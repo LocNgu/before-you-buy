@@ -23,19 +23,25 @@
     ],
     "ask": [
       "Bash(git checkout develop)",
-      "Bash(git push origin develop)",
       "Bash(git push --force origin claude/*)",
       "Bash(git push --force-with-lease origin claude/*)"
     ],
     "deny": [
       "Bash(git checkout main)",
-      "Bash(git push origin main)",
-      "Bash(git push --force origin main)",
-      "Bash(git push --force origin develop)",
-      "Bash(git push --force-with-lease origin main)",
-      "Bash(git push --force-with-lease origin develop)",
-      "Bash(git reset --hard:*)",
       "mcp__github__merge_pull_request"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-git.sh"
+          }
+        ]
+      }
     ]
   }
 }

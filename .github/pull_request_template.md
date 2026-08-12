@@ -17,7 +17,7 @@ Closes #
 
 ## Testing
 
-<!-- How was this verified? New/updated unit tests, Compose tests, manual steps on device/emulator. -->
+<!-- New/updated unit tests, Compose tests, manual steps on device/emulator. -->
 <!-- If CI is the only verification, say so. -->
 
 -
@@ -25,9 +25,9 @@ Closes #
 ## Checklist
 
 - [ ] `CHANGELOG.md` `[Unreleased]` updated (not required for `chore:`/docs-only PRs)
-- [ ] `.claude/CLAUDE.md` updated if architecture, conventions, or completed features changed
-- [ ] All new UI strings live in `strings.xml` (no hardcoded strings in Compose)
-- [ ] New dependencies pinned to an exact version in `app/build.gradle.kts`
-- [ ] DB schema JSON committed under `app/schemas/` and a `Migration` added if the DB version was bumped
+- [ ] `AGENTS.md` / `.claude/CLAUDE.md` updated if conventions or workflow changed
+- [ ] New dependencies pinned to an exact version
+- [ ] All new UI strings live in `strings.xml`
 - [ ] New/changed behaviour covered by tests, or explained above why not
-- [ ] Relevant ADRs in `docs/decisions/` consulted; new/superseding ADR added if a decision changed
+- [ ] Relevant ADRs in `docs/decisions/` consulted; new ADR added if this PR settles a decision
+      listed as open in `AGENTS.md`

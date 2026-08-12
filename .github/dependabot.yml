@@ -1,6 +1,9 @@
 # Dependabot configuration — automated dependency updates.
-# Dependency versions are inlined in app/build.gradle.kts (no libs.versions.toml);
-# the Compose BOM aligns Compose artifacts.
+#
+# Inert until the Gradle project exists. Whether this repo keeps Dependabot or moves
+# to Renovate is still open (see AGENTS.md): Dependabot is native to GitHub but does
+# not update the Gradle wrapper and has no version-catalog support, both of which
+# Renovate handles. Revisit when the dependency-declaration decision is made.
 #
 # Coupling note: several dependency groups must move together or CI breaks —
 # AGP / Kotlin / KSP are a matched toolchain, and the KotlinX libraries and MockK

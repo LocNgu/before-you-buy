@@ -8,5 +8,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Project scaffolding: Claude Code agent pipeline (`.claude/`), CI workflows, Detekt config,
-  ADR structure, and contributor docs.
+- Project scaffolding: `AGENTS.md` + `.claude/` agent instructions, implementer and reviewer
+  subagents, a `PreToolUse` git guard hook, ADR structure, issue/PR templates, and contributor docs.

@@ -3,10 +3,14 @@
 Thanks for your interest in this project. This guide covers how to get set up and
 what we expect from contributions.
 
-For a deeper tour of the architecture and conventions, see the
-[README](README.md) and [`.claude/CLAUDE.md`](.claude/CLAUDE.md) (the latter is
-aimed at AI agents but is the most detailed reference for how the codebase is
-organized).
+For a deeper tour of the conventions, see the [README](README.md) and
+[`AGENTS.md`](AGENTS.md) (the latter is aimed at AI coding agents but is the most
+detailed reference for how the codebase is organized; `.claude/CLAUDE.md` adds a
+Claude-specific layer on top of it).
+
+**This project is pre-scaffold.** There is no app module yet, and the architecture,
+DI approach, persistence layer and SDK levels are deliberately still open — see the
+open-decisions table in `AGENTS.md` before assuming any of them.
 
 ## Reporting bugs & requesting features
 
@@ -22,10 +26,12 @@ Please search existing issues first to avoid duplicates.
 ## Development setup
 
 - **Android Studio** (latest stable) or the command-line Gradle wrapper.
-- **JDK 17** and the **Android SDK** (`platforms;android-37`,
-  `build-tools;35.0.0`).
+- **JDK 17** and the **Android SDK**.
 - Clone the repo and let Gradle sync; the build uses the Gradle wrapper
   (`./gradlew`), so no separate Gradle install is required.
+
+Exact SDK and toolchain versions land with the app module — see
+`.claude/rules/ci-build.md` for the traps to watch when setting it up.
 
 ## Branching & pull requests
 
@@ -47,16 +53,12 @@ Please search existing issues first to avoid duplicates.
 
 ## Code style
 
-- Static analysis runs on every PR via **Detekt** (with `detekt-formatting` /
-  ktlint rules); the config lives in `config/detekt/`. New violations fail CI.
-- Run it locally before pushing:
-  ```
-  ./gradlew detekt
-  ```
-  Formatting issues can be auto-fixed by enabling `autoCorrect` on the Detekt
-  tasks locally; CI only reports, it never auto-corrects.
 - All user-facing UI strings must live in `res/values/strings.xml` — no
   hardcoded strings in Compose.
+- The conventions in [`AGENTS.md`](AGENTS.md) apply to hand-written code too, not
+  just agent-written code.
+- A static-analysis gate (Detekt or equivalent) lands with the app module; see
+  `.claude/rules/ci-build.md` for the configuration that worked previously.
 
 ## Architecture decisions
 
@@ -70,11 +72,9 @@ future contributors would otherwise have to re-derive.
 ```
 ./gradlew testDebugUnitTest   # JVM unit tests
 ./gradlew lintDebug           # Android lint
-./gradlew detekt              # static analysis
 ```
 
-Instrumented (androidTest) tests run on CI's emulator; they can also be run
-locally against a connected device/emulator with
+Instrumented (androidTest) tests need a connected device/emulator:
 `./gradlew connectedDebugAndroidTest`.
 
 ## License

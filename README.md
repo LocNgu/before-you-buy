@@ -7,36 +7,26 @@ An Android app. Kotlin · Jetpack Compose · Material 3.
 
 ## Status
 
-Early scaffolding. The repository currently carries the shared project infrastructure
-(agent pipeline, CI, static analysis, decision records) — the app module itself comes next.
+Pre-scaffold. The repository currently carries shared development infrastructure — agent
+instructions, decision records, contributor docs — and no app module yet. Architecture, DI,
+persistence and SDK levels are deliberately undecided; see the open-decisions table in
+[AGENTS.md](AGENTS.md).
 
 ## Features
 
 - TODO
 
-## Tech stack
-
-- Kotlin, Jetpack Compose, Material 3
-- MVVM + Repository, manual DI (no Hilt)
-- Compose Navigation with a type-safe `Screen` sealed class
-- AGP 9.3.1 · Gradle 9.7.0 · Kotlin 2.4.10 · KSP 2.3.11 · compileSdk 37 / targetSdk 35 / minSdk 26
-
 ## Build
 
-```bash
-./gradlew assembleDebug        # debug APK
-./gradlew testDebugUnitTest    # JVM unit tests
-./gradlew lintDebug            # Android lint
-./gradlew detekt               # static analysis
-```
+TODO once the Gradle project exists.
 
 ## Repository layout
 
 | Path | What's in it |
 |---|---|
-| `.claude/` | Agent instructions (`CLAUDE.md`), sub-agents, path-scoped rules, the run-app skill |
-| `.github/` | CI/CD workflows, Dependabot config, PR template |
-| `config/detekt/` | Detekt static-analysis config |
+| `AGENTS.md` | Tool-agnostic agent instructions: conventions, open decisions, git workflow |
+| `.claude/` | Claude-specific layer — `CLAUDE.md`, subagents, path-scoped rules, hooks, run-app skill |
+| `.github/` | Issue and PR templates, Dependabot config |
 | `docs/decisions/` | Architecture Decision Records (product + technical) |
 | `scripts/` | Cloud-session setup script |
 
