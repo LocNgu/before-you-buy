@@ -36,5 +36,5 @@ Guidance for Claude sessions working in this repository. Most code here is writt
 
 ## Environment notes
 
-- Cloud sessions need network access to `dl.google.com` to install the Android SDK (see the environment setup issue). `maven.google.com` is reachable by default.
+- Cloud sessions need network access to `dl.google.com` to install the Android SDK (issue #7). `maven.google.com` is reachable by default.
 - Java 21 and Gradle are preinstalled in the cloud image; the Android SDK is not.

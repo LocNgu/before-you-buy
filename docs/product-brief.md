@@ -291,7 +291,7 @@ Capture methods: share sheet + manual quick add (M1), home-screen widget (Later)
 
 ## 12. Open decisions
 
-- **Final app name and logo** (descriptive names are hard to register as EU word marks — see `research.md`)
-- **applicationId** — placeholder during development; must be final before the first Play upload (it can never change)
-- **Google Play account type** — personal (12 testers × 14 days closed test) vs organization (D-U-N-S, exempt)
-- **Monetization model** — and with it EU DSA trader status (public address) and German business registration
+- **Final app name and logo** — #31 (descriptive names are hard to register as EU word marks — see `research.md`)
+- **applicationId** — #33 — placeholder during development; must be final before the first Play upload (it can never change)
+- **Google Play account type** — #34 — personal (12 testers × 14 days closed test) vs organization (D-U-N-S, exempt)
+- **Monetization model** — #41 — and with it EU DSA trader status (public address) and German business registration

@@ -128,4 +128,4 @@ Notes:
 - **Navigation 3** is stable (Nov 2025). ([blog](https://android-developers.googleblog.com/2025/11/jetpack-navigation-3-is-stable.html))
 - **Images:** Photo Picker (no storage permission), copy into app-private storage.
 - **Money:** store `Long` minor units; format with locale-aware currency formatting. Single currency per installation in MVP.
-- **Cloud dev environment:** `dl.google.com` (Android SDK downloads) is blocked by the current Claude environment network policy; `maven.google.com` works. Needs an allowlist change (see issue on environment setup).
+- **Cloud dev environment:** `dl.google.com` (Android SDK downloads) is blocked by the current Claude environment network policy; `maven.google.com` works. Needs an allowlist change (issue #7).
