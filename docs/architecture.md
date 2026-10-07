@@ -67,8 +67,9 @@ ui/theme/  feature/{home,capture,wishlist,reflection,decision,history,money,prio
 ## Cloud build environment (ADR-0021)
 
 - Android SDK: installed by `scripts/install-android-sdk.sh`, called from the cloud environment's setup script (cached).
-- `local.properties` + SDK presence check: SessionStart hook (cloud only).
-- Network allowlist: `dl.google.com`, `downloads.gradle.org`, `release-assets.githubusercontent.com` (plus the default package managers). Setup steps: issue #7.
+- `local.properties`, `ANDROID_HOME` and the SDK presence check: `scripts/session-start.sh`, a SessionStart hook (cloud only).
+- Network allowlist: `dl.google.com`, `downloads.gradle.org`, `release-assets.githubusercontent.com` (plus the default package managers).
+- Details, gotchas and diagnosis: `.claude/rules/ci-build.md`.
 
 ## Placeholder applicationId
 
