@@ -14,6 +14,7 @@ Offline Android app that makes people pause, reflect, prioritize and save before
 ## Workflow (ADR-0020)
 
 - One issue → one `claude/<kebab-name>` branch → one PR to `main`. Never mix unrelated work. Only the owner merges.
+- `.claude/hooks/guard-git.sh` blocks pushing to `main`, `git reset --hard` and merging PRs, whatever the phrasing. Don't work around it; change it only with its tests (`.claude/hooks/test-guard-git.sh`).
 - Implement only the issue's scope; meet every acceptance criterion or explain why in the PR.
 - Before opening/updating a PR: run the verify task (see `docs/architecture.md`; keep the exact command there, nowhere else), then review your own diff (e.g. `/code-review`).
 - After two failed attempts to fix the same test, stop changing it: find the real cause (framework docs, a minimal repro) and check whether the test asserts structure instead of behaviour.
