@@ -14,7 +14,9 @@
       "Bash(git checkout -b claude/*)",
       "Bash(git push -u origin claude/*)",
       "Bash(git push origin claude/*)",
-      "Bash(./gradlew*)"
+      "Bash(./gradlew*)",
+      "Bash(scripts/install-android-sdk.sh*)",
+      "Bash(scripts/session-start.sh*)"
     ],
     "deny": [
       "Bash(git push origin main*)",
@@ -33,6 +35,20 @@
       "Bash(cat *.env)",
       "Bash(cat *keystore*)",
       "Bash(cat *.jks)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/session-start.sh",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
