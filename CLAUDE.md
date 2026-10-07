@@ -11,14 +11,24 @@ Offline Android app that makes people pause, reflect, prioritize and save before
 - `docs/architecture.md` — stack, modules, pitfalls.
 - `docs/research.md` — evidence behind product decisions (only when a design question comes up).
 
-## Workflow (ADR-0020)
+## "Work on #N" — the default procedure (ADR-0020)
 
-- One issue → one `claude/<kebab-name>` branch → one PR to `main`. Never mix unrelated work. Only the owner merges.
-- `.claude/hooks/guard-git.sh` blocks pushing to `main`, `git reset --hard` and merging PRs, whatever the phrasing. Don't work around it; change it only with its tests (`.claude/hooks/test-guard-git.sh`).
-- Implement only the issue's scope; meet every acceptance criterion or explain why in the PR.
-- Before opening/updating a PR: run the verify task (see `docs/architecture.md`; keep the exact command there, nowhere else), then review your own diff (e.g. `/code-review`).
-- After two failed attempts to fix the same test, stop changing it: find the real cause (framework docs, a minimal repro) and check whether the test asserts structure instead of behaviour.
-- In the same PR: update `CHANGELOG.md` `[Unreleased]` for user-visible changes, add/update the `.claude/rules/<area>.md` for the area you built, and add an ADR for any significant new decision.
+A request like "work on #N" or "do #N" means this whole procedure. Don't wait to be told the steps; stop only where it says so.
+
+1. **Read** the issue, its comments and its parent epic (GitHub MCP tools; `gh` isn't available in cloud sessions). Then read the ADRs, product-brief sections and `.claude/rules/` files it cites.
+2. **Stop and ask the owner first** if the issue is labelled `decision` or `needs-owner`, is blocked by an open dependency ("Depends on #…"), contradicts an ADR, or leaves a product question open. Batch all the questions into one message. Don't guess.
+3. **Branch** from freshly fetched `origin/main`: use the session's assigned `claude/*` branch if there is one, else `claude/<N>-<kebab-title>`. One issue per branch. Never mix unrelated work.
+4. **Implement** only the issue's scope. Every acceptance criterion is met or explicitly explained.
+5. **In the same PR:** tests for new behaviour, `CHANGELOG.md` `[Unreleased]` for user-visible changes, the `.claude/rules/<area>.md` for the area you built, and an ADR for any significant new decision.
+6. **Verify:** run the verify task (the exact command lives only in `docs/architecture.md`). Then review your own diff (`/code-review`) and fix what it finds.
+7. **Open the PR** against `main` using `.github/pull_request_template.md`. Include `Closes #N`, or `Part of #N` when something is left for the owner. Map each acceptance criterion to how it was verified, and name any check that couldn't run, with the reason.
+8. **Hand over:** reply with the PR link, what changed, and anything the owner must do or decide. Never merge. Only the owner merges.
+
+Guardrails:
+
+- `.claude/hooks/guard-git.sh` blocks pushing to `main`, `git reset --hard` and merging PRs, whatever the phrasing. Don't work around it. Change it only together with its tests (`.claude/hooks/test-guard-git.sh`).
+- After two failed attempts to fix the same test, stop changing it. Find the real cause (framework docs, a minimal repro), and check whether the test asserts structure instead of behaviour.
+- If the issue turns out to be much larger than one PR, stop and propose a split before going deep.
 
 ## Product non-negotiables
 
