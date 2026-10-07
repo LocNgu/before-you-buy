@@ -16,7 +16,7 @@ Instead of *"Can I afford this?"* it asks **"Is this the best use of my money co
 - **History** of what you bought and what you decided against
 - **Private by design** — local only, no account, no tracking
 
-Status: **planning** — see [`docs/product-brief.md`](docs/product-brief.md), [`docs/research.md`](docs/research.md) and [`docs/architecture.md`](docs/architecture.md). Work is tracked in GitHub issues.
+Status: **planning** — see [`docs/product-brief.md`](docs/product-brief.md), [`docs/decisions/`](docs/decisions/README.md), [`docs/research.md`](docs/research.md) and [`docs/architecture.md`](docs/architecture.md). Work is tracked in GitHub issues.
 
 ## Licence
 

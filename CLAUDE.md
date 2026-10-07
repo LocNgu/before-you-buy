@@ -1,40 +1,35 @@
-# CLAUDE.md
+# Before You Buy (working name)
 
-Guidance for Claude sessions working in this repository. Most code here is written by Claude sessions, one GitHub issue at a time.
+Offline Android app that makes people pause, reflect, prioritize and save before buying. Local only — no account, no server, no analytics, no `INTERNET` permission.
 
-## Read first
+> **Keep this file lean — it loads into every session.** Only repo-wide rules, one or two lines each. Area-specific detail goes in a path-scoped `.claude/rules/<area>.md` (with `paths:` frontmatter, so it loads only when matching files are touched). Decisions go in `docs/decisions/`. History goes in `CHANGELOG.md` and `git log`, never here.
 
-1. `docs/product-brief.md` — what the app is, the rules, the lifecycle, copy/tone rules
-2. `docs/architecture.md` — stack, modules, hard constraints
-3. `docs/research.md` — why things are the way they are (only when a design question comes up)
-4. The GitHub issue you were asked to implement, including its parent epic
+## Where things are
 
-## Working on an issue
+- `docs/product-brief.md` — the product: concepts, lifecycle, screens, tone. Read the sections your issue cites, not the whole file.
+- `docs/decisions/` — ADRs. **Scan the index before working in an area.** If a request contradicts an ADR, name it and ask the owner before proceeding; changed decisions get a new superseding ADR (rules in `docs/decisions/README.md`).
+- `docs/architecture.md` — stack, modules, pitfalls.
+- `docs/research.md` — evidence behind product decisions (only when a design question comes up).
 
-- Implement **only** the issue's scope. If something outside it is needed, note it in the PR description instead of widening the change.
-- Every acceptance-criteria checkbox must be met or explicitly explained in the PR.
-- Business rules go into `:core:domain` with JVM unit tests. Don't put rules in ViewModels or Composables.
-- UI changes: add/update Roborazzi screenshot tests once the screenshot setup exists.
-- All user-facing strings go into `strings.xml` in **both** `values/` (English) and `values-de/` (German).
-- Run before pushing: `./gradlew spotlessCheck lint test` (adjust once the scaffold defines the exact tasks — keep this line accurate).
-- If you change a documented decision, update the relevant doc in the same PR.
+## Workflow (ADR-0020)
+
+- One issue → one `claude/<kebab-name>` branch → one PR to `main`. Never mix unrelated work. Only the owner merges.
+- Implement only the issue's scope; meet every acceptance criterion or explain why in the PR.
+- Before opening/updating a PR: run the verify task (see `docs/architecture.md`; keep the exact command there, nowhere else), then review your own diff (e.g. `/code-review`).
+- After two failed attempts to fix the same test, stop changing it: find the real cause (framework docs, a minimal repro) and check whether the test asserts structure instead of behaviour.
+- In the same PR: update `CHANGELOG.md` `[Unreleased]` for user-visible changes, add/update the `.claude/rules/<area>.md` for the area you built, and add an ADR for any significant new decision.
 
 ## Product non-negotiables
 
-- Never build anything that encourages spending: no "you have money available", no deals, price-drop alerts, product suggestions or urgency.
-- No shaming. "Decided against" is neutral — no streaks, trophies, confetti or "you saved!" language.
-- Reject/"Let it go" is always as easy and visible as Buy.
-- While an item is cooling off, lead with the user's reasons, not the product image; no prominent "open in shop" button.
-- No `INTERNET` permission, no analytics, no ads, no account. Data stays on the device.
-- Money is `Long` minor units, never floating point. Time comes from an injected `Clock`.
+- Never encourage spending: no "money available", deals, price alerts, suggestions or urgency (ADR-0014).
+- No shaming or celebration of not buying (ADR-0012). Reject/"Let it go" is always as easy as Buy.
+- While cooling off: reasons first, image de-emphasized, no prominent "open in shop" (ADR-0013).
 
-## Licensing constraints
+## Code non-negotiables
 
-- The project is **source-available (PolyForm Noncommercial 1.0.0), not open source** — don't describe it as open source.
-- Only add dependencies with permissive licences (Apache-2.0, MIT, BSD). No GPL/AGPL.
-- Don't accept or merge code contributions from third parties (see `CONTRIBUTING.md`).
-
-## Environment notes
-
-- Cloud sessions need network access to `dl.google.com` to install the Android SDK (issue #7). `maven.google.com` is reachable by default.
-- Java 21 and Gradle are preinstalled in the cloud image; the Android SDK is not.
+- Business rules live in `:core:domain` with JVM tests — not in ViewModels or Composables.
+- Money is `Long` minor units; time comes from an injected `Clock`; days are calendar days (ADR-0018).
+- No `INTERNET` permission (ADR-0003). Only Apache-2.0/MIT/BSD dependencies (ADR-0004).
+- Every user-facing string in `values/` **and** `values-de/` (ADR-0016).
+- Room: explicit migrations only, schemas committed (ADR-0019).
+- The project is **source available, not open source** — never call it open source.

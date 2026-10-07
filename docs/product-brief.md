@@ -268,26 +268,9 @@ The explicit "Let it go" action is deliberate: in the *one sec* study the option
 
 Capture methods: share sheet + manual quick add (M1), home-screen widget (Later).
 
-## 11. Decision log
+## 11. Decisions
 
-| Date | Decision |
-|---|---|
-| 2026-10-04 | Android only, native Kotlin + Jetpack Compose |
-| 2026-10-04 | Code is written mostly by Claude sessions → issues are self-contained specs |
-| 2026-10-04 | Monetization: free for now, decide later |
-| 2026-10-04 | Data: local only + export; no account, no bank connection |
-| 2026-10-04 | Cooling-off: soft lock with friction; early purchases logged |
-| 2026-10-04 | Waiting and saving run in parallel; Ready = cooled + reflected + funded |
-| 2026-10-04 | `NEED` fast path skips cooling-off, still logged |
-| 2026-10-04 | "Decided against" stat shown carefully (no trophies/streaks) |
-| 2026-10-04 | Product images de-emphasized during cooling-off |
-| 2026-10-04 | Discretionary money = monthly allowance that accrues automatically |
-| 2026-10-04 | Reflection asked after capture; required before Ready |
-| 2026-10-04 | Languages: English + German |
-| 2026-10-04 | Capture: share sheet + quick add (MVP), widget later; no app interception |
-| 2026-10-04 | Priorities: configurable 1–5, default 3; head-to-head to earn a slot |
-| 2026-10-04 | Licence: PolyForm Noncommercial 1.0.0 (forks allowed, must stay non-commercial); brand reserved separately (`TRADEMARKS.md`) |
-| 2026-10-04 | No outside code contributions for now (no CLA needed); issues/ideas welcome |
+All decisions are recorded as ADRs in [`docs/decisions/`](decisions/README.md) (index there). Changing a decision means a new superseding ADR, not editing this brief silently.
 
 ## 12. Open decisions
 

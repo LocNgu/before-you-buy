@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(git fetch*)",
+      "Bash(git branch --show-current)",
+      "Bash(git branch -a)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout claude/*)",
+      "Bash(git checkout -b claude/*)",
+      "Bash(git push -u origin claude/*)",
+      "Bash(git push origin claude/*)",
+      "Bash(./gradlew*)"
+    ],
+    "deny": [
+      "Bash(git push origin main*)",
+      "Bash(git push origin *:main*)",
+      "Bash(git push --force*origin main*)",
+      "Bash(git push -f*origin main*)",
+      "Bash(git push --force-with-lease*origin main*)",
+      "Bash(git reset --hard*)",
+      "Bash(git branch -D*)",
+      "Bash(git branch -d*)",
+      "Bash(git branch --delete*)",
+      "Bash(git stash clear*)",
+      "Bash(cat ~/.ssh/*)",
+      "Bash(cat ~/.git-credentials*)",
+      "Bash(cat ~/.netrc*)",
+      "Bash(cat *.env)",
+      "Bash(cat *keystore*)",
+      "Bash(cat *.jks)"
+    ]
+  }
+}
