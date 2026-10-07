@@ -16,7 +16,8 @@
       "Bash(git push origin claude/*)",
       "Bash(./gradlew*)",
       "Bash(scripts/install-android-sdk.sh*)",
-      "Bash(scripts/session-start.sh*)"
+      "Bash(scripts/session-start.sh*)",
+      "Bash(.claude/hooks/test-guard-git.sh)"
     ],
     "deny": [
       "Bash(git push origin main*)",
@@ -34,7 +35,9 @@
       "Bash(cat ~/.netrc*)",
       "Bash(cat *.env)",
       "Bash(cat *keystore*)",
-      "Bash(cat *.jks)"
+      "Bash(cat *.jks)",
+      "mcp__github__merge_pull_request",
+      "mcp__github__enable_pr_auto_merge"
     ]
   },
   "hooks": {
@@ -46,6 +49,18 @@
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/session-start.sh",
             "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-git.sh",
+            "timeout": 10
           }
         ]
       }
