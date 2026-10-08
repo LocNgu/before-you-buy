@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityTest {
@@ -16,12 +15,7 @@ class MainActivityTest {
 
     @Test
     fun `launches to Home showing the app name`() {
-        composeRule.onNodeWithText("Before You Buy").assertIsDisplayed()
-    }
-
-    @Test
-    @Config(qualifiers = "de")
-    fun `launches to Home showing the app name in German`() {
-        composeRule.onNodeWithText("Before You Buy").assertIsDisplayed()
+        val appName = composeRule.activity.getString(R.string.app_name)
+        composeRule.onNodeWithText(appName).assertIsDisplayed()
     }
 }

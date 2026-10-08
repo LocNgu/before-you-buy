@@ -52,8 +52,6 @@ android {
     lint {
         abortOnError = true
         warningsAsErrors = true
-        // Version-update checks depend on the network and the calendar, not on the code.
-        disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion")
     }
 
     testOptions {
@@ -76,7 +74,7 @@ kotlin {
 }
 
 roborazzi {
-    // Golden images are committed next to the tests.
+    // Golden images are committed next to the tests. Tests call captureRoboImage() without a path.
     outputDir = file("src/test/screenshots")
 }
 

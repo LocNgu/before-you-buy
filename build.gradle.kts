@@ -18,7 +18,7 @@ spotless {
     // Prune build output while walking, so Spotless never reads directories another task is writing.
     fun sources(pattern: String) = fileTree(rootDir) {
         include(pattern)
-        exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**")
+        exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", ".git/**", ".claude/**")
     }
     kotlin {
         target(sources("**/*.kt"))

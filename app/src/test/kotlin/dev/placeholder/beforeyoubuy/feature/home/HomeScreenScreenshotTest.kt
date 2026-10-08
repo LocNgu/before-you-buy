@@ -22,6 +22,6 @@ class HomeScreenScreenshotTest {
     @Test
     fun homeScreen() {
         composeRule.setContent { MaterialTheme { HomeScreen() } }
-        composeRule.onRoot().captureRoboImage("src/test/screenshots/HomeScreen.png")
+        composeRule.onRoot().captureRoboImage()
     }
 }

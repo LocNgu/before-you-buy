@@ -14,7 +14,7 @@ kotlin = "2.4.20"
 ksp = "2.3.12"
 hilt = "2.60.1"
 spotless = "8.10.3"
-ktlint = "1.8.0" # MIT
+ktlint = "1.8.0" # MIT; the version Spotless runs, not a project dependency
 roborazzi = "1.76.0"
 
 androidx-activity = "1.13.0"
@@ -71,9 +71,6 @@ roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = 
 roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
 roborazzi-junit-rule = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
-
-# Not a project dependency: the ktlint version Spotless runs.
-ktlint-cli = { module = "com.pinterest.ktlint:ktlint-cli", version.ref = "ktlint" }
 
 [bundles]
 # Shared by every module's unit tests.

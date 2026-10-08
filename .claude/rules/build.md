@@ -2,6 +2,7 @@
 description: Gradle build, modules, version catalog and the verify task
 paths:
   - "**/*.gradle.kts"
+  - "lint.xml"
   - "gradle/**/*"
   - "gradle.properties"
   - ".editorconfig"
@@ -33,15 +34,17 @@ paths:
 ## Verify task
 
 - `./gradlew verify` (root `build.gradle.kts`): `spotlessCheck`, every module's `lint`, the debug unit tests and `:app:verifyRoborazziDebug`. Issue #9 adds the no-INTERNET and string-parity checks there.
-- Lint treats warnings as errors. The version-update checks (`GradleDependency`, `NewerVersionAvailable`, `AndroidGradlePluginVersion`) are off, so the result doesn't depend on the network or the date. Fix a lint finding rather than suppressing it; if you must suppress, use `@Suppress`/`tools:ignore` at the narrowest scope with a reason.
+- Lint treats warnings as errors. The version-update checks (`GradleDependency`, `NewerVersionAvailable`, `AndroidGradlePluginVersion`) are off for every module in the root `lint.xml`, so the result doesn't depend on the network or the date. Fix a lint finding rather than suppressing it; if you must suppress, use `@Suppress`/`tools:ignore` at the narrowest scope with a reason.
 - Formatting: Spotless + ktlint, `android_studio` style (`.editorconfig`). `./gradlew spotlessApply` fixes it.
 
 ## Tests
 
 - JVM tests for `:core:domain`; Robolectric + Compose UI tests in `:app` under `src/test`. No instrumented tests.
 - Robolectric runs with `TestApplication` (`src/test/resources/robolectric.properties`). Its `onAppStart()` is a no-op, so start-up work never races tests. All app-start work goes into `BeforeYouBuyApplication.onAppStart()`.
+- WorkManager's start-up initializer is removed in the manifest; it initializes on first use from `BeforeYouBuyApplication.workManagerConfiguration` (where Hilt's worker factory goes later). Don't re-add the initializer.
+- Inject `java.time.Clock`; production gets `SystemZoneClock`, which reads the device zone on every call. Tests pass `Clock.fixed(...)` or a fake.
 - Compose tests use the `androidx.compose.ui.test.junit4.v2` rules (`createComposeRule`, `createAndroidComposeRule`).
-- Screenshots: Roborazzi; goldens are committed in `app/src/test/screenshots/`. Record with `./gradlew :app:recordRoborazziDebug`, then look at the PNGs before committing. `verify` compares; diffs land in `app/build/outputs/roborazzi/`.
+- Screenshots: Roborazzi; goldens are committed in `app/src/test/screenshots/` (the plugin's `outputDir`). Call `captureRoboImage()` without a path so names follow `<package>.<Class>.<test>.png`. Record with `./gradlew :app:recordRoborazziDebug`, then look at the PNGs before committing. `verify` compares; diffs land in `app/build/outputs/roborazzi/`.
 
 ## Gotchas
 
