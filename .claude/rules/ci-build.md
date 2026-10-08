@@ -28,6 +28,10 @@ Beyond the default package managers: `dl.google.com` (SDK), `downloads.gradle.or
 - **Install success is checked on disk, not by exit code.** `yes | sdkmanager` under `pipefail` exits non-zero even on success.
 - Don't seed the Gradle wrapper by copying the image's pre-installed Gradle (Gradle 8): AGP 9 needs Gradle 9, and the wrapper downloads it itself.
 
+## Related
+
+Gradle, modules, versions and the verify task: `.claude/rules/build.md`.
+
 ## Diagnosing
 
 1. `curl -sSI https://dl.google.com/android/repository/repository2-3.xml`: anything other than 200 means the network allowlist is wrong.

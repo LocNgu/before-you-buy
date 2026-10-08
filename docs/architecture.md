@@ -1,6 +1,6 @@
 # Architecture
 
-Status: planned, not yet implemented. The scaffold issue (#8) turns this into code; update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist; features don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -8,23 +8,24 @@ Status: planned, not yet implemented. The scaffold issue (#8) turns this into co
 ./gradlew verify
 ```
 
-`verify` is an aggregate Gradle task defined in the root build (issue #8). It runs exactly what CI runs: formatting check, Android Lint, unit tests (incl. Robolectric and Roborazzi verification), the no-`INTERNET` manifest check and the string-parity check. **This is the only place the command is written down** — CI, `CLAUDE.md` and the PR template refer to it. While iterating, run narrower tasks (`:core:domain:test`, `--tests "…"`) with `-q`; they never replace `verify` before a push.
+`verify` is an aggregate Gradle task defined in the root `build.gradle.kts`. It runs exactly what CI runs: formatting check (`spotlessCheck`), Android Lint for every module (warnings are errors), unit tests (incl. Robolectric) and Roborazzi screenshot verification. Issue #9 adds the no-`INTERNET` manifest check and the string-parity check. **This is the only place the command is written down** — CI, `CLAUDE.md` and the PR template refer to it. While iterating, run narrower tasks (`:core:domain:test`, `--tests "…"`) with `-q`; they never replace `verify` before a push.
 
 ## Stack (ADR-0017)
 
 | Concern | Choice |
 |---|---|
-| Language / UI | Kotlin (K2), Jetpack Compose, Material 3 |
+| Language / UI | Kotlin (K2, via AGP 9's built-in Kotlin), Jetpack Compose, Material 3 |
 | Navigation | Navigation 3 |
 | DI | Hilt |
 | Persistence | Room (KSP) + DataStore Preferences |
 | Background | WorkManager |
 | Serialization | kotlinx.serialization (export/import) |
 | Time | `java.time` + injected `Clock` (ADR-0018) |
-| Build | Gradle Kotlin DSL + version catalog `gradle/libs.versions.toml` |
+| Build | Gradle 9 (wrapper) + AGP 9, Kotlin DSL, version catalog `gradle/libs.versions.toml` |
 | Format/lint | Spotless + ktlint, Android Lint |
 | Tests | JUnit 4, kotlinx-coroutines-test, Turbine, Robolectric, Roborazzi |
-| SDK levels | minSdk 26, targetSdk/compileSdk 36 or newer stable (Play requires target 36 since Aug 2026) |
+| SDK levels | minSdk 26, targetSdk/compileSdk 37 (Play requires at least target 36 since Aug 2026; current AndroidX needs compileSdk 37) |
+| Bytecode | Java/Kotlin target 17; builds run on JDK 21 |
 
 Dependencies: Apache-2.0/MIT/BSD only; no analytics, crash-reporting or ads SDKs (ADR-0002, ADR-0004).
 
@@ -44,7 +45,10 @@ Dependencies: Apache-2.0/MIT/BSD only; no analytics, crash-reporting or ads SDKs
 
 ```
 ui/theme/  feature/{home,capture,wishlist,reflection,decision,history,money,priorities,settings}/  notifications/
+navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. the Clock)
 ```
+
+Room schema JSON goes to `core/data/schemas/` (ADR-0019).
 
 ## Pitfalls (common Android traps — apply from day one)
 
@@ -73,4 +77,9 @@ ui/theme/  feature/{home,capture,wishlist,reflection,decision,history,money,prio
 
 ## Placeholder applicationId
 
-Until the final ID is chosen (#33), use `dev.placeholder.beforeyoubuy` as `applicationId` and `namespace`, defined in one place in `app/build.gradle.kts`.
+Until the final ID is chosen (#33), `applicationId` and `namespace` are `dev.placeholder.beforeyoubuy`, defined in one place: `app.id` in `gradle.properties` (`:core:data` appends `.core.data`). Kotlin packages use the same name; #33 decides whether they move too.
+
+## Not set up yet
+
+- **Backup:** `allowBackup="false"` and backup rules that exclude everything, until export/import decides what Android backup includes (ADR-0002, product brief §backup).
+- **Theme:** plain `MaterialTheme` and a platform window theme until #10.
