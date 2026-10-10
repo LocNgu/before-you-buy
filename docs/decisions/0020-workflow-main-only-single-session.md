@@ -1,6 +1,6 @@
 # ADR-0020: main only; one issue per PR; one session implements; human merges
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0024 (branch naming)
 **Type**: technical
 **Date**: 2026-10-05
 
