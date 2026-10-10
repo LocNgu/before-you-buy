@@ -22,7 +22,7 @@ set -uo pipefail
 
 # Used when the build files can't be read (e.g. the script runs before the
 # repository is cloned). Keep in step with compileSdk.
-DEFAULT_COMPILE_SDK=36
+DEFAULT_COMPILE_SDK=37
 
 # sdkmanager only knows packages that existed when its own build was released,
 # so an old build can't see new platforms. Bump this when a new compileSdk
