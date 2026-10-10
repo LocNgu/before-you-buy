@@ -23,7 +23,7 @@ paths:
 ## Version catalog (`gradle/libs.versions.toml`)
 
 - Every version lives in `[versions]`, including SDK levels and `jvmTarget`. Build files never hard-code a version.
-- Use latest **stable** releases only (no alpha/beta/rc). A new dependency must be Apache-2.0, MIT or BSD (ADR-0004); write the licence as a comment if it's not Apache-2.0. Check what permissions it merges into the release manifest (ADR-0003).
+- Use latest **stable** releases only (no alpha/beta/rc). A new dependency that ships (release runtime or debug-only) must be Apache-2.0, MIT or BSD; test-only and build-only ones may be any OSI-approved licence (ADR-0004, ADR-0023). Write the licence as a comment if it's not Apache-2.0, and state licence and classpath in the PR. Check what permissions it merges into the release manifest (ADR-0003).
 - Alias names are kebab-case (`androidx-room-runtime`), giving `libs.androidx.room.runtime`. Compose libraries come from the BOM and have no version.
 - Changing `compileSdk`: also bump `DEFAULT_COMPILE_SDK` in `scripts/install-android-sdk.sh`, then run that script (see `ci-build.md`).
 

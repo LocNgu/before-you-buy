@@ -36,3 +36,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0020](0020-workflow-main-only-single-session.md) | technical | `main` only; one issue per PR; one session implements; human merges |
 | [0021](0021-cloud-build-environment.md) | technical | Cloud builds: SDK in the environment setup script, project config in a SessionStart hook |
 | [0022](0022-monetization-deferred.md) | product | Free for now; monetization decided later |
+| [0023](0023-licence-rule-shipped-dependencies.md) | technical | Licence rule (Apache/MIT/BSD) covers shipped dependencies; test and build tools exempt |

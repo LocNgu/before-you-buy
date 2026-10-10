@@ -27,7 +27,7 @@ Status: scaffolded (#8): modules, build, DI, navigation and tests exist; feature
 | SDK levels | minSdk 26, targetSdk/compileSdk 37 (Play requires at least target 36 since Aug 2026; current AndroidX needs compileSdk 37) |
 | Bytecode | Java/Kotlin target 17; builds run on JDK 21 |
 
-Dependencies: Apache-2.0/MIT/BSD only; no analytics, crash-reporting or ads SDKs (ADR-0002, ADR-0004).
+Dependencies: Apache-2.0/MIT/BSD only in what ships (test and build tools exempt, ADR-0023); no analytics, crash-reporting or ads SDKs (ADR-0002, ADR-0004).
 
 ## Modules
 

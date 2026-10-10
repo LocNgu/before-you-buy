@@ -40,7 +40,7 @@ Guardrails:
 
 - Business rules live in `:core:domain` with JVM tests — not in ViewModels or Composables.
 - Money is `Long` minor units; time comes from an injected `Clock`; days are calendar days (ADR-0018).
-- No `INTERNET` permission (ADR-0003). Only Apache-2.0/MIT/BSD dependencies (ADR-0004).
+- No `INTERNET` permission (ADR-0003). Only Apache-2.0/MIT/BSD dependencies in what ships; test/build tools exempt (ADR-0004, ADR-0023).
 - Every user-facing string in `values/` **and** `values-de/` (ADR-0016).
 - Room: explicit migrations only, schemas committed (ADR-0019).
 - The project is **source available, not open source** — never call it open source.

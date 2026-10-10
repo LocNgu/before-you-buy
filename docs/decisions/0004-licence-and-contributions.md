@@ -1,6 +1,6 @@
 # ADR-0004: PolyForm Noncommercial; brand reserved; no outside code contributions
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0023 (dependency licences)
 **Type**: product
 **Date**: 2026-10-04
 
