@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.room) apply false
     alias(libs.plugins.roborazzi) apply false
     alias(libs.plugins.spotless)
+    id("beforeyoubuy.string-parity")
 }
 
 spotless {
@@ -33,7 +34,7 @@ spotless {
 // The one pre-push gate: exactly what CI runs (docs/architecture.md).
 tasks.register("verify") {
     group = "verification"
-    description = "Formatting, Android Lint, unit tests and screenshot verification. Run before every push."
+    description = "Formatting, Android Lint, unit tests, screenshots and the hard-constraint checks. Run before every push."
     dependsOn(
         "spotlessCheck",
         ":app:lint",
@@ -42,9 +43,11 @@ tasks.register("verify") {
         ":app:testDebugUnitTest",
         ":core:data:testDebugUnitTest",
         ":core:domain:test",
-        ":app:verifyRoborazziDebug"
+        ":app:verifyRoborazziDebug",
+        // Hard constraints (build-logic, ADR-0025): no INTERNET in the release manifest (ADR-0003),
+        // the same strings in values/ and values-de/ (ADR-0016).
+        ":app:checkNoInternetPermission",
+        "checkStringParity",
+        gradle.includedBuild("build-logic").task(":test"),
     )
-    // Issue #9 adds the hard-constraint checks here:
-    //   ":app:checkNoInternetPermission" (no INTERNET in the merged release manifest, ADR-0003)
-    //   "checkStringParity" (same keys in values/ and values-de/, ADR-0016)
 }

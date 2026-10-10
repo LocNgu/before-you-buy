@@ -8,6 +8,7 @@ paths:
   - ".editorconfig"
   - "**/AndroidManifest.xml"
   - "**/src/test/**/*"
+  - "build-logic/**/*"
 ---
 
 # Build (ADR-0017)
@@ -33,9 +34,17 @@ paths:
 
 ## Verify task
 
-- `./gradlew verify` (root `build.gradle.kts`): `spotlessCheck`, every module's `lint`, the debug unit tests and `:app:verifyRoborazziDebug`. Issue #9 adds the no-INTERNET and string-parity checks there.
+- `./gradlew verify` (root `build.gradle.kts`): `spotlessCheck`, every module's `lint`, the debug unit tests, `:app:verifyRoborazziDebug`, the hard-constraint checks `:app:checkNoInternetPermission` and `checkStringParity`, and `build-logic`'s own tests. CI runs exactly this (`.claude/rules/ci-build.md`).
 - Lint treats warnings as errors. The version-update checks (`GradleDependency`, `NewerVersionAvailable`, `AndroidGradlePluginVersion`) are off for every module in the root `lint.xml`, so the result doesn't depend on the network or the date. Fix a lint finding rather than suppressing it; if you must suppress, use `@Suppress`/`tools:ignore` at the narrowest scope with a reason.
 - Formatting: Spotless + ktlint, `android_studio` style (`.editorconfig`). `./gradlew spotlessApply` fixes it.
+
+## build-logic (ADR-0025)
+
+- `build-logic/` is an included build (`pluginManagement { includeBuild(...) }`) with the project's own check plugins. It is not a module: no `lint`, but Spotless covers it and its `:test` runs in `verify`.
+- `beforeyoubuy.no-internet-permission` (applied in `:app`) registers `checkNoInternetPermission`: it reads the **merged manifest of every release variant** (`SingleArtifact.MERGED_MANIFEST`) and fails on `uses-permission`/`uses-permission-sdk-23`/`uses-permission-sdk-m` for `android.permission.INTERNET`.
+- `beforeyoubuy.string-parity` (applied at the root) registers `checkStringParity`: for each `src/*/res/` of every module it compares the `string`, `plurals` and `string-array` names in `values/*.xml` with `values-de/*.xml`. `translatable="false"` strings need no German entry and must not have one.
+- Logic sits in plain functions (`ManifestPermissions`, `StringResources`) with JUnit tests; the tasks only collect files and format messages. Task classes use lazy properties only (configuration cache). `build-logic` uses only AGP's `gradle-api`, `compileOnly`.
+- A new hard constraint: add it here as a plugin + tested logic, then add its task to `verify`.
 
 ## Tests
 

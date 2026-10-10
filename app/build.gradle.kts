@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
+    id("beforeyoubuy.no-internet-permission")
 }
 
 val appId = providers.gradleProperty("app.id").get()
