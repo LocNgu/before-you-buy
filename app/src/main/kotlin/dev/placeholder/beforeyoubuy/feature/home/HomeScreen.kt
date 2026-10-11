@@ -1,6 +1,7 @@
 package dev.placeholder.beforeyoubuy.feature.home
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -12,18 +13,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.placeholder.beforeyoubuy.R
+import dev.placeholder.beforeyoubuy.ui.components.EmptyState
+import dev.placeholder.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 
 /** Placeholder until the real Home screen is built. */
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
     Scaffold(modifier = modifier) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentAlignment = Alignment.Center
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium
+            )
+            EmptyState(
+                title = stringResource(R.string.home_empty_title),
+                body = stringResource(R.string.home_empty_body)
             )
         }
     }
@@ -32,5 +40,5 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 private fun HomeScreenPreview() {
-    MaterialTheme { HomeScreen() }
+    BeforeYouBuyTheme { HomeScreen() }
 }

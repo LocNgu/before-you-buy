@@ -38,3 +38,5 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0022](0022-monetization-deferred.md) | product | Free for now; monetization decided later |
 | [0023](0023-licence-rule-shipped-dependencies.md) | technical | Licence rule (Apache/MIT/BSD) covers shipped dependencies; test and build tools exempt |
 | [0024](0024-branch-naming.md) | technical | Branches: session's assigned `claude/*` branch, else `claude/<N>-<kebab-title>` |
+| [0025](0025-money-formatting-and-input.md) | technical | Money formatting/parsing in `:core:domain`; input accepts `.` or `,` as decimal separator |
+| [0026](0026-calm-fixed-theme.md) | product | Calm fixed palette, no dynamic colour, no urgency colours, identical Buy/Reject buttons |
