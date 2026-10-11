@@ -18,5 +18,9 @@ gradlePlugin {
             id = "beforeyoubuy.string-parity"
             implementationClass = "io.github.locngu.beforeyoubuy.buildlogic.StringParityPlugin"
         }
+        register("release") {
+            id = "beforeyoubuy.release"
+            implementationClass = "io.github.locngu.beforeyoubuy.buildlogic.ReleasePlugin"
+        }
     }
 }

@@ -85,6 +85,10 @@ Implemented as Gradle plugins in the `build-logic` included build (ADR-0025, `.c
 
 `applicationId` and `namespace` are `io.github.locngu.beforeyoubuy`, defined in one place: `app.id` in `gradle.properties` (`:core:data` appends `.core.data`). Kotlin packages use the same name. It may still change to an owned domain until the first Play upload; after that it is permanent. Android treats a changed ID as a different app, so a change needs export/import (#27) first (ADR-0026).
 
+## Releases (ADR-0029)
+
+Version tags `vX.Y.Z` on `main` publish a signed APK on GitHub Releases (`.github/workflows/release.yml`). The tag is the only source of `versionName`/`versionCode`; release signing comes from environment variables and is never committed. Owner steps (key, secrets, tagging, installing): `docs/releasing.md`. Play (AAB, tracks) is #35.
+
 ## Not set up yet
 
 - **Backup:** `allowBackup="false"` and backup rules that exclude everything, until export/import decides what Android backup includes (ADR-0002, product brief §backup).

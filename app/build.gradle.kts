@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
     id("beforeyoubuy.no-internet-permission")
+    // versionName/versionCode from the release tag, release signing from environment variables (ADR-0029).
+    id("beforeyoubuy.release")
 }
 
 val appId = providers.gradleProperty("app.id").get()
@@ -28,13 +30,11 @@ android {
             libs.versions.targetSdk
                 .get()
                 .toInt()
-        versionCode = 1
-        versionName = "0.1.0"
     }
 
     buildTypes {
         release {
-            // No signing config is committed; release signing is issue #35.
+            // Signed only when the release key's environment variables are set (beforeyoubuy.release, docs/releasing.md).
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

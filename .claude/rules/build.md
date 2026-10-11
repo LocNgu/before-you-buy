@@ -31,6 +31,8 @@ paths:
 ## Identity
 
 - `applicationId` and the namespace root are the `app.id` property in `gradle.properties`, the only place they're written. Module namespaces append to it (`.core.data`). Kotlin packages use the same root (`io.github.locngu.beforeyoubuy…`). Changing the ID makes a different app for Android: follow ADR-0026, never change it casually.
+- `versionName`/`versionCode` are never written in a build file. `beforeyoubuy.release` derives them from `-Papp.versionTag=vX.Y.Z` (`versionCode = X*10000 + Y*100 + Z`, Y and Z ≤ 99); without it they're `0.0.0-dev`/`1` (ADR-0029).
+- Release signing is never committed. The `release` build type is signed only when `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS` and `RELEASE_KEY_PASSWORD` are all set; none set means unsigned, some set fails the build, and signing with the configuration cache on fails (it would store the passwords). Never print these values.
 
 ## Verify task
 
@@ -43,7 +45,8 @@ paths:
 - `build-logic/` is an included build (`pluginManagement { includeBuild(...) }`) with the project's own check plugins. It is not a module: no `lint`, but Spotless covers it and its `:test` runs in `verify`.
 - `beforeyoubuy.no-internet-permission` (applied in `:app`) registers `checkNoInternetPermission`: it reads the **merged manifest of every release variant** (`SingleArtifact.MERGED_MANIFEST`) and fails on `uses-permission`/`uses-permission-sdk-23`/`uses-permission-sdk-m` for `android.permission.INTERNET`.
 - `beforeyoubuy.string-parity` (applied at the root) registers `checkStringParity`: for each `src/*/res/` of every module it compares the `string`, `plurals` and `string-array` names in `values/*.xml` with `values-de/*.xml`. `translatable="false"` strings need no German entry and must not have one.
-- Logic sits in plain functions (`ManifestPermissions`, `StringResources`) with JUnit tests; the tasks only collect files and format messages. Task classes use lazy properties only (configuration cache). `build-logic` uses only AGP's `gradle-api`, `compileOnly`.
+- `beforeyoubuy.release` (applied in `:app`) sets the version and release signing (above) and registers `releaseNotes`, which writes the version's `CHANGELOG.md` section to `app/build/release/notes.md` (`docs/releasing.md`).
+- Logic sits in plain functions (`ManifestPermissions`, `StringResources`, `AppVersion`, `ReleaseSigning`, `Changelog`) with JUnit tests; the tasks only collect files and format messages. Task classes use lazy properties only (configuration cache). `build-logic` uses only AGP's `gradle-api`, `compileOnly`.
 - A new hard constraint: add it here as a plugin + tested logic, then add its task to `verify`.
 
 ## Tests
