@@ -7,10 +7,11 @@ on:
   push:
     branches: [main]
 
-# A newer push to the same PR or branch cancels the run it supersedes.
+# A newer push to the same PR cancels the run it supersedes. Runs on main are never cancelled:
+# the docs-only filter only looks at the latest push, so a cancelled run's code would go unchecked.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -31,16 +32,16 @@ jobs:
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
         run: |
-          # Docs-only (docs/**, *.md) skips the Android job; anything else, workflows included, runs it.
+          # Docs-only (docs/**, top-level *.md) skips the Android job; anything else, workflows included, runs it.
           # Without a usable base (new branch, force push) it runs.
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "No base commit to compare with; running the Android job."
             echo "android=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          changed="$(git diff --name-only "$BASE" "$GITHUB_SHA")"
+          changed="$(git diff --name-only --no-renames "$BASE" "$GITHUB_SHA")"
           printf 'Changed files:\n%s\n' "$changed"
-          if grep -qvE '^docs/|\.md$' <<<"$changed"; then
+          if grep -qvE '^docs/|^[^/]+\.md$' <<<"$changed"; then
             echo "android=true" >> "$GITHUB_OUTPUT"
           else
             echo "Docs-only change; skipping the Android job."

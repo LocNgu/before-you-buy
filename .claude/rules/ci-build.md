@@ -10,11 +10,11 @@ paths:
 
 # GitHub Actions CI
 
-`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. A newer push to the same PR or branch cancels the older run (concurrency group).
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. A newer push to the same PR cancels the older run (concurrency group); runs on `main` are never cancelled, because the docs-only filter only sees the latest push.
 
 ## Jobs
 
-- **Detect changes** (`changes`): diffs the PR's base (or the push's previous commit) against the tested commit. If every changed file is under `docs/` or ends in `.md`, it outputs `android=false`; anything else, workflows included, gives `android=true`. Without a usable base (new branch, force push) it runs the Android job.
+- **Detect changes** (`changes`): diffs the PR's base (or the push's previous commit) against the tested commit. If every changed file is under `docs/` or is a top-level `*.md` (renames count as delete + add), it outputs `android=false`; anything else, workflows included, gives `android=true`. Without a usable base (new branch, force push) it runs the Android job.
 - **Verify and build release** (`android`, skipped for docs-only changes; a skipped job counts as passed): JDK 21 (Temurin), `android-actions/setup-android` (cmdline-tools and licences; AGP downloads the platform and build-tools itself), `gradle/actions/setup-gradle` (cache, wrapper validation; only `main` writes the cache), then `./gradlew verify` and `./gradlew assembleRelease` (unsigned, so R8 runs). On failure it uploads the artifact `reports-<attempt>`: `**/build/reports/`, `**/build/test-results/`, `app/build/outputs/roborazzi/` (screenshot diffs) and `app/build/outputs/logs/` (manifest merger report).
 - CI runs `verify`, never its own list of tasks. A new check goes into `verify` (root `build.gradle.kts`) and CI picks it up.
 - Actions are well-known ones pinned to a major version (`@v7`). Bump majors deliberately, one PR, after reading the release notes.

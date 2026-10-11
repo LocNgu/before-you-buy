@@ -20,8 +20,5 @@ internal object ManifestPermissions {
         .map { RequestedPermission(it.tagName, it.getAttributeNS(ANDROID_NAMESPACE, "name")) }
 
     /** The elements in [manifest] that request `INTERNET` (ADR-0003). */
-    fun internet(manifest: File): List<RequestedPermission> = requested(manifest).filter {
-        it.name ==
-            INTERNET_PERMISSION
-    }
+    fun internet(manifest: File) = requested(manifest).filter { it.name == INTERNET_PERMISSION }
 }

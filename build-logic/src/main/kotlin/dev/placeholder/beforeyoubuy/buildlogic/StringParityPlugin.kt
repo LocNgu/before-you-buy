@@ -13,7 +13,7 @@ class StringParityPlugin : Plugin<Project> {
             valuesFiles.from(
                 project.fileTree(project.rootDir) {
                     include("**/src/*/res/values/*.xml", "**/src/*/res/values-de/*.xml")
-                    exclude("**/build/**", "**/.gradle/**", ".git/**", "build-logic/**")
+                    exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", ".git/**", ".claude/**", "build-logic/**")
                 }
             )
             rootDirectory.set(project.layout.projectDirectory)
