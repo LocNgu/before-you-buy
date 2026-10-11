@@ -33,6 +33,6 @@ paths:
 
 ## Tests
 
-- Component screenshots: `ComponentScreenshotTest`, parameterized over en/de × light/dark, named `…ComponentScreenshotTest.<test>[<lang>-<theme>].png`. Add a test method per new component. Capture via the compose rule (`onRoot().captureRoboImage()`), which waits for drawing; Roborazzi's standalone `captureRoboImage { content }` sometimes captured a blank image. Qualifiers go in a rule ordered before the compose rule.
+- Component screenshots: abstract `ComponentScreenshotTest` with one subclass per variant (en/de × light/dark), each with fixed `@Config(qualifiers = …)`; images are `…ComponentScreenshot<Lang><Theme>Test.<test>.png`. Add a test method per new component to the base class. Set qualifiers with `@Config`, not `RuntimeEnvironment.setQualifiers` between tests.
 - Text and behaviour per language: Robolectric with `@Config(qualifiers = "de")` on the test method.
 - Robolectric doesn't read `android:localeConfig`; `LocaleConfigTest` checks the resource instead. Switching the per-app language in system settings can only be checked on a device (Android 13+).
