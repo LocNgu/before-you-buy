@@ -1,5 +1,5 @@
 ---
-description: Cloud build environment, Android SDK install and the SessionStart hook
+description: GitHub Actions CI, the cloud build environment, Android SDK install and the SessionStart hook
 paths:
   - "scripts/**/*"
   - ".claude/settings.json"
@@ -7,6 +7,24 @@ paths:
   - "gradle/**/*"
   - ".github/**/*"
 ---
+
+# GitHub Actions CI
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`. A newer push to the same PR cancels the older run (concurrency group); runs on `main` are never cancelled, because the docs-only filter only sees the latest push.
+
+## Jobs
+
+- **Detect changes** (`changes`): diffs the PR's base (or the push's previous commit) against the tested commit. If every changed file is under `docs/` or is a top-level `*.md` (renames count as delete + add), it outputs `android=false`; anything else, workflows included, gives `android=true`. Without a usable base (new branch, force push) it runs the Android job.
+- **Verify and build release** (`android`, skipped for docs-only changes; a skipped job counts as passed): JDK 21 (Temurin), `android-actions/setup-android` (cmdline-tools and licences; AGP downloads the platform and build-tools itself), `gradle/actions/setup-gradle` (cache, wrapper validation; only `main` writes the cache), then `./gradlew verify` and `./gradlew assembleRelease` (unsigned, so R8 runs). On failure it uploads the artifact `reports-<attempt>`: `**/build/reports/`, `**/build/test-results/`, `app/build/outputs/roborazzi/` (screenshot diffs) and `app/build/outputs/logs/` (manifest merger report).
+- CI runs `verify`, never its own list of tasks. A new check goes into `verify` (root `build.gradle.kts`) and CI picks it up.
+- Actions are well-known ones pinned to a major version (`@v7`). Bump majors deliberately, one PR, after reading the release notes.
+
+## Diagnosing a failed run
+
+1. **Annotations first.** The hard-constraint checks (`checkNoInternetPermission`, `checkStringParity`) print a GitHub error annotation with the full message. Read the check runs of the PR's head commit (`pull_request_read` → `get_check_runs`, then `get_check_run` for the failed one). setup-gradle's job summary names the failed Gradle task.
+2. **Then the log, saved, never inline.** `get_job_logs` with `run_id` + `failed_only` and a modest `tail_lines` (about 200). If the result is saved to a file, `grep -nE 'FAILURE:|What went wrong|FAILED|e: |error:' <file>` and read only the lines around the hits. Never pull the full log into the conversation.
+3. Reproduce locally with the failed task alone (`./gradlew :app:checkNoInternetPermission`, `--tests "…"`), fix, then run `verify` before pushing.
+4. Screenshot diffs: the `*_compare.png` files in the uploaded artifact. Don't re-record goldens to make CI green without looking at why they differ.
 
 # Cloud build environment (ADR-0021)
 

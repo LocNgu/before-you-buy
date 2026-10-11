@@ -6,7 +6,7 @@
 
 ## Context
 
-Development used the placeholder `dev.placeholder.beforeyoubuy` (#33). The owner wants to install the app from GitHub Releases and use it daily (#53), long before the first Play upload. Android identifies an app by its `applicationId`: a build with a different ID installs as a separate app with its own (empty) data. On Google Play the ID can never change after the first upload.
+Development used the placeholder `io.github.locngu.beforeyoubuy` (#33). The owner wants to install the app from GitHub Releases and use it daily (#53), long before the first Play upload. Android identifies an app by its `applicationId`: a build with a different ID installs as a separate app with its own (empty) data. On Google Play the ID can never change after the first upload.
 
 The owner plans several small apps, so the ID should follow a scheme that works for all of them. Options considered (#33):
 
