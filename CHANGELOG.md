@@ -4,6 +4,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-12
+
 ### Added
 
 - Project planning: product brief, research notes, architecture plan, decision records, licence.
@@ -12,3 +14,6 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 - Amounts and dates follow the app language (e.g. "1.234,56 €" in German, "€1,234.56" in English). Typing an amount accepts either "1.234,56" or "1,234.56".
 - The app language can be chosen per app in Android settings (Android 13 and newer).
 - Signed APKs on GitHub Releases for each version, which install on the phone and update in place with data kept (`docs/releasing.md`).
+
+[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/LocNgu/before-you-buy/releases/tag/v0.1.0
