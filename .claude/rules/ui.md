@@ -9,7 +9,7 @@ paths:
   - "core/domain/src/**/money/**/*"
 ---
 
-# UI basics (ADR-0025, ADR-0026)
+# UI basics (ADR-0027, ADR-0028)
 
 ## Theme (`ui/theme/`)
 

@@ -275,6 +275,5 @@ All decisions are recorded as ADRs in [`docs/decisions/`](decisions/README.md) (
 ## 12. Open decisions
 
 - **Final app name and logo** — #31 (descriptive names are hard to register as EU word marks — see `research.md`)
-- **applicationId** — #33 — placeholder during development; must be final before the first Play upload (it can never change)
 - **Google Play account type** — #34 — personal (12 testers × 14 days closed test) vs organization (D-U-N-S, exempt)
 - **Monetization model** — #41 — and with it EU DSA trader status (public address) and German business registration

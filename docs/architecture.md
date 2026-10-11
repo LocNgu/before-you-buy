@@ -8,7 +8,7 @@ Status: scaffolded (#8): modules, build, DI, navigation and tests exist; feature
 ./gradlew verify
 ```
 
-`verify` is an aggregate Gradle task defined in the root `build.gradle.kts`. It runs exactly what CI runs: formatting check (`spotlessCheck`), Android Lint for every module (warnings are errors), unit tests (incl. Robolectric) and Roborazzi screenshot verification. Issue #9 adds the no-`INTERNET` manifest check and the string-parity check. **This is the only place the command is written down** — CI, `CLAUDE.md` and the PR template refer to it. While iterating, run narrower tasks (`:core:domain:test`, `--tests "…"`) with `-q`; they never replace `verify` before a push.
+`verify` is an aggregate Gradle task defined in the root `build.gradle.kts`. It runs exactly what CI runs: formatting check (`spotlessCheck`), Android Lint for every module (warnings are errors), unit tests (incl. Robolectric), Roborazzi screenshot verification, the hard-constraint checks below (`:app:checkNoInternetPermission`, `checkStringParity`) and the tests of `build-logic`. CI (`.github/workflows/ci.yml`) runs it plus `assembleRelease`. **This is the only place the command is written down** — CI, `CLAUDE.md` and the PR template refer to it. While iterating, run narrower tasks (`:core:domain:test`, `--tests "…"`) with `-q`; they never replace `verify` before a push.
 
 ## Stack (ADR-0017)
 
@@ -48,9 +48,11 @@ ui/theme/  ui/components/  ui/format/  feature/{home,capture,wishlist,reflection
 navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. the Clock)
 ```
 
-`ui/theme/` is the fixed calm theme (ADR-0026), `ui/components/` the shared components, and `ui/format/` the locale-aware text helpers (current locale, dates, day plurals). Money formatting and parsing live in `:core:domain` `money/` (ADR-0025). Conventions: `.claude/rules/ui.md`.
+`ui/theme/` is the fixed calm theme (ADR-0028), `ui/components/` the shared components, and `ui/format/` the locale-aware text helpers (current locale, dates, day plurals). Money formatting and parsing live in `:core:domain` `money/` (ADR-0027). Conventions: `.claude/rules/ui.md`.
 
 Room schema JSON goes to `core/data/schemas/` (ADR-0019).
+
+`build-logic/` is not a module but an included build with the project's own Gradle check plugins (ADR-0025).
 
 ## Pitfalls (common Android traps — apply from day one)
 
@@ -66,8 +68,10 @@ Room schema JSON goes to `core/data/schemas/` (ADR-0019).
 
 ## Hard constraints (checked by `verify` and CI)
 
-- The merged release manifest must **not** contain `android.permission.INTERNET` (ADR-0003).
-- `values/strings.xml` and `values-de/strings.xml` have the same keys (ADR-0016).
+Implemented as Gradle plugins in the `build-logic` included build (ADR-0025, `.claude/rules/build.md`).
+
+- The merged release manifest must **not** contain `android.permission.INTERNET` (ADR-0003): `:app:checkNoInternetPermission`.
+- `values/` and `values-de/` have the same string, plural and string-array names in every module (ADR-0016): `checkStringParity`.
 - No user-facing strings hard-coded in Kotlin.
 
 ## Cloud build environment (ADR-0021)
@@ -77,9 +81,9 @@ Room schema JSON goes to `core/data/schemas/` (ADR-0019).
 - Network allowlist: `dl.google.com`, `downloads.gradle.org`, `release-assets.githubusercontent.com` (plus the default package managers).
 - Details, gotchas and diagnosis: `.claude/rules/ci-build.md`.
 
-## Placeholder applicationId
+## applicationId (ADR-0026)
 
-Until the final ID is chosen (#33), `applicationId` and `namespace` are `dev.placeholder.beforeyoubuy`, defined in one place: `app.id` in `gradle.properties` (`:core:data` appends `.core.data`). Kotlin packages use the same name; #33 decides whether they move too.
+`applicationId` and `namespace` are `io.github.locngu.beforeyoubuy`, defined in one place: `app.id` in `gradle.properties` (`:core:data` appends `.core.data`). Kotlin packages use the same name. It may still change to an owned domain until the first Play upload; after that it is permanent. Android treats a changed ID as a different app, so a change needs export/import (#27) first (ADR-0026).
 
 ## Not set up yet
 
