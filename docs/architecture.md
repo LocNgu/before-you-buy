@@ -79,9 +79,9 @@ Implemented as Gradle plugins in the `build-logic` included build (ADR-0025, `.c
 - Network allowlist: `dl.google.com`, `downloads.gradle.org`, `release-assets.githubusercontent.com` (plus the default package managers).
 - Details, gotchas and diagnosis: `.claude/rules/ci-build.md`.
 
-## Placeholder applicationId
+## applicationId (ADR-0026)
 
-Until the final ID is chosen (#33), `applicationId` and `namespace` are `dev.placeholder.beforeyoubuy`, defined in one place: `app.id` in `gradle.properties` (`:core:data` appends `.core.data`). Kotlin packages use the same name; #33 decides whether they move too.
+`applicationId` and `namespace` are `io.github.locngu.beforeyoubuy`, defined in one place: `app.id` in `gradle.properties` (`:core:data` appends `.core.data`). Kotlin packages use the same name. It may still change to an owned domain until the first Play upload; after that it is permanent. Android treats a changed ID as a different app, so a change needs export/import (#27) first (ADR-0026).
 
 ## Not set up yet
 

@@ -12,11 +12,11 @@ gradlePlugin {
     plugins {
         register("noInternetPermission") {
             id = "beforeyoubuy.no-internet-permission"
-            implementationClass = "dev.placeholder.beforeyoubuy.buildlogic.NoInternetPermissionPlugin"
+            implementationClass = "io.github.locngu.beforeyoubuy.buildlogic.NoInternetPermissionPlugin"
         }
         register("stringParity") {
             id = "beforeyoubuy.string-parity"
-            implementationClass = "dev.placeholder.beforeyoubuy.buildlogic.StringParityPlugin"
+            implementationClass = "io.github.locngu.beforeyoubuy.buildlogic.StringParityPlugin"
         }
     }
 }

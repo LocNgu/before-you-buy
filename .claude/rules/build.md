@@ -30,7 +30,7 @@ paths:
 
 ## Identity
 
-- `applicationId` and the namespace root are the `app.id` property in `gradle.properties`, the only place they're written. Module namespaces append to it (`.core.data`). Kotlin packages are `dev.placeholder.beforeyoubuy…` until issue #33.
+- `applicationId` and the namespace root are the `app.id` property in `gradle.properties`, the only place they're written. Module namespaces append to it (`.core.data`). Kotlin packages use the same root (`io.github.locngu.beforeyoubuy…`). Changing the ID makes a different app for Android: follow ADR-0026, never change it casually.
 
 ## Verify task
 

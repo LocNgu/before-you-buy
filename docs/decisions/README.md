@@ -39,3 +39,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0023](0023-licence-rule-shipped-dependencies.md) | technical | Licence rule (Apache/MIT/BSD) covers shipped dependencies; test and build tools exempt |
 | [0024](0024-branch-naming.md) | technical | Branches: session's assigned `claude/*` branch, else `claude/<N>-<kebab-title>` |
 | [0025](0025-build-checks-in-build-logic.md) | technical | Project-specific build checks are tested Gradle plugins in the `build-logic` included build |
+| [0026](0026-application-id.md) | technical | applicationId `io.github.locngu.beforeyoubuy` (scheme `io.github.locngu.<codename>`); changeable until the first Play upload |
