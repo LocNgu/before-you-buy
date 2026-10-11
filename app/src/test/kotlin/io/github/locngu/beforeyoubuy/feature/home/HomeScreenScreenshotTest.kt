@@ -1,10 +1,10 @@
 package io.github.locngu.beforeyoubuy.feature.home
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onRoot
+import androidx.activity.ComponentActivity
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.github.takahirom.roborazzi.captureRoboImage
+import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,11 +17,11 @@ import org.robolectric.annotation.GraphicsMode
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
 class HomeScreenScreenshotTest {
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
     fun homeScreen() {
-        composeRule.setContent { MaterialTheme { HomeScreen() } }
-        composeRule.onRoot().captureRoboImage()
+        composeRule.setContent { BeforeYouBuyTheme { HomeScreen() } }
+        composeRule.captureContent()
     }
 }

@@ -44,9 +44,11 @@ Dependencies: Apache-2.0/MIT/BSD only in what ships (test and build tools exempt
 ## Package layout in `:app`
 
 ```
-ui/theme/  feature/{home,capture,wishlist,reflection,decision,history,money,priorities,settings}/  notifications/
+ui/theme/  ui/components/  ui/format/  feature/{home,capture,wishlist,reflection,decision,history,money,priorities,settings}/  notifications/
 navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. the Clock)
 ```
+
+`ui/theme/` is the fixed calm theme (ADR-0028), `ui/components/` the shared components, and `ui/format/` the locale-aware text helpers (current locale, dates, day plurals). Money formatting and parsing live in `:core:domain` `money/` (ADR-0027). Conventions: `.claude/rules/ui.md`.
 
 Room schema JSON goes to `core/data/schemas/` (ADR-0019).
 
@@ -86,4 +88,4 @@ Implemented as Gradle plugins in the `build-logic` included build (ADR-0025, `.c
 ## Not set up yet
 
 - **Backup:** `allowBackup="false"` and backup rules that exclude everything, until export/import decides what Android backup includes (ADR-0002, product brief §backup).
-- **Theme:** plain `MaterialTheme` and a platform window theme until #10.
+- **In-app language picker:** the per-app language works through Android 13+ system settings (`res/xml/locales_config.xml`). A picker in Settings (and per-app language on Android 8–12 via AppCompat) comes with the Settings screen.

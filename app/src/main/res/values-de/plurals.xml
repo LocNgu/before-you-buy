@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gleiche Schlüssel wie values/plurals.xml (ADR-0016). Zahlen sind Kalendertage (ADR-0018). -->
+<resources>
+    <plurals name="countdown_days_left">
+        <item quantity="one">Noch %d Tag</item>
+        <item quantity="other">Noch %d Tage</item>
+    </plurals>
+
+    <!-- Eine Zeitspanne, z. B. wie lange ein Artikel schon gewünscht ist. -->
+    <plurals name="duration_days">
+        <item quantity="one">%d Tag</item>
+        <item quantity="other">%d Tage</item>
+    </plurals>
+
+    <!-- Ab 2 Tagen; 0 und 1 sind relative_today und relative_yesterday. -->
+    <plurals name="relative_days_ago">
+        <item quantity="one">vor %d Tag</item>
+        <item quantity="other">vor %d Tagen</item>
+    </plurals>
+</resources>
