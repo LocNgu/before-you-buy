@@ -32,7 +32,7 @@ paths:
 
 - `applicationId` and the namespace root are the `app.id` property in `gradle.properties`, the only place they're written. Module namespaces append to it (`.core.data`). Kotlin packages use the same root (`io.github.locngu.beforeyoubuy…`). Changing the ID makes a different app for Android: follow ADR-0026, never change it casually.
 - `versionName`/`versionCode` are never written in a build file. `beforeyoubuy.release` derives them from `-Papp.versionTag=vX.Y.Z` (`versionCode = X*10000 + Y*100 + Z`, Y and Z ≤ 99); without it they're `0.0.0-dev`/`1` (ADR-0027).
-- Release signing is never committed. The `release` build type is signed only when `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS` and `RELEASE_KEY_PASSWORD` are all set; none set means unsigned, some set fails the build. Never print these values.
+- Release signing is never committed. The `release` build type is signed only when `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS` and `RELEASE_KEY_PASSWORD` are all set; none set means unsigned, some set fails the build, and signing with the configuration cache on fails (it would store the passwords). Never print these values.
 
 ## Verify task
 

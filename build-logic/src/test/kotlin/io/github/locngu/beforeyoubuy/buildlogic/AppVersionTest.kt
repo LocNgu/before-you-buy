@@ -48,6 +48,7 @@ class AppVersionTest {
             "v1.02.3",
             "V1.2.3",
             "v0.0.0",
+            "v0.0.1",
             "vfoo"
         ).forEach { tag ->
             assertThrows(tag, IllegalArgumentException::class.java) { AppVersion.fromTag(tag) }

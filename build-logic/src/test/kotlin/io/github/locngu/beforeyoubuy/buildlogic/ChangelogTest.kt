@@ -44,6 +44,16 @@ class ChangelogTest {
     }
 
     @Test
+    fun `link definitions inside a section are kept`() {
+        val text = "## [1.0.0]\n\n- Fixed [a crash][1].\n\n[1]: https://example.com/1\n\n## [0.9.0]\n\n- Old.\n"
+
+        assertEquals(
+            "- Fixed [a crash][1].\n\n[1]: https://example.com/1",
+            Changelog.section(text, "1.0.0")
+        )
+    }
+
+    @Test
     fun `a heading without a date is found`() {
         assertEquals("- Fixed.", Changelog.section("## [1.0.0]\n\n- Fixed.\n", "1.0.0"))
     }

@@ -22,21 +22,24 @@ paths:
 
 # Release workflow (ADR-0027)
 
-`.github/workflows/release.yml` runs on a pushed tag `v*`, never on branches. Owner steps (key, secrets, tagging, installing): `docs/releasing.md`. Its steps, in order:
+`.github/workflows/release.yml` runs on a pushed tag `v*`, never on branches. Owner steps (key, environment, tagging, installing): `docs/releasing.md`. All `run:` steps use `bash` (`-eo pipefail`).
 
-1. **Tag is on main**: `git merge-base --is-ancestor` against `origin/main` (checkout with `fetch-depth: 0`).
-2. **Signing secrets are set**: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`. Any missing fails the run before building.
-3. Same setup as `ci.yml`, but setup-gradle is `cache-read-only`.
+**Job `build`** (`environment: release`, `contents: read`, checkout with `fetch-depth: 0` and `persist-credentials: false`):
+
+1. **Tag is on main**: `git merge-base --is-ancestor` against `origin/main`.
+2. **Signing secrets are set**: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`, environment secrets of `release` (which admits only `v*` tags). Any missing fails the run before building.
+3. Same setup as `ci.yml` (bump both together), but setup-gradle is `cache-read-only`.
 4. `:app:releaseNotes -Papp.versionTag=<tag>`: validates the tag and writes the `CHANGELOG.md` section to `app/build/release/notes.md` (fails if missing or empty), before the long build.
 5. `verify`, without any signing variables.
-6. **Assemble signed release**: decodes the keystore to `$RUNNER_TEMP` (deleted on exit), sets `RELEASE_KEYSTORE_PATH`, runs `:app:assembleRelease -Papp.versionTag=<tag> --no-configuration-cache` (so the passwords never land in the configuration cache).
-7. **Check signature and version**: requires `app-release.apk` (an unsigned build is `app-release-unsigned.apk`), `apksigner verify`, rejects `CN=Android Debug`, checks `versionName` with `aapt2 dump badging`, prints the public certificate digest, and writes `before-you-buy-<version>.apk` + `.sha256` to `dist/`.
-8. `gh release create <tag> dist/* --notes-file app/build/release/notes.md --verify-tag`.
+6. **Assemble signed release**: decodes the keystore to `$RUNNER_TEMP` (deleted on exit), sets `RELEASE_KEYSTORE_PATH`, runs `:app:assembleRelease -Papp.versionTag=<tag> --no-configuration-cache` (the plugin refuses to sign with the configuration cache on).
+7. **Check signature and version**: requires `app-release.apk` (an unsigned build is `app-release-unsigned.apk`), `apksigner verify` from the newest stable build-tools, rejects `CN=Android Debug`, checks `versionCode`/`versionName` with `aapt2 dump badging` against its own computation from the tag, prints the public certificate digest, and puts `before-you-buy-<version>.apk` + `.sha256` and `notes.md` into the artifact `release`.
+
+**Job `publish`** (`contents: write`, no checkout, no build code): downloads `release` and runs `gh release create <tag> out/apk/* --notes-file out/notes.md --verify-tag`.
 
 Rules:
 
 - Secrets go only into the steps that need them (`env:` per step), never into the job or workflow `env`. Never `echo` them, never `set -x` in those steps.
-- `contents: write` exists only in this workflow.
+- `contents: write` exists only in the `publish` job. Never give it to a job that runs Gradle or third-party build actions.
 - A re-run after the release exists fails at `gh release create`: delete the release (not the tag) first, or cut a new patch version.
 
 ## Diagnosing a failed run

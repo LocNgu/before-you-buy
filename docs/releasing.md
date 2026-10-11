@@ -50,7 +50,11 @@ base64 -i before-you-buy-release.jks -o keystore.b64        # macOS
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("before-you-buy-release.jks")) | Set-Content keystore.b64  # Windows
 ```
 
-On GitHub: the repository → **Settings → Secrets and variables → Actions → New repository secret**. Add four secrets:
+The secrets go into a GitHub **environment** that only version tags can use. Plain repository secrets would be readable by any workflow on any branch, including pull request runs.
+
+1. The repository → **Settings → Environments → New environment**, name it `release`.
+2. Under **Deployment branches and tags**, choose **Selected branches and tags** → **Add deployment branch or tag rule** → type **Tag**, pattern `v*`.
+3. Under **Environment secrets**, add four secrets:
 
 | Secret | Value |
 |---|---|
@@ -59,7 +63,11 @@ On GitHub: the repository → **Settings → Secrets and variables → Actions �
 | `RELEASE_KEY_ALIAS` | `release` |
 | `RELEASE_KEY_PASSWORD` | the same password (PKCS12) |
 
-Then delete `keystore.b64`. GitHub masks secret values in logs. The workflow only puts them into the one build step that signs, and deletes the decoded keystore after it. Pull request CI (`ci.yml`) never gets them and builds unsigned.
+Then delete `keystore.b64`. Don't add these as repository secrets as well.
+
+GitHub masks secret values in logs. The release workflow only puts them into the one build step that signs, and deletes the decoded keystore after it. That build job can't write to the repository; a separate job without any build code publishes the release. Pull request CI (`ci.yml`) never gets the secrets and builds unsigned.
+
+Optional: protect version tags with a ruleset (**Settings → Rules → Rulesets → New tag ruleset**, target `v*`, restrict creation, update and deletion to yourself), so a tag can't be moved or deleted by mistake.
 
 ## 4. Cut a release
 
@@ -77,7 +85,7 @@ Versions are `vMAJOR.MINOR.PATCH`, with MINOR and PATCH from 0 to 99 and no suff
    Use `git`, not GitHub's "Draft a new release" button: the workflow creates the release itself and fails if one already exists.
 3. **Watch the run** under **Actions → Release**. It fails, without publishing anything, if:
    - the tag isn't on `main`, or isn't `vX.Y.Z`;
-   - a signing secret is missing;
+   - a signing secret is missing from the `release` environment;
    - `CHANGELOG.md` has no section for the version;
    - `verify` fails;
    - the APK isn't signed with the release key (unsigned or debug-signed) or has the wrong version.
@@ -110,13 +118,17 @@ When the app goes to Play, enable Play App Signing with **this key** (choose to 
 
 ## Signing a local build (optional)
 
-Normally only the release workflow signs. To sign locally, set the four variables and build with the tag:
+Normally only the release workflow signs. To sign locally, set the four variables for that one command (don't `export` them, or every later build in the shell would sign) and build with the tag:
 
 ```bash
-export RELEASE_KEYSTORE_PATH=/path/to/before-you-buy-release.jks   # absolute, or relative to the repository root
-export RELEASE_KEY_ALIAS=release
-read -rs RELEASE_KEYSTORE_PASSWORD && export RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_PASSWORD="$RELEASE_KEYSTORE_PASSWORD"
-./gradlew :app:assembleRelease -Papp.versionTag=v0.1.0 --no-configuration-cache
+read -rs PASSWORD   # type the keystore password; it isn't shown or saved in the shell history
+RELEASE_KEYSTORE_PATH=/path/to/before-you-buy-release.jks RELEASE_KEY_ALIAS=release \
+  RELEASE_KEYSTORE_PASSWORD="$PASSWORD" RELEASE_KEY_PASSWORD="$PASSWORD" \
+  ./gradlew :app:assembleRelease -Papp.versionTag=v0.1.0 --no-configuration-cache
+unset PASSWORD
 ```
 
-Set all four or none: with only some, the build fails. Without them, `assembleRelease` builds `app-release-unsigned.apk`, which can't be installed.
+- `RELEASE_KEYSTORE_PATH` is absolute or relative to the repository root.
+- Set all four or none: with only some, the build fails.
+- Signing refuses to run with the configuration cache (it would store the passwords on disk), so `--no-configuration-cache` is required.
+- Without the variables, `assembleRelease` builds `app-release-unsigned.apk`, which can't be installed.

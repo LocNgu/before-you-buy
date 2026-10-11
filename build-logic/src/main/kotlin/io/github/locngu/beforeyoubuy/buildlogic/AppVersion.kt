@@ -25,8 +25,9 @@ internal data class AppVersion(val name: String, val code: Int) {
                 }
             val (major, minor, patch) = match.destructured.toList().map(String::toLong)
             val code = major * 10_000 + minor * 100 + patch
-            require(code in DEV.code..MAX_VERSION_CODE) {
-                "Release tag '$tag' gives versionCode $code, outside ${DEV.code}..$MAX_VERSION_CODE."
+            // Above DEV's code, so every release ranks above every dev build.
+            require(code in DEV.code + 1..MAX_VERSION_CODE) {
+                "Release tag '$tag' gives versionCode $code, outside ${DEV.code + 1}..$MAX_VERSION_CODE."
             }
             return AppVersion("$major.$minor.$patch", code.toInt())
         }

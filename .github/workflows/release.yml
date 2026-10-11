@@ -11,19 +11,26 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-# Creating the release needs write access. This is the only workflow that has it.
 permissions:
-  contents: write
+  contents: read
+
+# bash -eo pipefail: a failing command in a pipeline fails the step.
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  release:
-    name: Build and publish signed APK
+  build:
+    name: Build signed APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # The signing secrets live in this environment, which only admits v* tags (docs/releasing.md).
+    environment: release
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # main's history, for the tag-on-main check
+          persist-credentials: false
 
       - name: Tag is on main
         run: |
@@ -45,10 +52,11 @@ jobs:
             [ -n "${!name}" ] || missing+=("$name")
           done
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "::error title=Signing secrets missing::Missing repository secrets: ${missing[*]}. Nothing is published without the release key; see docs/releasing.md."
+            echo "::error title=Signing secrets missing::Missing secrets in the release environment: ${missing[*]}. Nothing is published without the release key; see docs/releasing.md."
             exit 1
           fi
 
+      # Same setup as ci.yml; bump both together.
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -70,8 +78,8 @@ jobs:
       - name: Verify
         run: ./gradlew verify
 
-      # The key only exists in this step, in the runner's temp directory. No configuration cache, so the passwords
-      # aren't stored in it.
+      # The key only exists in this step, in the runner's temp directory. Signing refuses the configuration cache,
+      # so the passwords are never stored in it.
       - name: Assemble signed release
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -88,13 +96,17 @@ jobs:
       - name: Check signature and version
         run: |
           version="${GITHUB_REF_NAME#v}"
+          # Recomputed here on purpose, as an independent check of the build (ADR-0027).
+          IFS=. read -r major minor patch <<<"$version"
+          code=$((10#$major * 10000 + 10#$minor * 100 + 10#$patch))
           # AGP names an unsigned release APK app-release-unsigned.apk.
           apk=app/build/outputs/apk/release/app-release.apk
           if [ ! -f "$apk" ]; then
             echo "::error title=No signed APK::$apk is missing; the release build wasn't signed."
             exit 1
           fi
-          build_tools="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          # Newest stable build-tools (no -rc/preview directories).
+          build_tools="$(ls -d "$ANDROID_HOME"/build-tools/* | grep -E '/[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1)"
           if ! certs="$("$build_tools/apksigner" verify --print-certs "$apk")"; then
             echo "::error title=Bad signature::apksigner rejected $apk."
             exit 1
@@ -109,23 +121,22 @@ jobs:
           badging="$("$build_tools/aapt2" dump badging "$apk")"
           package="$(grep -m 1 "^package:" <<<"$badging" || true)"
           echo "$package"
-          if ! grep -q "versionName='$version'" <<<"$package"; then
-            echo "::error title=Wrong version::The APK's versionName doesn't match the tag $GITHUB_REF_NAME."
+          if ! grep -qF "versionCode='$code' versionName='$version'" <<<"$package"; then
+            echo "::error title=Wrong version::Expected versionCode $code and versionName $version for $GITHUB_REF_NAME."
             exit 1
           fi
-          mkdir dist
-          cp "$apk" "dist/before-you-buy-$version.apk"
-          (cd dist && sha256sum "before-you-buy-$version.apk" > "before-you-buy-$version.apk.sha256")
-          cat dist/*.sha256
+          mkdir -p out/apk
+          cp "$apk" "out/apk/before-you-buy-$version.apk"
+          (cd out/apk && sha256sum "before-you-buy-$version.apk" > "before-you-buy-$version.apk.sha256")
+          cat out/apk/*.sha256
+          cp app/build/release/notes.md out/notes.md
 
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create "$GITHUB_REF_NAME" dist/*
-          --title "$GITHUB_REF_NAME"
-          --notes-file app/build/release/notes.md
-          --verify-tag
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload reports
         if: failure()
@@ -139,3 +150,27 @@ jobs:
             app/build/outputs/logs/
           if-no-files-found: ignore
           retention-days: 14
+
+  # Only this job can write to the repository, and it runs no build code.
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: out
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" out/apk/*
+          --title "$GITHUB_REF_NAME"
+          --notes-file out/notes.md
+          --verify-tag
