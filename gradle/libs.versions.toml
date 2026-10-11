@@ -72,6 +72,9 @@ roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose"
 roborazzi-junit-rule = { module = "io.github.takahirom.roborazzi:roborazzi-junit-rule", version.ref = "roborazzi" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 
+# build-logic only (compile-time API, not shipped)
+android-gradle-api = { module = "com.android.tools.build:gradle-api", version.ref = "agp" }
+
 [bundles]
 # Shared by every module's unit tests.
 unit-test = ["junit", "kotlinx-coroutines-test", "turbine"]

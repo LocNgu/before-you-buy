@@ -1,4 +1,6 @@
 pluginManagement {
+    // This project's own check plugins (ADR-0025).
+    includeBuild("build-logic")
     repositories {
         google {
             content {
