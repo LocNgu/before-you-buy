@@ -1,0 +1,141 @@
+# Publishes a signed APK as a GitHub Release for every version tag vX.Y.Z on main (ADR-0027).
+# One-time setup and how to cut a release: docs/releasing.md. Job layout: .claude/rules/ci-build.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# Never cancel a release half-way; a second push of the same tag waits.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Creating the release needs write access. This is the only workflow that has it.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # main's history, for the tag-on-main check
+
+      - name: Tag is on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error title=Tag not on main::$GITHUB_REF_NAME points to a commit that isn't on main. Releases are tags on main (ADR-0020); see docs/releasing.md."
+            exit 1
+          fi
+
+      # Fail before building: a release must never be unsigned or debug-signed.
+      - name: Signing secrets are set
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          missing=()
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_KEYSTORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error title=Signing secrets missing::Missing repository secrets: ${missing[*]}. Nothing is published without the release key; see docs/releasing.md."
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v4
+        with:
+          log-accepted-android-sdk-licenses: false
+
+      # Reads the cache main's CI wrote; a release never writes it.
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      # Checks the tag format and that CHANGELOG.md has its section, before the long build.
+      - name: Release notes from CHANGELOG.md
+        run: ./gradlew :app:releaseNotes -Papp.versionTag="$GITHUB_REF_NAME"
+
+      - name: Verify
+        run: ./gradlew verify
+
+      # The key only exists in this step, in the runner's temp directory. No configuration cache, so the passwords
+      # aren't stored in it.
+      - name: Assemble signed release
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/release.keystore"
+          trap 'rm -f "$RELEASE_KEYSTORE_PATH"' EXIT
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RELEASE_KEYSTORE_PATH"
+          unset RELEASE_KEYSTORE_BASE64
+          ./gradlew :app:assembleRelease -Papp.versionTag="$GITHUB_REF_NAME" --no-configuration-cache
+
+      - name: Check signature and version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # AGP names an unsigned release APK app-release-unsigned.apk.
+          apk=app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$apk" ]; then
+            echo "::error title=No signed APK::$apk is missing; the release build wasn't signed."
+            exit 1
+          fi
+          build_tools="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
+          if ! certs="$("$build_tools/apksigner" verify --print-certs "$apk")"; then
+            echo "::error title=Bad signature::apksigner rejected $apk."
+            exit 1
+          fi
+          if grep -q "CN=Android Debug" <<<"$certs"; then
+            echo "::error title=Debug-signed APK::$apk is signed with the debug key."
+            exit 1
+          fi
+          # The certificate is public (it's in every APK): compare its digest with the backup's (docs/releasing.md).
+          grep -E "Signer #1 certificate (DN|SHA-256 digest)" <<<"$certs" || true
+          # Captured first: piping into grep -m 1 or head would fail aapt2 on the closed pipe under pipefail.
+          badging="$("$build_tools/aapt2" dump badging "$apk")"
+          package="$(grep -m 1 "^package:" <<<"$badging" || true)"
+          echo "$package"
+          if ! grep -q "versionName='$version'" <<<"$package"; then
+            echo "::error title=Wrong version::The APK's versionName doesn't match the tag $GITHUB_REF_NAME."
+            exit 1
+          fi
+          mkdir dist
+          cp "$apk" "dist/before-you-buy-$version.apk"
+          (cd dist && sha256sum "before-you-buy-$version.apk" > "before-you-buy-$version.apk.sha256")
+          cat dist/*.sha256
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --title "$GITHUB_REF_NAME"
+          --notes-file app/build/release/notes.md
+          --verify-tag
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-${{ github.run_attempt }}
+          path: |
+            **/build/reports/
+            **/build/test-results/
+            app/build/outputs/roborazzi/
+            app/build/outputs/logs/
+          if-no-files-found: ignore
+          retention-days: 14

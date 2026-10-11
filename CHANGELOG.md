@@ -8,3 +8,4 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 - Project planning: product brief, research notes, architecture plan, decision records, licence.
 - App skeleton: the app installs and opens a placeholder Home screen, in English and German.
+- Signed APKs on GitHub Releases for each version, which install on the phone and update in place with data kept (`docs/releasing.md`).

@@ -1,5 +1,5 @@
 ---
-description: GitHub Actions CI, the cloud build environment, Android SDK install and the SessionStart hook
+description: GitHub Actions CI, the release workflow, the cloud build environment, Android SDK install and the SessionStart hook
 paths:
   - "scripts/**/*"
   - ".claude/settings.json"
@@ -18,10 +18,30 @@ paths:
 - **Verify and build release** (`android`, skipped for docs-only changes; a skipped job counts as passed): JDK 21 (Temurin), `android-actions/setup-android` (cmdline-tools and licences; AGP downloads the platform and build-tools itself), `gradle/actions/setup-gradle` (cache, wrapper validation; only `main` writes the cache), then `./gradlew verify` and `./gradlew assembleRelease` (unsigned, so R8 runs). On failure it uploads the artifact `reports-<attempt>`: `**/build/reports/`, `**/build/test-results/`, `app/build/outputs/roborazzi/` (screenshot diffs) and `app/build/outputs/logs/` (manifest merger report).
 - CI runs `verify`, never its own list of tasks. A new check goes into `verify` (root `build.gradle.kts`) and CI picks it up.
 - Actions are well-known ones pinned to a major version (`@v7`). Bump majors deliberately, one PR, after reading the release notes.
+- `ci.yml` has `contents: read` and never sees a secret. PR builds stay unsigned; don't add signing to it.
+
+# Release workflow (ADR-0027)
+
+`.github/workflows/release.yml` runs on a pushed tag `v*`, never on branches. Owner steps (key, secrets, tagging, installing): `docs/releasing.md`. Its steps, in order:
+
+1. **Tag is on main**: `git merge-base --is-ancestor` against `origin/main` (checkout with `fetch-depth: 0`).
+2. **Signing secrets are set**: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`. Any missing fails the run before building.
+3. Same setup as `ci.yml`, but setup-gradle is `cache-read-only`.
+4. `:app:releaseNotes -Papp.versionTag=<tag>`: validates the tag and writes the `CHANGELOG.md` section to `app/build/release/notes.md` (fails if missing or empty), before the long build.
+5. `verify`, without any signing variables.
+6. **Assemble signed release**: decodes the keystore to `$RUNNER_TEMP` (deleted on exit), sets `RELEASE_KEYSTORE_PATH`, runs `:app:assembleRelease -Papp.versionTag=<tag> --no-configuration-cache` (so the passwords never land in the configuration cache).
+7. **Check signature and version**: requires `app-release.apk` (an unsigned build is `app-release-unsigned.apk`), `apksigner verify`, rejects `CN=Android Debug`, checks `versionName` with `aapt2 dump badging`, prints the public certificate digest, and writes `before-you-buy-<version>.apk` + `.sha256` to `dist/`.
+8. `gh release create <tag> dist/* --notes-file app/build/release/notes.md --verify-tag`.
+
+Rules:
+
+- Secrets go only into the steps that need them (`env:` per step), never into the job or workflow `env`. Never `echo` them, never `set -x` in those steps.
+- `contents: write` exists only in this workflow.
+- A re-run after the release exists fails at `gh release create`: delete the release (not the tag) first, or cut a new patch version.
 
 ## Diagnosing a failed run
 
-1. **Annotations first.** The hard-constraint checks (`checkNoInternetPermission`, `checkStringParity`) print a GitHub error annotation with the full message. Read the check runs of the PR's head commit (`pull_request_read` → `get_check_runs`, then `get_check_run` for the failed one). setup-gradle's job summary names the failed Gradle task.
+1. **Annotations first.** The hard-constraint checks (`checkNoInternetPermission`, `checkStringParity`), `releaseNotes` and the release workflow's own checks print a GitHub error annotation with the full message. Read the check runs of the PR's head commit (`pull_request_read` → `get_check_runs`, then `get_check_run` for the failed one). setup-gradle's job summary names the failed Gradle task.
 2. **Then the log, saved, never inline.** `get_job_logs` with `run_id` + `failed_only` and a modest `tail_lines` (about 200). If the result is saved to a file, `grep -nE 'FAILURE:|What went wrong|FAILED|e: |error:' <file>` and read only the lines around the hits. Never pull the full log into the conversation.
 3. Reproduce locally with the failed task alone (`./gradlew :app:checkNoInternetPermission`, `--tests "…"`), fix, then run `verify` before pushing.
 4. Screenshot diffs: the `*_compare.png` files in the uploaded artifact. Don't re-record goldens to make CI green without looking at why they differ.
