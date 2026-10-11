@@ -1,4 +1,4 @@
-# ADR-0027: Signed APKs on GitHub Releases for version tags; one release key for GitHub and Play
+# ADR-0029: Signed APKs on GitHub Releases for version tags; one release key for GitHub and Play
 
 **Status**: accepted
 **Type**: technical

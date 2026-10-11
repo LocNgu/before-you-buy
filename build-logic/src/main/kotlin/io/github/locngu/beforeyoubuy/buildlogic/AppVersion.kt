@@ -2,7 +2,7 @@ package io.github.locngu.beforeyoubuy.buildlogic
 
 /**
  * The app's `versionName` and `versionCode`. Both come from one source: the release tag `vX.Y.Z`, with
- * `versionCode = X * 10000 + Y * 100 + Z` (ADR-0027).
+ * `versionCode = X * 10000 + Y * 100 + Z` (ADR-0029).
  */
 internal data class AppVersion(val name: String, val code: Int) {
     companion object {

@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Ton: .claude/rules/copy-and-tone.md. Gleiche Schlüssel wie values/strings.xml (ADR-0016). -->
 <resources>
     <!-- Arbeitstitel (Issue #31). -->
     <string name="app_name">Before You Buy</string>
+
+    <!-- Platzhalter-Startseite, bis das echte Dashboard existiert. -->
+    <string name="home_empty_title">Noch nichts hier</string>
+    <string name="home_empty_body">Was du gern kaufen möchtest, wartet hier, bis du dich entschieden hast.</string>
+
+    <!-- Countdown bei Artikeln in der Wartezeit. -->
+    <string name="countdown_over">Wartezeit vorbei</string>
+
+    <!-- Relative Datumsangaben, in Kalendertagen. -->
+    <string name="relative_today">Heute</string>
+    <string name="relative_yesterday">Gestern</string>
 </resources>

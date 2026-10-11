@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every key also in values-de/plurals.xml (ADR-0016). Counts are calendar days (ADR-0018). -->
+<resources>
+    <plurals name="countdown_days_left">
+        <item quantity="one">%d day left</item>
+        <item quantity="other">%d days left</item>
+    </plurals>
+
+    <!-- A length of time, e.g. how long an item has been wanted. -->
+    <plurals name="duration_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+
+    <!-- Used from 2 days on; 0 and 1 are relative_today and relative_yesterday. -->
+    <plurals name="relative_days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+</resources>

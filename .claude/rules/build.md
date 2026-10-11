@@ -31,7 +31,7 @@ paths:
 ## Identity
 
 - `applicationId` and the namespace root are the `app.id` property in `gradle.properties`, the only place they're written. Module namespaces append to it (`.core.data`). Kotlin packages use the same root (`io.github.locngu.beforeyoubuy…`). Changing the ID makes a different app for Android: follow ADR-0026, never change it casually.
-- `versionName`/`versionCode` are never written in a build file. `beforeyoubuy.release` derives them from `-Papp.versionTag=vX.Y.Z` (`versionCode = X*10000 + Y*100 + Z`, Y and Z ≤ 99); without it they're `0.0.0-dev`/`1` (ADR-0027).
+- `versionName`/`versionCode` are never written in a build file. `beforeyoubuy.release` derives them from `-Papp.versionTag=vX.Y.Z` (`versionCode = X*10000 + Y*100 + Z`, Y and Z ≤ 99); without it they're `0.0.0-dev`/`1` (ADR-0029).
 - Release signing is never committed. The `release` build type is signed only when `RELEASE_KEYSTORE_PATH`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS` and `RELEASE_KEY_PASSWORD` are all set; none set means unsigned, some set fails the build, and signing with the configuration cache on fails (it would store the passwords). Never print these values.
 
 ## Verify task
@@ -56,7 +56,7 @@ paths:
 - WorkManager's start-up initializer is removed in the manifest; it initializes on first use from `BeforeYouBuyApplication.workManagerConfiguration` (where Hilt's worker factory goes later). Don't re-add the initializer.
 - Inject `java.time.Clock`; production gets `SystemZoneClock`, which reads the device zone on every call. Tests pass `Clock.fixed(...)` or a fake.
 - Compose tests use the `androidx.compose.ui.test.junit4.v2` rules (`createComposeRule`, `createAndroidComposeRule`).
-- Screenshots: Roborazzi; goldens are committed in `app/src/test/screenshots/` (the plugin's `outputDir`). Call `captureRoboImage()` without a path so names follow `<package>.<Class>.<test>.png`. Record with `./gradlew :app:recordRoborazziDebug`, then look at the PNGs before committing. `verify` compares; diffs land in `app/build/outputs/roborazzi/`.
+- Screenshots: Roborazzi; goldens are committed in `app/src/test/screenshots/` (the plugin's `outputDir`). Use `createAndroidComposeRule<ComponentActivity>()` and capture with `composeRule.captureContent()` (`testing/Screenshots.kt`), never `onRoot().captureRoboImage()`: Roborazzi's window PixelCopy races Robolectric's render thread and intermittently captured a blank frame (seen on CI). Names follow `<package>.<Class>.<test>.png` (add `RoborazziRule()` when tests live in a base class). Record with `./gradlew :app:recordRoborazziDebug`, then look at the PNGs before committing. `verify` compares; diffs land in `app/build/outputs/roborazzi/`.
 
 ## Gotchas
 

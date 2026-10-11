@@ -3,7 +3,7 @@ package io.github.locngu.beforeyoubuy.buildlogic
 import java.io.File
 
 /**
- * The release key, read from environment variables (ADR-0027). It is never committed: CI decodes it from GitHub
+ * The release key, read from environment variables (ADR-0029). It is never committed: CI decodes it from GitHub
  * Actions secrets, and a local build only has it if the owner sets the variables.
  */
 internal class ReleaseSigning(

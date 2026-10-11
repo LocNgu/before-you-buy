@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
     id("beforeyoubuy.no-internet-permission")
-    // versionName/versionCode from the release tag, release signing from environment variables (ADR-0027).
+    // versionName/versionCode from the release tag, release signing from environment variables (ADR-0029).
     id("beforeyoubuy.release")
 }
 

@@ -3,6 +3,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- localeConfig: the per-app language setting exists from API 33; older versions ignore it, as intended. -->
     <application
         android:name=".BeforeYouBuyApplication"
         android:allowBackup="false"
@@ -10,8 +11,10 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.BeforeYouBuy"
+        tools:ignore="UnusedAttribute">
 
         <activity
             android:name=".MainActivity"

@@ -20,7 +20,7 @@ paths:
 - Actions are well-known ones pinned to a major version (`@v7`). Bump majors deliberately, one PR, after reading the release notes.
 - `ci.yml` has `contents: read` and never sees a secret. PR builds stay unsigned; don't add signing to it.
 
-# Release workflow (ADR-0027)
+# Release workflow (ADR-0029)
 
 `.github/workflows/release.yml` runs on a pushed tag `v*`, never on branches. Owner steps (key, environment, tagging, installing): `docs/releasing.md`. All `run:` steps use `bash` (`-eo pipefail`).
 

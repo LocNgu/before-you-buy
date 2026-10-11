@@ -1,4 +1,4 @@
-# Publishes a signed APK as a GitHub Release for every version tag vX.Y.Z on main (ADR-0027).
+# Publishes a signed APK as a GitHub Release for every version tag vX.Y.Z on main (ADR-0029).
 # One-time setup and how to cut a release: docs/releasing.md. Job layout: .claude/rules/ci-build.md.
 name: Release
 
@@ -96,7 +96,7 @@ jobs:
       - name: Check signature and version
         run: |
           version="${GITHUB_REF_NAME#v}"
-          # Recomputed here on purpose, as an independent check of the build (ADR-0027).
+          # Recomputed here on purpose, as an independent check of the build (ADR-0029).
           IFS=. read -r major minor patch <<<"$version"
           code=$((10#$major * 10000 + 10#$minor * 100 + 10#$patch))
           # AGP names an unsigned release APK app-release-unsigned.apk.

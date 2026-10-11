@@ -11,7 +11,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
-/** Writes the `CHANGELOG.md` section of the version being built: the GitHub Release's notes (ADR-0027). */
+/** Writes the `CHANGELOG.md` section of the version being built: the GitHub Release's notes (ADR-0029). */
 abstract class ReleaseNotesTask : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)

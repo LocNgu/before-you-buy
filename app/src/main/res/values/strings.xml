@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Tone: .claude/rules/copy-and-tone.md. Every key also in values-de/strings.xml (ADR-0016). -->
 <resources>
     <!-- Working name (issue #31). -->
     <string name="app_name">Before You Buy</string>
+
+    <!-- Placeholder Home until the real dashboard exists. -->
+    <string name="home_empty_title">Nothing here yet</string>
+    <string name="home_empty_body">Things you’d like to buy wait here until you’ve decided.</string>
+
+    <!-- Countdown on items that are cooling off. -->
+    <string name="countdown_over">Cooling-off over</string>
+
+    <!-- Relative dates, in calendar days. -->
+    <string name="relative_today">Today</string>
+    <string name="relative_yesterday">Yesterday</string>
 </resources>

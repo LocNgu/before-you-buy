@@ -40,4 +40,6 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0024](0024-branch-naming.md) | technical | Branches: session's assigned `claude/*` branch, else `claude/<N>-<kebab-title>` |
 | [0025](0025-build-checks-in-build-logic.md) | technical | Project-specific build checks are tested Gradle plugins in the `build-logic` included build |
 | [0026](0026-application-id.md) | technical | applicationId `io.github.locngu.beforeyoubuy` (scheme `io.github.locngu.<codename>`); changeable until the first Play upload |
-| [0027](0027-github-releases-signed-apk.md) | technical | Signed APKs on GitHub Releases for tags `vX.Y.Z` on `main`; version from the tag; one release key, later also Play's app signing key |
+| [0027](0027-money-formatting-and-input.md) | technical | Money formatting/parsing in `:core:domain`; input accepts `.` or `,` as decimal separator |
+| [0028](0028-calm-fixed-theme.md) | product | Calm fixed palette, no dynamic colour, no urgency colours, identical Buy/Reject buttons |
+| [0029](0029-github-releases-signed-apk.md) | technical | Signed APKs on GitHub Releases for tags `vX.Y.Z` on `main`; version from the tag; one release key, later also Play's app signing key |

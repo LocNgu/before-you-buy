@@ -11,7 +11,7 @@ import org.gradle.api.configuration.BuildFeatures
 internal const val VERSION_TAG_PROPERTY = "app.versionTag"
 
 /**
- * Release setup for the Android application (ADR-0027):
+ * Release setup for the Android application (ADR-0029):
  * - `versionName`/`versionCode` from the tag in [VERSION_TAG_PROPERTY] ([AppVersion]; a dev default without it).
  * - The `release` build type is signed if the [ReleaseSigning] environment variables are set, else unsigned. Signing
  *   needs `--no-configuration-cache`, so the passwords are never written to the configuration cache on disk.

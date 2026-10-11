@@ -1,6 +1,6 @@
 # Releasing
 
-How the app gets from `main` to your phone: a signed APK on GitHub Releases for every version tag (ADR-0027). Google Play comes later (#35) and will use the same key.
+How the app gets from `main` to your phone: a signed APK on GitHub Releases for every version tag (ADR-0029). Google Play comes later (#35) and will use the same key.
 
 - **Once:** create the release key, back it up, add it to GitHub as secrets.
 - **Each release:** update `CHANGELOG.md`, tag `main`, push the tag. `.github/workflows/release.yml` does the rest.
