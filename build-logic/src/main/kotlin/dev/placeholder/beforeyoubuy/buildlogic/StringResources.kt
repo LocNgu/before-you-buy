@@ -10,10 +10,7 @@ internal object StringResources {
      * Keys (`string/app_name`, `plurals/days_left`, …) of the string resources in one `values*` XML file.
      * With [translatableOnly], strings marked `translatable="false"` are left out.
      */
-    fun keys(
-        file: File,
-        translatableOnly: Boolean,
-    ): Set<String> = parseXml(file)
+    fun keys(file: File, translatableOnly: Boolean): Set<String> = parseXml(file)
         .childElements()
         .filter { it.tagName in STRING_TYPES }
         .filterNot { translatableOnly && it.getAttribute("translatable") == "false" }
@@ -24,10 +21,7 @@ internal object StringResources {
      * Problems for one resource directory, given the English files in `values/` and the German files in
      * `values-de/`. English-only strings (`translatable="false"`) need no German entry and must not have one.
      */
-    fun parityProblems(
-        english: Collection<File>,
-        german: Collection<File>,
-    ): List<String> {
+    fun parityProblems(english: Collection<File>, german: Collection<File>): List<String> {
         val englishKeys = english.flatMap { keys(it, translatableOnly = true) }.toSet()
         val germanKeys = german.flatMap { keys(it, translatableOnly = false) }.toSet()
         return (englishKeys - germanKeys).sorted().map { "$it is in values/ but missing from values-de/" } +

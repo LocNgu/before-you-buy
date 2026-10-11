@@ -7,7 +7,7 @@ import org.gradle.api.Project
 
 /**
  * Registers `checkNoInternetPermission` on an Android application: it inspects the merged manifest of every
- * release variant (ADR-0003). Apply after `com.android.application`.
+ * release variant (ADR-0003).
  */
 class NoInternetPermissionPlugin : Plugin<Project> {
     override fun apply(project: Project) {
@@ -15,8 +15,12 @@ class NoInternetPermissionPlugin : Plugin<Project> {
             val check =
                 project.tasks.register("checkNoInternetPermission", CheckNoInternetPermissionTask::class.java) {
                     group = "verification"
-                    description = "Fails if the merged release manifest requests android.permission.INTERNET (ADR-0003)."
-                    projectDirectory.set(project.layout.projectDirectory)
+                    description =
+                        "Fails if the merged release manifest requests android.permission.INTERNET (ADR-0003)."
+                    rootDirectory.set(project.rootProject.layout.projectDirectory)
+                    mergerReport.set(
+                        project.layout.buildDirectory.file("outputs/logs/manifest-merger-release-report.txt")
+                    )
                     result.set(project.layout.buildDirectory.file("reports/checkNoInternetPermission/result.txt"))
                 }
             val androidComponents = project.extensions.getByType(ApplicationAndroidComponentsExtension::class.java)

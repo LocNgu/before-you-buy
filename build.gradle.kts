@@ -34,7 +34,8 @@ spotless {
 // The one pre-push gate: exactly what CI runs (docs/architecture.md).
 tasks.register("verify") {
     group = "verification"
-    description = "Formatting, Android Lint, unit tests, screenshots and the hard-constraint checks. Run before every push."
+    description =
+        "Formatting, Android Lint, unit tests, screenshots and the hard-constraint checks. Run before every push."
     dependsOn(
         "spotlessCheck",
         ":app:lint",
@@ -48,6 +49,6 @@ tasks.register("verify") {
         // the same strings in values/ and values-de/ (ADR-0016).
         ":app:checkNoInternetPermission",
         "checkStringParity",
-        gradle.includedBuild("build-logic").task(":test"),
+        gradle.includedBuild("build-logic").task(":test")
     )
 }

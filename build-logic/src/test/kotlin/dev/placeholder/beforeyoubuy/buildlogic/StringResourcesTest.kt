@@ -1,20 +1,16 @@
 package dev.placeholder.beforeyoubuy.buildlogic
 
+import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
 
 class StringResourcesTest {
     @get:Rule
     val temp = TemporaryFolder()
 
-    private fun values(
-        folder: String,
-        body: String,
-        name: String = "strings.xml",
-    ): File {
+    private fun values(folder: String, body: String, name: String = "strings.xml"): File {
         val dir = File(temp.root, "res/$folder").apply { mkdirs() }
         return File(dir, name).apply { writeText("<resources>\n$body\n</resources>\n") }
     }
@@ -40,7 +36,7 @@ class StringResourcesTest {
 
         assertEquals(
             listOf("string/save is in values/ but missing from values-de/"),
-            StringResources.parityProblems(listOf(english), listOf(german)),
+            StringResources.parityProblems(listOf(english), listOf(german))
         )
     }
 
@@ -51,7 +47,7 @@ class StringResourcesTest {
 
         assertEquals(
             listOf("plurals/days is in values-de/ but not a translatable string in values/"),
-            StringResources.parityProblems(listOf(english), listOf(german)),
+            StringResources.parityProblems(listOf(english), listOf(german))
         )
     }
 
@@ -60,11 +56,14 @@ class StringResourcesTest {
         val english =
             listOf(
                 values("values", """<string name="a">x</string>"""),
-                values("values", """<plurals name="b"><item quantity="other">x</item></plurals>""", "plurals.xml"),
+                values("values", """<plurals name="b"><item quantity="other">x</item></plurals>""", "plurals.xml")
             )
         val german =
             listOf(
-                values("values-de", """<string name="a">x</string><plurals name="b"><item quantity="other">x</item></plurals>"""),
+                values(
+                    "values-de",
+                    """<string name="a">x</string><plurals name="b"><item quantity="other">x</item></plurals>"""
+                )
             )
 
         assertEquals(emptyList<String>(), StringResources.parityProblems(english, german))
@@ -78,9 +77,9 @@ class StringResourcesTest {
         assertEquals(
             listOf(
                 "string/days is in values/ but missing from values-de/",
-                "plurals/days is in values-de/ but not a translatable string in values/",
+                "plurals/days is in values-de/ but not a translatable string in values/"
             ),
-            StringResources.parityProblems(listOf(english), listOf(german)),
+            StringResources.parityProblems(listOf(english), listOf(german))
         )
     }
 
@@ -93,7 +92,7 @@ class StringResourcesTest {
         val german = values("values-de", """<string name="brand">x</string>""")
         assertEquals(
             listOf("string/brand is in values-de/ but not a translatable string in values/"),
-            StringResources.parityProblems(listOf(english), listOf(german)),
+            StringResources.parityProblems(listOf(english), listOf(german))
         )
     }
 
@@ -102,8 +101,11 @@ class StringResourcesTest {
         val english = values("values", """<string name="a">x</string><string name="b">x</string>""")
 
         assertEquals(
-            listOf("string/a is in values/ but missing from values-de/", "string/b is in values/ but missing from values-de/"),
-            StringResources.parityProblems(listOf(english), emptyList()),
+            listOf(
+                "string/a is in values/ but missing from values-de/",
+                "string/b is in values/ but missing from values-de/"
+            ),
+            StringResources.parityProblems(listOf(english), emptyList())
         )
     }
 

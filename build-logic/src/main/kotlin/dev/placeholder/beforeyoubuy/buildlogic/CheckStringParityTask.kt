@@ -1,5 +1,6 @@
 package dev.placeholder.beforeyoubuy.buildlogic
 
+import java.io.File
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
@@ -11,7 +12,6 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import java.io.File
 
 /** Fails if a string resource exists in `values/` but not in `values-de/`, or the other way round (ADR-0016). */
 abstract class CheckStringParityTask : DefaultTask() {
@@ -55,7 +55,7 @@ abstract class CheckStringParityTask : DefaultTask() {
             throw GradleException(message)
         }
         result.get().asFile.writeText(
-            byResDir.keys.sorted().joinToString("\n", postfix = "\n") { "OK: ${it.relativeTo(base)}" },
+            byResDir.keys.sorted().joinToString("\n", postfix = "\n") { "OK: ${it.relativeTo(base)}" }
         )
     }
 }

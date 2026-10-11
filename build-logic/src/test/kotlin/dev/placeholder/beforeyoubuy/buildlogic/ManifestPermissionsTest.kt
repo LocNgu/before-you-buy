@@ -17,7 +17,7 @@ class ManifestPermissionsTest {
             $body
                 <application android:name=".App" />
             </manifest>
-            """.trimIndent(),
+            """.trimIndent()
         )
     }
 
@@ -28,7 +28,7 @@ class ManifestPermissionsTest {
                 """
                 <uses-permission android:name="android.permission.WAKE_LOCK" />
                 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-                """,
+                """
             )
 
         assertEquals(emptyList<RequestedPermission>(), ManifestPermissions.internet(file))
@@ -40,7 +40,7 @@ class ManifestPermissionsTest {
 
         assertEquals(
             listOf(RequestedPermission("uses-permission", INTERNET_PERMISSION)),
-            ManifestPermissions.internet(file),
+            ManifestPermissions.internet(file)
         )
     }
 
@@ -51,12 +51,12 @@ class ManifestPermissionsTest {
                 """
                 <uses-permission-sdk-23 android:name="android.permission.INTERNET" />
                 <uses-permission-sdk-m android:name="android.permission.INTERNET" />
-                """,
+                """
             )
 
         assertEquals(
             listOf("uses-permission-sdk-23", "uses-permission-sdk-m"),
-            ManifestPermissions.internet(file).map { it.element },
+            ManifestPermissions.internet(file).map { it.element }
         )
     }
 
@@ -64,7 +64,7 @@ class ManifestPermissionsTest {
     fun `a name outside the android namespace is not a permission request`() {
         val file =
             manifest(
-                """<uses-permission xmlns:other="urn:other" other:name="android.permission.INTERNET" />""",
+                """<uses-permission xmlns:other="urn:other" other:name="android.permission.INTERNET" />"""
             )
 
         assertEquals(emptyList<RequestedPermission>(), ManifestPermissions.internet(file))
@@ -74,7 +74,7 @@ class ManifestPermissionsTest {
     fun `the finding reads like the manifest line`() {
         assertEquals(
             """<uses-permission android:name="android.permission.INTERNET"/>""",
-            RequestedPermission("uses-permission", INTERNET_PERMISSION).toString(),
+            RequestedPermission("uses-permission", INTERNET_PERMISSION).toString()
         )
     }
 }

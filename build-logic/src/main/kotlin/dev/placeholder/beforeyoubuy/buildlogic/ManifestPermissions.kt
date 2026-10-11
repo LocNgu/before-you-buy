@@ -5,10 +5,7 @@ import java.io.File
 internal const val INTERNET_PERMISSION = "android.permission.INTERNET"
 
 /** A `<uses-permission…>` element of a manifest: the element name and the permission it requests. */
-internal data class RequestedPermission(
-    val element: String,
-    val name: String,
-) {
+internal data class RequestedPermission(val element: String, val name: String) {
     override fun toString() = "<$element android:name=\"$name\"/>"
 }
 
@@ -23,5 +20,8 @@ internal object ManifestPermissions {
         .map { RequestedPermission(it.tagName, it.getAttributeNS(ANDROID_NAMESPACE, "name")) }
 
     /** The elements in [manifest] that request `INTERNET` (ADR-0003). */
-    fun internet(manifest: File): List<RequestedPermission> = requested(manifest).filter { it.name == INTERNET_PERMISSION }
+    fun internet(manifest: File): List<RequestedPermission> = requested(manifest).filter {
+        it.name ==
+            INTERNET_PERMISSION
+    }
 }

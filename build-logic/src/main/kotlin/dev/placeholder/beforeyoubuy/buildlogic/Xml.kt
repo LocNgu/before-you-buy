@@ -1,9 +1,9 @@
 package dev.placeholder.beforeyoubuy.buildlogic
 
-import org.w3c.dom.Element
 import java.io.File
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+import org.w3c.dom.Element
 
 internal const val ANDROID_NAMESPACE = "http://schemas.android.com/apk/res/android"
 
@@ -27,10 +27,7 @@ internal fun Element.childElements(): List<Element> {
 }
 
 /** Prints a GitHub Actions error annotation when running there; a no-op elsewhere. */
-internal fun annotateGitHubError(
-    title: String,
-    message: String,
-) {
+internal fun annotateGitHubError(title: String, message: String) {
     if (System.getenv("GITHUB_ACTIONS") != "true") return
     fun escape(value: String) = value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
     println("::error title=${escape(title).replace(",", "%2C").replace(":", "%3A")}::${escape(message)}")

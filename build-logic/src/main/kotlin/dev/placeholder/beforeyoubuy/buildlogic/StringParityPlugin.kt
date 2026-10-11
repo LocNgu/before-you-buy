@@ -14,7 +14,7 @@ class StringParityPlugin : Plugin<Project> {
                 project.fileTree(project.rootDir) {
                     include("**/src/*/res/values/*.xml", "**/src/*/res/values-de/*.xml")
                     exclude("**/build/**", "**/.gradle/**", ".git/**", "build-logic/**")
-                },
+                }
             )
             rootDirectory.set(project.layout.projectDirectory)
             result.set(project.layout.buildDirectory.file("reports/checkStringParity/result.txt"))
