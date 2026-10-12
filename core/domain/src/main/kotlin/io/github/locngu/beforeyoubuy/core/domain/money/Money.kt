@@ -7,13 +7,28 @@ import java.util.Currency
  *
  * [currency] is an ISO 4217 code such as `EUR`; how many minor units make one major unit comes from
  * [java.util.Currency] (2 for EUR, 0 for JPY).
+ *
+ * Arithmetic and comparison only work within one currency: mixing currencies is a programming error and throws.
+ * Overflowing a [Long] throws [ArithmeticException] instead of wrapping around.
  */
-data class Money(val minorUnits: Long, val currency: String) {
+data class Money(val minorUnits: Long, val currency: String) : Comparable<Money> {
     init {
         val known = runCatching { Currency.getInstance(currency) }.isSuccess
         require(known && currency.all { it in 'A'..'Z' }) {
             "Currency must be an ISO 4217 code like EUR, was \"$currency\""
         }
+    }
+
+    operator fun plus(other: Money): Money = Money(Math.addExact(minorUnits, sameCurrency(other).minorUnits), currency)
+
+    operator fun minus(other: Money): Money =
+        Money(Math.subtractExact(minorUnits, sameCurrency(other).minorUnits), currency)
+
+    override fun compareTo(other: Money): Int = minorUnits.compareTo(sameCurrency(other).minorUnits)
+
+    private fun sameCurrency(other: Money): Money {
+        require(other.currency == currency) { "Can't combine $currency with ${other.currency}" }
+        return other
     }
 
     companion object {
