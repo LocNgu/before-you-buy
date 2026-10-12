@@ -11,7 +11,7 @@ enum class DecisionType {
     /** A want that isn't Ready yet: allowed with friction and always logged (ADR-0006). */
     BUY_EARLY,
 
-    /** A `NEED` (ADR-0008); never paid from fun money (ADR-0031). */
+    /** A `NEED`, whatever its stage (ADR-0008). */
     BUY_NEED,
 
     /** Stay active and look again at [Decision.waitUntil]. */

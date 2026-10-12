@@ -69,13 +69,12 @@ class StageTest {
     }
 
     @Test
-    fun `a need skips cooling off, reflection and funding`() {
+    fun `a need skips cooling off and reflection but not funding`() {
         val need = item(ItemKind.NEED)
-        val nothingSaved = Money(0, "EUR")
         assertTrue(isCooledOff(need, ADDED))
         assertTrue(isReflected(need, null))
-        assertTrue(isFunded(need, nothingSaved))
-        assertEquals(Stage.READY, stageOf(need, null, nothingSaved, ADDED))
+        assertEquals(Stage.READY, stageOf(need, null, FUNDED, ADDED))
+        assertEquals(Stage.SAVING, stageOf(need, null, UNFUNDED, ADDED))
     }
 
     @Test
@@ -107,8 +106,8 @@ class StageTest {
     }
 
     @Test
-    fun `a need is due for a decision right away, with nothing saved for it`() {
-        assertTrue(isDueForDecision(item(ItemKind.NEED), null, Money(0, "EUR"), ADDED))
+    fun `a funded need is due for a decision right away`() {
+        assertTrue(isDueForDecision(item(ItemKind.NEED), null, FUNDED, ADDED))
     }
 
     @Test

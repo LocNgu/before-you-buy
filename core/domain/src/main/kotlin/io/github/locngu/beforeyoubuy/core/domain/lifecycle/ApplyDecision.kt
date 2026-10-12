@@ -15,7 +15,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
  * - `BUY`: a want that is Ready.
  * - `BUY_EARLY`: a want, with a non-blank reason (ADR-0006). Allowed "any time" (brief §5), so confirming just as
  *   cooling off ends still records the early purchase the user went through the friction for.
- * - `BUY_NEED`: a `NEED` (ADR-0008), which is always Ready (ADR-0031).
+ * - `BUY_NEED`: a `NEED`, in any stage (ADR-0008).
  * - `WAIT`: any active item, with a re-check date in the future. The item stays active.
  * - `REJECT`: any active item.
  *
