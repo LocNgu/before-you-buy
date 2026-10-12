@@ -13,23 +13,23 @@ import java.time.ZoneId
  * must be in the rules' currency and not negative; anything else is a programming error and throws.
  */
 fun periodFor(price: Money, rules: CoolingOffRules): Period {
-    require(price.currency == rules.currency) {
-        "Price in ${price.currency} doesn't match the cooling-off rules' currency ${rules.currency}"
-    }
-    require(price.minorUnits >= 0) { "Price can't be negative, was $price" }
+    requireFits(price, rules)
     return rules.tiers.last { it.minPriceInclusive <= price }.period
 }
 
 /**
  * When a new item's cooling-off ends (brief §4.2): [addedAt] plus the period for [price], counted in calendar days
  * in [zone] so a daylight-saving change doesn't move the end by an hour (ADR-0018). A `NEED` doesn't wait
- * (ADR-0008), so it ends at [addedAt].
+ * (ADR-0008), so it ends at [addedAt]. Like [periodFor], throws for a price that doesn't fit the rules, whatever
+ * the kind.
  */
-fun initialCoolingEnd(addedAt: Instant, price: Money, kind: ItemKind, rules: CoolingOffRules, zone: ZoneId): Instant =
-    when (kind) {
+fun initialCoolingEnd(addedAt: Instant, price: Money, kind: ItemKind, rules: CoolingOffRules, zone: ZoneId): Instant {
+    val period = periodFor(price, rules)
+    return when (kind) {
         ItemKind.NEED -> addedAt
-        ItemKind.WANT -> addedAt.atZone(zone).plus(periodFor(price, rules)).toInstant()
+        ItemKind.WANT -> addedAt.atZone(zone).plus(period).toInstant()
     }
+}
 
 /**
  * The item's cooling-off end after its price changes to [newPrice] (brief §4.2, ADR-0005): the later of the current
@@ -54,6 +54,7 @@ fun coolingEndAfterPriceEdit(item: Item, newPrice: Money, rules: CoolingOffRules
  */
 fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, zone: ZoneId): Item {
     require(item.status == ItemStatus.ACTIVE) { "Only active items change kind; ${item.id} is ${item.status}" }
+    requireFits(item.price, rules)
     if (kind == item.kind) return item
     return when (kind) {
         ItemKind.NEED -> item.copy(kind = ItemKind.NEED, markedAsNeedAt = at)
@@ -67,4 +68,12 @@ fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, 
             )
         )
     }
+}
+
+/** Wiring bugs fail on every path, not only once an item turns into a want. */
+private fun requireFits(price: Money, rules: CoolingOffRules) {
+    require(price.currency == rules.currency) {
+        "Price in ${price.currency} doesn't match the cooling-off rules' currency ${rules.currency}"
+    }
+    require(price.minorUnits >= 0) { "Price can't be negative, was $price" }
 }

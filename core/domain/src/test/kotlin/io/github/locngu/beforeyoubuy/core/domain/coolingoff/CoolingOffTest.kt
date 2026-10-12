@@ -91,13 +91,37 @@ class CoolingOffTest {
     }
 
     @Test
-    fun `an end inside the skipped spring hour moves to just after it`() {
+    fun `an end inside the skipped spring hour moves forward by the gap`() {
         // 22 March 2026, 02:30 CET; 29 March 02:30 doesn't exist in Berlin, so it ends at 03:30 CEST.
         val addedAt = Instant.parse("2026-03-22T01:30:00Z")
         assertEquals(
             Instant.parse("2026-03-29T01:30:00Z"),
             initialCoolingEnd(addedAt, eur(5_000), ItemKind.WANT, rules, berlin)
         )
+    }
+
+    @Test
+    fun `an end inside the repeated autumn hour takes the earlier one`() {
+        // 18 October 2026, 02:30 CEST; 25 October 02:30 happens twice in Berlin, so it ends at the first, in CEST.
+        val addedAt = Instant.parse("2026-10-18T00:30:00Z")
+        assertEquals(
+            Instant.parse("2026-10-25T00:30:00Z"),
+            initialCoolingEnd(addedAt, eur(5_000), ItemKind.WANT, rules, berlin)
+        )
+    }
+
+    @Test
+    fun `a need's price is checked against the rules like a want's`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            initialCoolingEnd(added, Money(5_000, "USD"), ItemKind.NEED, rules, utc)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            coolingEndAfterPriceEdit(item(eur(5_000), ItemKind.NEED), eur(-1), rules, utc)
+        }
+        val usdRules = CoolingOffRules.defaults("USD")
+        assertThrows(IllegalArgumentException::class.java) {
+            changeKind(item(eur(5_000)), ItemKind.NEED, daysAfterAdded(1), usdRules, utc)
+        }
     }
 
     @Test
