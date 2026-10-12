@@ -57,6 +57,7 @@ fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, 
     if (kind == item.kind) return item
     return when (kind) {
         ItemKind.NEED -> item.copy(kind = ItemKind.NEED, markedAsNeedAt = at)
+
         ItemKind.WANT -> item.copy(
             kind = ItemKind.WANT,
             markedAsNeedAt = null,

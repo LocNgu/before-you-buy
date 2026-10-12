@@ -5,16 +5,16 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertThrows
-import org.junit.Test
 import java.time.Instant
 import java.time.Period
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
+import org.junit.Test
 
 class CoolingOffTest {
     private val rules = CoolingOffRules.defaults("EUR")
@@ -130,8 +130,10 @@ class CoolingOffTest {
 
     @Test
     fun `a price edit uses the rules it is given`() {
-        val longer = (CoolingOffRules.from(listOf(CoolingOffTier(eur(0), Period.ofDays(14)))) as
-            CoolingOffRulesResult.Valid).rules
+        val longer = (
+            CoolingOffRules.from(listOf(CoolingOffTier(eur(0), Period.ofDays(14)))) as
+                CoolingOffRulesResult.Valid
+            ).rules
         assertEquals(daysAfterAdded(14), coolingEndAfterPriceEdit(item(eur(5_000)), eur(6_000), longer, utc))
     }
 

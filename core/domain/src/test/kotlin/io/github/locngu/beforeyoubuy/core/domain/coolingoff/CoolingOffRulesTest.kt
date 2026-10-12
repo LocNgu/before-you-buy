@@ -1,10 +1,10 @@
 package io.github.locngu.beforeyoubuy.core.domain.coolingoff
 
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import java.time.Period
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import java.time.Period
 
 class CoolingOffRulesTest {
     private fun eur(minorUnits: Long) = Money(minorUnits, "EUR")
