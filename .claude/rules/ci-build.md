@@ -20,27 +20,29 @@ paths:
 - Actions are well-known ones pinned to a major version (`@v7`). Bump majors deliberately, one PR, after reading the release notes.
 - `ci.yml` has `contents: read` and never sees a secret. PR builds stay unsigned; don't add signing to it.
 
-# Release workflow (ADR-0029)
+# Release workflow (ADR-0029, ADR-0030)
 
-`.github/workflows/release.yml` runs on a pushed tag `v*`, never on branches. Owner steps (key, environment, tagging, installing): `docs/releasing.md`. All `run:` steps use `bash` (`-eo pipefail`).
+`.github/workflows/release.yml` runs on the **Run workflow** button (`workflow_dispatch` on `main`, input `version`) or on a pushed tag `v*`. Owner steps (key, environment, changelog, starting a release, installing): `docs/releasing.md`. All `run:` steps use `bash` (`-eo pipefail`). One release at a time (concurrency group `release`, never cancelled).
 
 **Job `build`** (`environment: release`, `contents: read`, checkout with `fetch-depth: 0` and `persist-credentials: false`):
 
-1. **Tag is on main**: `git merge-base --is-ancestor` against `origin/main`.
-2. **Signing secrets are set**: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`, environment secrets of `release` (which admits only `v*` tags). Any missing fails the run before building.
-3. Same setup as `ci.yml` (bump both together), but setup-gradle is `cache-read-only`.
-4. `:app:releaseNotes -Papp.versionTag=<tag>`: validates the tag and writes the `CHANGELOG.md` section to `app/build/release/notes.md` (fails if missing or empty), before the long build.
-5. `verify`, without any signing variables.
-6. **Assemble signed release**: decodes the keystore to `$RUNNER_TEMP` (deleted on exit), sets `RELEASE_KEYSTORE_PATH`, runs `:app:assembleRelease -Papp.versionTag=<tag> --no-configuration-cache` (the plugin refuses to sign with the configuration cache on).
-7. **Check signature and version**: requires `app-release.apk` (an unsigned build is `app-release-unsigned.apk`), `apksigner verify` from the newest stable build-tools, rejects `CN=Android Debug`, checks `versionCode`/`versionName` with `aapt2 dump badging` against its own computation from the tag, prints the public certificate digest, and puts `before-you-buy-<version>.apk` + `.sha256` and `notes.md` into the artifact `release`.
+1. **Resolve tag** (output `tag`, env `TAG`): the pushed tag, or `v<version>` for a button run. A button run fails if it wasn't started on `main` or the tag already exists. The input goes through `env:`, never inline into the script.
+2. **Commit is on main**: `git merge-base --is-ancestor` against `origin/main`.
+3. **Signing secrets are set**: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`, environment secrets of `release` (which admits only branch `main` and tags `v*`). Any missing fails the run before building.
+4. Same setup as `ci.yml` (bump both together), but setup-gradle is `cache-read-only`.
+5. `:app:releaseNotes -Papp.versionTag=$TAG`: validates the tag and writes the `CHANGELOG.md` section to `app/build/release/notes.md` (fails if missing or empty), before the long build.
+6. `verify`, without any signing variables.
+7. **Assemble signed release**: decodes the keystore to `$RUNNER_TEMP` (deleted on exit), sets `RELEASE_KEYSTORE_PATH`, runs `:app:assembleRelease -Papp.versionTag=$TAG --no-configuration-cache` (the plugin refuses to sign with the configuration cache on).
+8. **Check signature and version**: requires `app-release.apk` (an unsigned build is `app-release-unsigned.apk`), `apksigner verify` from the newest stable build-tools, rejects `CN=Android Debug`, checks `versionCode`/`versionName` with `aapt2 dump badging` against its own computation from the tag, prints the public certificate digest, and puts `before-you-buy-<version>.apk` + `.sha256` and `notes.md` into the artifact `release`.
 
-**Job `publish`** (`contents: write`, no checkout, no build code): downloads `release` and runs `gh release create <tag> out/apk/* --notes-file out/notes.md --verify-tag`, or updates the release if it already exists (rules below).
+**Job `publish`** (`contents: write`, no checkout, no build code): downloads `release`. If a release for the tag exists, it attaches the files (`gh release upload --clobber`) and replaces title and notes (`gh release edit`). Otherwise `gh release create $TAG … --target $GITHUB_SHA`, which on a button run also creates the tag at the built commit. A tag created with `GITHUB_TOKEN` doesn't start another run.
 
 Rules:
 
 - Secrets go only into the steps that need them (`env:` per step), never into the job or workflow `env`. Never `echo` them, never `set -x` in those steps.
 - `contents: write` exists only in the `publish` job. Never give it to a job that runs Gradle or third-party build actions.
-- If a release for the tag already exists (published on the web page, or an earlier attempt), `publish` attaches the files with `gh release upload --clobber` and replaces title and notes with `gh release edit`, instead of failing. So "Re-run failed jobs" is always safe.
+- "Re-run failed jobs" is always safe (publish updates an existing release). "Re-run all jobs" on a button run whose tag exists stops at "Tag exists".
+- **When the owner asks Claude to release `X.Y.Z`:** check `CHANGELOG.md` on `main` has a non-empty `## [X.Y.Z]` section (if not, open the changelog PR first and wait for the merge), check the tag doesn't exist, then `actions_run_trigger` → `run_workflow`, `workflow_id: release.yml`, `ref: main`, `inputs: {version: "X.Y.Z"}`. Never push a tag or create a release by hand.
 
 ## Diagnosing a failed run
 

@@ -1,14 +1,22 @@
-# Publishes a signed APK as a GitHub Release for every version tag vX.Y.Z on main (ADR-0029).
+# Publishes a signed APK as a GitHub Release for a version vX.Y.Z on main (ADR-0029, ADR-0030). Started either by
+# the "Run workflow" button on main (it creates the tag after a successful build) or by pushing a tag v*.
 # One-time setup and how to cut a release: docs/releasing.md. Job layout: .claude/rules/ci-build.md.
 name: Release
+run-name: Release ${{ inputs.version || github.ref_name }}
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 0.1.1. CHANGELOG.md on main needs a section ## [0.1.1]."
+        required: true
+        type: string
 
-# Never cancel a release half-way; a second push of the same tag waits.
+# One release at a time, never cancelled half-way; a second one waits.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 permissions:
@@ -24,18 +32,43 @@ jobs:
     name: Build signed APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    # The signing secrets live in this environment, which only admits v* tags (docs/releasing.md).
+    # The signing secrets live in this environment, which only admits main and v* tags (docs/releasing.md).
     environment: release
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0 # main's history, for the tag-on-main check
+          fetch-depth: 0 # main's history and all tags, for the checks below
           persist-credentials: false
 
-      - name: Tag is on main
+      # The tag this run releases: the pushed tag, or v<version> from the button.
+      - name: Resolve tag
+        id: tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            if [ "$GITHUB_REF" != refs/heads/main ]; then
+              echo "::error title=Not on main::Run the release from main, not $GITHUB_REF_NAME (ADR-0020)."
+              exit 1
+            fi
+            tag="v${VERSION#v}"
+            if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+              echo "::error title=Tag exists::$tag already exists. Release a new version instead; never move a tag (docs/releasing.md)."
+              exit 1
+            fi
+          else
+            tag="$GITHUB_REF_NAME"
+          fi
+          echo "Releasing $tag from $GITHUB_SHA"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Commit is on main
         run: |
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
-            echo "::error title=Tag not on main::$GITHUB_REF_NAME points to a commit that isn't on main. Releases are tags on main (ADR-0020); see docs/releasing.md."
+            echo "::error title=Tag not on main::$TAG points to a commit that isn't on main. Releases are tags on main (ADR-0020); see docs/releasing.md."
             exit 1
           fi
 
@@ -73,7 +106,7 @@ jobs:
 
       # Checks the tag format and that CHANGELOG.md has its section, before the long build.
       - name: Release notes from CHANGELOG.md
-        run: ./gradlew :app:releaseNotes -Papp.versionTag="$GITHUB_REF_NAME"
+        run: ./gradlew :app:releaseNotes -Papp.versionTag="$TAG"
 
       - name: Verify
         run: ./gradlew verify
@@ -91,11 +124,11 @@ jobs:
           trap 'rm -f "$RELEASE_KEYSTORE_PATH"' EXIT
           printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RELEASE_KEYSTORE_PATH"
           unset RELEASE_KEYSTORE_BASE64
-          ./gradlew :app:assembleRelease -Papp.versionTag="$GITHUB_REF_NAME" --no-configuration-cache
+          ./gradlew :app:assembleRelease -Papp.versionTag="$TAG" --no-configuration-cache
 
       - name: Check signature and version
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${TAG#v}"
           # Recomputed here on purpose, as an independent check of the build (ADR-0029).
           IFS=. read -r major minor patch <<<"$version"
           code=$((10#$major * 10000 + 10#$minor * 100 + 10#$patch))
@@ -122,7 +155,7 @@ jobs:
           package="$(grep -m 1 "^package:" <<<"$badging" || true)"
           echo "$package"
           if ! grep -qF "versionCode='$code' versionName='$version'" <<<"$package"; then
-            echo "::error title=Wrong version::Expected versionCode $code and versionName $version for $GITHUB_REF_NAME."
+            echo "::error title=Wrong version::Expected versionCode $code and versionName $version for $TAG."
             exit 1
           fi
           mkdir -p out/apk
@@ -167,15 +200,18 @@ jobs:
 
       # A release for the tag may already exist: created on GitHub's web page (which also pushes the tag), or by an
       # earlier attempt of this run. Then the files are attached to it and its notes replaced, instead of failing.
+      # Otherwise the release is created; on a button run that also creates the tag, at the commit that was built.
+      # (A tag created with this token doesn't start another run.)
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            echo "::notice title=Release already existed::Attaching the APK to $GITHUB_REF_NAME and replacing its notes with the CHANGELOG.md section."
-            gh release upload "$GITHUB_REF_NAME" out/apk/* --clobber
-            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file out/notes.md
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::notice title=Release already existed::Attaching the APK to $TAG and replacing its notes with the CHANGELOG.md section."
+            gh release upload "$TAG" out/apk/* --clobber
+            gh release edit "$TAG" --title "$TAG" --notes-file out/notes.md
           else
-            gh release create "$GITHUB_REF_NAME" out/apk/* --title "$GITHUB_REF_NAME" --notes-file out/notes.md --verify-tag
+            gh release create "$TAG" out/apk/* --title "$TAG" --notes-file out/notes.md --target "$GITHUB_SHA"
           fi
