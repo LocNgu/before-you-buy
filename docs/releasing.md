@@ -82,7 +82,7 @@ Versions are `vMAJOR.MINOR.PATCH`, with MINOR and PATCH from 0 to 99 and no suff
    git push origin v0.1.0
    ```
 
-   Use `git`, not GitHub's "Draft a new release" button: the workflow creates the release itself and fails if one already exists.
+   Prefer `git` over GitHub's "Draft a new release" button: the workflow creates the release itself. If you do publish a release on the web page (which also creates the tag), the workflow attaches the APK to it and replaces its notes with the changelog section.
 3. **Watch the run** under **Actions → Release**. It fails, without publishing anything, if:
    - the tag isn't on `main`, or isn't `vX.Y.Z`;
    - a signing secret is missing from the `release` environment;
@@ -91,7 +91,7 @@ Versions are `vMAJOR.MINOR.PATCH`, with MINOR and PATCH from 0 to 99 and no suff
    - the APK isn't signed with the release key (unsigned or debug-signed) or has the wrong version.
 4. The release appears under **Releases**, named after the tag, with `before-you-buy-0.1.0.apk`, `before-you-buy-0.1.0.apk.sha256` and the changelog section as notes.
 
-**If a run fails:** fix the cause on `main` through a PR, then release a new patch version (`v0.1.1`). Don't move an existing tag. If only the publish step failed (e.g. GitHub was down), re-run the job; if the release was already created, delete the release (not the tag) first.
+**If a run fails:** fix the cause on `main` through a PR, then release a new patch version (`v0.1.1`). Don't move an existing tag. If only the publish step failed (e.g. GitHub was down), re-run the failed job: it reuses the APK already built in that run and updates the release if one exists.
 
 ## 5. Install on the phone
 

@@ -34,13 +34,13 @@ paths:
 6. **Assemble signed release**: decodes the keystore to `$RUNNER_TEMP` (deleted on exit), sets `RELEASE_KEYSTORE_PATH`, runs `:app:assembleRelease -Papp.versionTag=<tag> --no-configuration-cache` (the plugin refuses to sign with the configuration cache on).
 7. **Check signature and version**: requires `app-release.apk` (an unsigned build is `app-release-unsigned.apk`), `apksigner verify` from the newest stable build-tools, rejects `CN=Android Debug`, checks `versionCode`/`versionName` with `aapt2 dump badging` against its own computation from the tag, prints the public certificate digest, and puts `before-you-buy-<version>.apk` + `.sha256` and `notes.md` into the artifact `release`.
 
-**Job `publish`** (`contents: write`, no checkout, no build code): downloads `release` and runs `gh release create <tag> out/apk/* --notes-file out/notes.md --verify-tag`.
+**Job `publish`** (`contents: write`, no checkout, no build code): downloads `release` and runs `gh release create <tag> out/apk/* --notes-file out/notes.md --verify-tag`, or updates the release if it already exists (rules below).
 
 Rules:
 
 - Secrets go only into the steps that need them (`env:` per step), never into the job or workflow `env`. Never `echo` them, never `set -x` in those steps.
 - `contents: write` exists only in the `publish` job. Never give it to a job that runs Gradle or third-party build actions.
-- A re-run after the release exists fails at `gh release create`: delete the release (not the tag) first, or cut a new patch version.
+- If a release for the tag already exists (published on the web page, or an earlier attempt), `publish` attaches the files with `gh release upload --clobber` and replaces title and notes with `gh release edit`, instead of failing. So "Re-run failed jobs" is always safe.
 
 ## Diagnosing a failed run
 

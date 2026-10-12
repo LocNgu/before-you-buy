@@ -165,12 +165,17 @@ jobs:
           name: release
           path: out
 
-      - name: Create release
+      # A release for the tag may already exist: created on GitHub's web page (which also pushes the tag), or by an
+      # earlier attempt of this run. Then the files are attached to it and its notes replaced, instead of failing.
+      - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: >-
-          gh release create "$GITHUB_REF_NAME" out/apk/*
-          --title "$GITHUB_REF_NAME"
-          --notes-file out/notes.md
-          --verify-tag
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "::notice title=Release already existed::Attaching the APK to $GITHUB_REF_NAME and replacing its notes with the CHANGELOG.md section."
+            gh release upload "$GITHUB_REF_NAME" out/apk/* --clobber
+            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file out/notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" out/apk/* --title "$GITHUB_REF_NAME" --notes-file out/notes.md --verify-tag
+          fi
