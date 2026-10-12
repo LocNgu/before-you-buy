@@ -10,6 +10,7 @@ Offline Android app that makes people pause, reflect, prioritize and save before
 - `docs/decisions/` — ADRs. **Scan the index before working in an area.** If a request contradicts an ADR, name it and ask the owner before proceeding; changed decisions get a new superseding ADR (rules in `docs/decisions/README.md`).
 - `docs/architecture.md` — stack, modules, pitfalls.
 - `docs/research.md` — evidence behind product decisions (only when a design question comes up).
+- `docs/releasing.md` — releases. "Release X.Y.Z" means: changelog section on `main`, then start the Release workflow's **Run workflow** on `main` with that version (`.claude/rules/ci-build.md`). Never tag by hand.
 
 ## "Work on #N" — the default procedure (ADR-0020)
 

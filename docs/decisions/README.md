@@ -43,3 +43,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0027](0027-money-formatting-and-input.md) | technical | Money formatting/parsing in `:core:domain`; input accepts `.` or `,` as decimal separator |
 | [0028](0028-calm-fixed-theme.md) | product | Calm fixed palette, no dynamic colour, no urgency colours, identical Buy/Reject buttons |
 | [0029](0029-github-releases-signed-apk.md) | technical | Signed APKs on GitHub Releases for tags `vX.Y.Z` on `main`; version from the tag; one release key, later also Play's app signing key |
+| [0030](0030-release-button.md) | technical | Releases start from the Release workflow's "Run workflow" button on `main`; it tags only after a successful build |

@@ -1,9 +1,9 @@
 # Releasing
 
-How the app gets from `main` to your phone: a signed APK on GitHub Releases for every version tag (ADR-0029). Google Play comes later (#35) and will use the same key.
+How the app gets from `main` to your phone: a signed APK on GitHub Releases for every version tag (ADR-0029, ADR-0030). Google Play comes later (#35) and will use the same key.
 
 - **Once:** create the release key, back it up, add it to GitHub as secrets.
-- **Each release:** update `CHANGELOG.md`, tag `main`, push the tag. `.github/workflows/release.yml` does the rest.
+- **Each release:** update `CHANGELOG.md`, then press **Run workflow** on the Release workflow (or ask Claude to). `.github/workflows/release.yml` builds, tags and publishes.
 - **On the phone:** download the APK from the release page and install it; later releases install as updates.
 
 ## 1. Create the release key (once)
@@ -53,7 +53,9 @@ base64 -i before-you-buy-release.jks -o keystore.b64        # macOS
 The secrets go into a GitHub **environment** that only version tags can use. Plain repository secrets would be readable by any workflow on any branch, including pull request runs.
 
 1. The repository → **Settings → Environments → New environment**, name it `release`.
-2. Under **Deployment branches and tags**, choose **Selected branches and tags** → **Add deployment branch or tag rule** → type **Tag**, pattern `v*`.
+2. Under **Deployment branches and tags**, choose **Selected branches and tags** and add two rules (**Add deployment branch or tag rule**):
+   - type **Branch**, name `main` (for the **Run workflow** button, which runs on `main`);
+   - type **Tag**, pattern `v*` (for pushed tags and releases published on the web page).
 3. Under **Environment secrets**, add four secrets:
 
 | Secret | Value |
@@ -74,24 +76,31 @@ Optional: protect version tags with a ruleset (**Settings → Rules → Rulesets
 Versions are `vMAJOR.MINOR.PATCH`, with MINOR and PATCH from 0 to 99 and no suffix like `-rc.1`. The tag gives `versionName = MAJOR.MINOR.PATCH` and `versionCode = MAJOR*10000 + MINOR*100 + PATCH` (`v0.1.0` → 100, `v1.2.3` → 10203), so a later version always installs as an update.
 
 1. **Changelog PR.** In `CHANGELOG.md`, rename the entries under `## [Unreleased]` to a new section `## [0.1.0] - 2026-10-12` (version without the `v`, today's date) and leave an empty `## [Unreleased]` above it. The release notes are exactly this section; the release fails if it's missing or empty. Merge the PR.
-2. **Tag `main`** and push the tag:
+2. **Start the release** in one of these ways. All of them end in the same tag `v0.1.0` on `main` and the same release.
+   - **Run workflow button (recommended):** **Actions → Release → Run workflow**, branch `main`, version `0.1.0` → **Run workflow**. The workflow builds and checks first, and creates the tag and the release only when everything passed. A failed run publishes nothing.
+   - **Ask Claude:** "release 0.1.0". Claude starts the same run with its GitHub tools (`actions_run_trigger`, `run_workflow`, `ref: main`, input `version`).
+   - **Push a tag with `git`:**
 
-   ```bash
-   git fetch origin main
-   git tag -a v0.1.0 origin/main -m "v0.1.0"
-   git push origin v0.1.0
-   ```
+     ```bash
+     git fetch origin main
+     git tag -a v0.1.0 origin/main -m "v0.1.0"
+     git push origin v0.1.0
+     ```
 
-   Use `git`, not GitHub's "Draft a new release" button: the workflow creates the release itself and fails if one already exists.
+   - **Publish a release on GitHub's web page** with a new tag on `main`. This works too: the workflow attaches the APK to that release and replaces its notes with the changelog section. But the release is visible without an APK for a few minutes, and if the build fails it stays published and empty; delete it (and the tag) by hand.
 3. **Watch the run** under **Actions → Release**. It fails, without publishing anything, if:
-   - the tag isn't on `main`, or isn't `vX.Y.Z`;
+   - the version isn't `X.Y.Z`, the commit isn't on `main`, or (button) the tag already exists or the run wasn't started on `main`;
    - a signing secret is missing from the `release` environment;
    - `CHANGELOG.md` has no section for the version;
    - `verify` fails;
    - the APK isn't signed with the release key (unsigned or debug-signed) or has the wrong version.
 4. The release appears under **Releases**, named after the tag, with `before-you-buy-0.1.0.apk`, `before-you-buy-0.1.0.apk.sha256` and the changelog section as notes.
 
-**If a run fails:** fix the cause on `main` through a PR, then release a new patch version (`v0.1.1`). Don't move an existing tag. If only the publish step failed (e.g. GitHub was down), re-run the job; if the release was already created, delete the release (not the tag) first.
+**If a run fails:**
+
+- **Button run, failed before publishing:** no tag exists yet. Fix the cause on `main` through a PR and run it again with the same version.
+- **The tag already exists** (pushed tag, or a release from the web page): fix the cause on `main` through a PR, then release a new patch version (`v0.1.1`). Never move an existing tag.
+- **Only the publish job failed** (e.g. GitHub was down): **Re-run failed jobs**. It reuses the APK already built in that run and updates the release if one exists. Don't use "Re-run all jobs" on a button run whose tag was already created: it stops at "Tag exists".
 
 ## 5. Install on the phone
 

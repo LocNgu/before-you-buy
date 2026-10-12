@@ -1,6 +1,6 @@
 # ADR-0029: Signed APKs on GitHub Releases for version tags; one release key for GitHub and Play
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0030 (how a release is started)
 **Type**: technical
 **Date**: 2026-10-11
 
