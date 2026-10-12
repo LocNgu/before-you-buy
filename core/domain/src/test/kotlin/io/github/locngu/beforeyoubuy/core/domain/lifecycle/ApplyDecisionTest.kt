@@ -72,8 +72,15 @@ class ApplyDecisionTest {
     }
 
     @Test
-    fun `buying early is refused once the want is ready`() {
-        assertEquals(DecisionResult.AlreadyReady, decide(ready, DecisionType.BUY_EARLY, earlyReason = "Why not"))
+    fun `buying early is allowed in every stage of a want`() {
+        val early = ready.copy(status = ItemStatus.PURCHASED, prioritySlot = null)
+        assertEquals(early, applied(decide(ready, DecisionType.BUY_EARLY, reflection = null, earlyReason = "On sale")))
+        assertEquals(
+            early,
+            applied(decide(ready, DecisionType.BUY_EARLY, allocated = UNFUNDED, earlyReason = "On sale"))
+        )
+        // Confirmed just as cooling off ended: the friction was already gone through, so it still counts.
+        assertEquals(early, applied(decide(ready, DecisionType.BUY_EARLY, at = COOLING_ENDS, earlyReason = "On sale")))
     }
 
     @Test
@@ -97,6 +104,8 @@ class ApplyDecisionTest {
 
         val stillCooling = applied(decide(ready, DecisionType.WAIT, at = DURING_COOLING, waitUntil = recheck))
         assertEquals(recheck, stillCooling.recheckAt)
+
+        assertEquals(need.copy(recheckAt = recheck), applied(decide(need, DecisionType.WAIT, waitUntil = recheck)))
     }
 
     @Test
@@ -147,6 +156,14 @@ class ApplyDecisionTest {
         val inDollars = Decision(DecisionType.BUY, AFTER_COOLING, actualPrice = Money(11_000, "USD"))
         assertThrows(IllegalArgumentException::class.java) {
             applyDecision(ready, COMPLETE_REFLECTION, FUNDED, inDollars)
+        }
+    }
+
+    @Test
+    fun `savings in another currency throw for every decision`() {
+        val dollars = Money(12_000, "USD")
+        for (type in listOf(DecisionType.REJECT, DecisionType.BUY_NEED)) {
+            assertThrows(IllegalArgumentException::class.java) { decide(need, type, allocated = dollars) }
         }
     }
 

@@ -106,6 +106,18 @@ class StageTest {
     }
 
     @Test
+    fun `a funded need is due for a decision right away`() {
+        assertTrue(isDueForDecision(item(ItemKind.NEED), null, FUNDED, ADDED))
+    }
+
+    @Test
+    fun `savings in another currency throw in every stage`() {
+        val dollars = Money(12_000, "USD")
+        assertThrows(IllegalArgumentException::class.java) { stageOf(item(), null, dollars, DURING_COOLING) }
+        assertThrows(IllegalArgumentException::class.java) { isDueForDecision(item(), null, dollars, DURING_COOLING) }
+    }
+
+    @Test
     fun `an item can't have a negative price or a priority slot below 1`() {
         assertThrows(IllegalArgumentException::class.java) { item().copy(price = Money(-1, "EUR")) }
         assertThrows(IllegalArgumentException::class.java) { item().copy(prioritySlot = 0) }

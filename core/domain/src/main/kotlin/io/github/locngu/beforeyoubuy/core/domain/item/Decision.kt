@@ -21,6 +21,7 @@ enum class DecisionType {
     REJECT
     ;
 
+    /** Ends the item as `PURCHASED` and carries an actual price. */
     val isPurchase: Boolean get() = this == BUY || this == BUY_EARLY || this == BUY_NEED
 }
 

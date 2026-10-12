@@ -13,15 +13,18 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
  * item's new state (brief §5 "Decisions"):
  *
  * - `BUY`: a want that is Ready.
- * - `BUY_EARLY`: a want that isn't Ready, with a non-blank reason (ADR-0006).
+ * - `BUY_EARLY`: a want, with a non-blank reason (ADR-0006). Allowed "any time" (brief §5), so confirming just as
+ *   cooling off ends still records the early purchase the user went through the friction for.
  * - `BUY_NEED`: a `NEED`, in any stage (ADR-0008).
  * - `WAIT`: any active item, with a re-check date in the future. The item stays active.
  * - `REJECT`: any active item.
  *
  * Purchased and rejected items refuse every decision. Never throws for a refused decision. [allocated] and the
- * decision's actual price must be in the item's currency; anything else is a programming error and throws.
+ * decision's actual price must be in the item's currency; anything else is a programming error and throws, whatever
+ * the decision.
  */
 fun applyDecision(item: Item, reflection: Reflection?, allocated: Money, decision: Decision): DecisionResult {
+    requireSameCurrency(item, allocated)
     require(decision.actualPrice == null || decision.actualPrice.currency == item.price.currency) {
         "Actual price must be in the item's currency ${item.price.currency}"
     }
@@ -37,7 +40,6 @@ fun applyDecision(item: Item, reflection: Reflection?, allocated: Money, decisio
 
         DecisionType.BUY_EARLY -> when {
             isNeed -> DecisionResult.IsNeed
-            stageOf(item, reflection, allocated, now) == Stage.READY -> DecisionResult.AlreadyReady
             decision.earlyReason.isNullOrBlank() -> DecisionResult.MissingEarlyReason
             else -> null
         }

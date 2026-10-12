@@ -33,10 +33,12 @@ fun isFunded(item: Item, allocated: Money): Boolean = allocated >= item.price
 
 /**
  * The stage of an active item, per the table in brief §5. The first unmet condition wins: cooled off, then
- * reflected, then funded. Purchased and rejected items have no stage; asking for one is a programming error.
+ * reflected, then funded. Purchased and rejected items have no stage, and [allocated] must be in the item's
+ * currency; anything else is a programming error and throws.
  */
 fun stageOf(item: Item, reflection: Reflection?, allocated: Money, now: Instant): Stage {
     require(item.status == ItemStatus.ACTIVE) { "Only active items have a stage; ${item.id} is ${item.status}" }
+    requireSameCurrency(item, allocated)
     return when {
         !isCooledOff(item, now) -> Stage.COOLING_OFF
         !isReflected(item, reflection) -> Stage.NEEDS_REFLECTION
@@ -47,9 +49,19 @@ fun stageOf(item: Item, reflection: Reflection?, allocated: Money, now: Instant)
 
 /**
  * Whether the item should be offered for a decision now (brief §5): it is active and Ready, and a `WAIT`
- * decision's re-check date, if any, has come. False for purchased and rejected items.
+ * decision's re-check date, if any, has come. False for purchased and rejected items. Like [stageOf], throws if
+ * [allocated] isn't in the item's currency.
  */
-fun isDueForDecision(item: Item, reflection: Reflection?, allocated: Money, now: Instant): Boolean =
-    item.status == ItemStatus.ACTIVE &&
+fun isDueForDecision(item: Item, reflection: Reflection?, allocated: Money, now: Instant): Boolean {
+    requireSameCurrency(item, allocated)
+    return item.status == ItemStatus.ACTIVE &&
         stageOf(item, reflection, allocated, now) == Stage.READY &&
         (item.recheckAt == null || now >= item.recheckAt)
+}
+
+/** Mixing currencies is a wiring bug; fail on every path, not only once the item reaches the funded check. */
+internal fun requireSameCurrency(item: Item, allocated: Money) {
+    require(allocated.currency == item.price.currency) {
+        "Allocated ${allocated.currency} doesn't match the item's currency ${item.price.currency}"
+    }
+}

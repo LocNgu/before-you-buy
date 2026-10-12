@@ -15,9 +15,6 @@ sealed interface DecisionResult {
     /** `BUY` on a want that isn't Ready. Buying it now is `BUY_EARLY` (ADR-0006). */
     data object NotReady : Refused
 
-    /** `BUY_EARLY` on a want that is Ready. That's a plain `BUY`. */
-    data object AlreadyReady : Refused
-
     /** `BUY` or `BUY_EARLY` on a `NEED`. A need is bought with `BUY_NEED` (ADR-0008). */
     data object IsNeed : Refused
 

@@ -19,11 +19,14 @@ data class Money(val minorUnits: Long, val currency: String) : Comparable<Money>
         }
     }
 
+    /** The sum; throws on mixed currencies or overflow. */
     operator fun plus(other: Money): Money = Money(Math.addExact(minorUnits, sameCurrency(other).minorUnits), currency)
 
+    /** The difference, which may be negative; throws on mixed currencies or overflow. */
     operator fun minus(other: Money): Money =
         Money(Math.subtractExact(minorUnits, sameCurrency(other).minorUnits), currency)
 
+    /** Orders by amount; throws on mixed currencies. */
     override fun compareTo(other: Money): Int = minorUnits.compareTo(sameCurrency(other).minorUnits)
 
     private fun sameCurrency(other: Money): Money {
