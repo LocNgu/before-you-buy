@@ -277,4 +277,4 @@ All decisions are recorded as ADRs in [`docs/decisions/`](decisions/README.md) (
 - **Final app name and logo** — #31 (descriptive names are hard to register as EU word marks — see `research.md`)
 - **Google Play account type** — #34 — personal (12 testers × 14 days closed test) vs organization (D-U-N-S, exempt)
 - **Monetization model** — #41 — and with it EU DSA trader status (public address) and German business registration
-- **Needs and fun money** — decide before #23 (M2): should a `NEED` always count as funded (so it never waits in "Saving"), should needs ever be paid from the discretionary pool, and should the app track a budget for needs at all? Concern: a necessity eating the money for fun things feels like a punishment. Until decided, needs skip cooling off and reflection but not funding (ADR-0008); in M1 every item counts as funded anyway
+- **Needs and fun money** — #23 — do needs need funding, may they ever use the discretionary pool, and should needs have a budget at all? Discussion and proposal in the issue
