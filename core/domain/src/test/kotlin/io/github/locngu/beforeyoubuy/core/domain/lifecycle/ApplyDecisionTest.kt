@@ -84,7 +84,7 @@ class ApplyDecisionTest {
     }
 
     @Test
-    fun `a need is bought with BUY_NEED in any stage, and only a need`() {
+    fun `a need is bought with BUY_NEED, saved for or not, and only a need`() {
         assertEquals(ItemStatus.PURCHASED, applied(decide(need, DecisionType.BUY_NEED, at = ADDED)).status)
         assertEquals(
             ItemStatus.PURCHASED,

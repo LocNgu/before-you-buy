@@ -8,7 +8,7 @@ import java.time.LocalDate
 @JvmInline
 value class ItemId(val value: Long)
 
-/** `NEED` skips cooling-off and reflection (brief §4.4, ADR-0008). */
+/** `NEED` skips cooling-off, reflection and funding (brief §4.4, ADR-0008, ADR-0031). */
 enum class ItemKind { WANT, NEED }
 
 /** The only stored state of an item's lifecycle. The displayed stage is derived (brief §5, ADR-0007). */

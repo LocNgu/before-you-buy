@@ -102,10 +102,10 @@ Answers are shown again on the decision screen — this creates the separation b
 
 A user can mark an item as `NEED` (e.g. "fridge broke"). A need:
 
-- skips the cooling-off period and reflection requirement
+- skips the cooling-off period and reflection requirement, and never needs funding
 - goes straight to the decision screen
 - is recorded in history as a need (so the user can later see whether "needs" were really needs)
-- is **not** drawn from the discretionary pool by default (it's a necessity), but can be if the user chooses
+- is **never** paid from the discretionary pool and can't receive allocations: a necessity shouldn't eat the money for fun things. There's no budget for needs; they're only recorded. Something the user wants to pay from fun money is a want (ADR-0031)
 
 Without this path users stop using the app for "real" purchases.
 
@@ -144,7 +144,7 @@ An active item has three independent conditions:
 
 - `cooledOff` — now ≥ `coolingEndsAt` (always true for `NEED`)
 - `reflected` — required reflection answers present (always true for `NEED`)
-- `funded` — allocations ≥ price
+- `funded` — allocations ≥ price (always true for `NEED`, ADR-0031)
 
 The **displayed stage** is derived, never stored:
 

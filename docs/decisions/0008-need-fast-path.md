@@ -1,6 +1,6 @@
 # ADR-0008: NEED items skip cooling-off and reflection, still logged
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0031 (pool clause; needs always count as funded)
 **Type**: product
 **Date**: 2026-10-04
 
