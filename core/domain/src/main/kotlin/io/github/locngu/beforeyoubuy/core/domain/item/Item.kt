@@ -30,6 +30,8 @@ enum class ItemStatus {
  * @property recheckAt set by a `WAIT` decision; the item isn't due for a decision before it.
  * @property targetDate informational only.
  * @property prioritySlot 1..N while the item holds a priority slot (brief §4.7).
+ * @property markedAsNeedAt when a want was changed to a `NEED`; null for wants and for items captured as needs.
+ *   Change the kind with [io.github.locngu.beforeyoubuy.core.domain.coolingoff.changeKind].
  */
 data class Item(
     val id: ItemId,
@@ -45,7 +47,8 @@ data class Item(
     val notes: String? = null,
     val targetDate: LocalDate? = null,
     val recheckAt: Instant? = null,
-    val prioritySlot: Int? = null
+    val prioritySlot: Int? = null,
+    val markedAsNeedAt: Instant? = null
 ) {
     init {
         require(price.minorUnits >= 0) { "Price can't be negative, was $price" }
