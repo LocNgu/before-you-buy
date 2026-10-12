@@ -277,3 +277,4 @@ All decisions are recorded as ADRs in [`docs/decisions/`](decisions/README.md) (
 - **Final app name and logo** — #31 (descriptive names are hard to register as EU word marks — see `research.md`)
 - **Google Play account type** — #34 — personal (12 testers × 14 days closed test) vs organization (D-U-N-S, exempt)
 - **Monetization model** — #41 — and with it EU DSA trader status (public address) and German business registration
+- **Needs and fun money** — #23 — do needs need funding, may they ever use the discretionary pool, and should needs have a budget at all? Discussion and proposal in the issue
