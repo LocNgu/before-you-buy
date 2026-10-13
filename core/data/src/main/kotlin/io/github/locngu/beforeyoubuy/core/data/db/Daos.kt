@@ -24,6 +24,20 @@ internal interface ItemDao {
     @Query("SELECT * FROM items WHERE status = :status ORDER BY added_at, id")
     fun observeByStatus(status: String): Flow<List<ItemEntity>>
 
+    @Query("SELECT * FROM items WHERE status = :status ORDER BY added_at, id")
+    suspend fun getByStatus(status: String): List<ItemEntity>
+
+    @Query("SELECT * FROM items")
+    suspend fun getAll(): List<ItemEntity>
+
+    /** Changes only the cooling-off end, so columns this version can't read are kept as stored. */
+    @Query("UPDATE items SET cooling_ends_at = :coolingEndsAt WHERE id = :id")
+    suspend fun setCoolingEnd(id: Long, coolingEndsAt: Long)
+
+    /** Changes only the price, for a currency relabel (ADR-0033). */
+    @Query("UPDATE items SET price_minor = :priceMinor, currency = :currency WHERE id = :id")
+    suspend fun setPrice(id: Long, priceMinor: Long, currency: String)
+
     @Query("SELECT * FROM items WHERE id = :id")
     fun observeById(id: Long): Flow<ItemEntity?>
 
@@ -57,7 +71,11 @@ internal interface ReflectionDao {
     fun observe(itemId: Long): Flow<ReflectionEntity?>
 }
 
-/** Append-only: no update or delete (decisions go only when their item is deleted). */
+/**
+ * Append-only: no update or delete (decisions go only when their item is deleted). The one exception is
+ * [setActualPrice], which relabels the currency of what was paid when the app's currency changes (ADR-0033); what was
+ * decided never changes.
+ */
 @Dao
 internal interface DecisionDao {
     @Insert
@@ -65,6 +83,25 @@ internal interface DecisionDao {
 
     @Query("SELECT * FROM decisions WHERE item_id = :itemId ORDER BY id")
     fun observeForItem(itemId: Long): Flow<List<DecisionEntity>>
+
+    @Query("SELECT * FROM decisions WHERE actual_price_minor IS NOT NULL AND actual_price_currency IS NOT NULL")
+    suspend fun getWithActualPrice(): List<DecisionEntity>
+
+    @Query("UPDATE decisions SET actual_price_minor = :minor, actual_price_currency = :currency WHERE id = :id")
+    suspend fun setActualPrice(id: Long, minor: Long, currency: String)
+}
+
+/** The single policy row (id [PolicyEntity.ID]). [BeforeYouBuyDatabase] creates it on first open. */
+@Dao
+internal interface PolicyDao {
+    @Query("SELECT * FROM policy WHERE id = ${PolicyEntity.ID}")
+    fun observe(): Flow<PolicyEntity?>
+
+    @Query("SELECT * FROM policy WHERE id = ${PolicyEntity.ID}")
+    suspend fun get(): PolicyEntity?
+
+    @Update
+    suspend fun update(policy: PolicyEntity): Int
 }
 
 internal data class HistoryRow(

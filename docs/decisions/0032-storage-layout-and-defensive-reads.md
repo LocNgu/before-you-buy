@@ -10,7 +10,7 @@ Issue #13 creates the first Room schema and the settings store. Some choices sha
 
 - `reasons_against` (a list per reflection) could be a child table or a JSON column.
 - Decisions are history. Saving a decision changes the item too, and a notification action ("Let it go", "Wait") can race with the app: a decision or edit computed from an item read earlier must not overwrite a newer change.
-- Settings hold values that depend on each other (the cooling-off tiers are in the app's currency) and must never stop the app from starting.
+- Settings hold values that depend on each other and on the items (the cooling-off tiers are in the app's currency and move items' ends) and must never stop the app from starting.
 
 ## Decision
 
@@ -22,13 +22,12 @@ Issue #13 creates the first Room schema and the settings store. Some choices sha
 - **Instants are epoch millis**, so read-back instants are truncated to milliseconds. **Dates are ISO-8601 text.**
 - **Unknown enum names fall back** (ADR-0019): kind → `WANT`, reflection choices → unanswered, decision source → `APP`. An unknown status reads as `ACTIVE` in `observeById`, but the lists filter on the stored text, so such an item is in neither the active list nor history. A decision of an unknown type is skipped, because no other type has the same fields; its history entry is hidden until the app knows the type. An item read with a fallback (unknown kind or status, unreadable target date) never equals its stored row, so compare-and-set writes refuse it: it is read-only until the app understands it, and is never overwritten with a guess.
 - **Only enum names and dates are read defensively.** Other values (currency codes, amounts, a purchase's actual price) were validated by the domain model before this app wrote them, so the mappers don't catch per row. An impossible row fails the query that reads it rather than being hidden.
-- **Settings store only what the user set.** Defaults are computed on read. The currency defaults to the device region's (system locale, not the per-app language), else EUR, until the first setting is saved: every write also stores the currency in effect, so saved tiers never lose their currency to a region change. Usable currencies are ISO 4217 codes with fixed minor units (`isUsableCurrency`: no XXX, test codes or metals). Stored tiers apply only in their currency; otherwise, or if unreadable or invalid, the defaults in the current currency apply. An unreadable value reads as its default and a corrupt file is replaced by an empty one. A failed read is retried without emitting anything: showing defaults would show onboarding to a returning user, and a save from that screen would overwrite their currency.
+- **Currency and tiers are the policy row in Room** (ADR-0033). The currency is fixed when the database is first opened, from the device region (system locale, not the per-app language), else EUR. Usable currencies are ISO 4217 codes with fixed minor units (`isUsableCurrency`: no XXX, test codes or metals). The tiers are JSON, or null for the defaults in the currency; unreadable or invalid tiers read as the defaults.
+- **Preferences (notifications, onboarding) are in DataStore** and store only what the user set; defaults are computed on read. An unreadable value reads as its default and a corrupt file is replaced by an empty one. A failed read is retried without emitting anything: showing defaults would show onboarding to a returning user.
 
 ## Consequences
 
 - One reflection row per item; export (M3) can copy the JSON as is.
 - Callers keep the item they read and pass it as `current`; when `update`/`recordDecision` return false they reload and show the current state.
-- A corrupt settings file loses the user's settings (back to defaults) instead of crashing every start.
-- **Open (owner):** ADR-0031 says Settings stores the recomputed cooling-off ends "with the new tiers in one transaction". The tiers live in DataStore and the items in Room, so that can't be one transaction. How a tier change (and a currency change, which resets the effective tiers) reaches waiting items is to be decided before Settings (M3) changes tiers.
-- Changing the currency without new tiers resets the effective tiers to the defaults in the new currency. Settings (M3) sets the currency first, then tiers in it, and applies ADR-0031 to waiting items.
+- A corrupt preferences file loses the notification switches and the onboarding flag (back to defaults) instead of crashing every start. Currency, tiers and items are in Room.
 - After a downgrade, an item whose ending decision has an unknown type is missing from history until the app is updated again. That is accepted as the cost of not guessing a type.

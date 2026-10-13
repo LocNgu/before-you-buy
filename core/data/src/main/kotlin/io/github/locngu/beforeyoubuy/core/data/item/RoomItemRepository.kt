@@ -16,16 +16,23 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
     private val items = database.itemDao()
     private val reflections = database.reflectionDao()
     private val decisions = database.decisionDao()
+    private val policies = database.policyDao()
 
     override suspend fun add(item: Item): ItemId {
         require(item.status == ItemStatus.ACTIVE) { "New items are active, was ${item.status}" }
-        return ItemId(items.insert(item.copy(id = ItemId.NEW).toEntity()))
+        return database.withTransaction {
+            requireAppCurrency(item)
+            ItemId(items.insert(item.copy(id = ItemId.NEW).toEntity()))
+        }
     }
 
     override suspend fun update(current: Item, edited: Item): Boolean {
         require(edited.id == current.id) { "Can't change the id from ${current.id} to ${edited.id}" }
         require(edited.status == current.status) { "Status changes go through recordDecision" }
-        return writeIfUnchanged(current) { items.update(edited.toEntity()) }
+        return writeIfUnchanged(current) {
+            requireAppCurrency(edited)
+            items.update(edited.toEntity())
+        }
     }
 
     override fun observeActive(): Flow<List<Item>> =
@@ -57,6 +64,14 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
         return writeIfUnchanged(current) {
             decisions.insert(decision.toEntity(current.id))
             items.update(result.toEntity())
+        }
+    }
+
+    /** Every stored amount is in the app's currency (ADR-0033); anything else is a programming error. */
+    private suspend fun requireAppCurrency(item: Item) {
+        val currency = policies.get()?.currency ?: return
+        require(item.price.currency == currency) {
+            "Price in ${item.price.currency}, but the app's currency is $currency"
         }
     }
 

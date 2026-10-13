@@ -2,8 +2,37 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "c9db48ee7005b7e055b19cd324d3b615",
+    "identityHash": "6ac0f7c0b8bc217225a67c17261f30c5",
     "entities": [
+      {
+        "tableName": "policy",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `currency` TEXT NOT NULL, `cooling_off_rules` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currency",
+            "columnName": "currency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coolingOffRules",
+            "columnName": "cooling_off_rules",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
       {
         "tableName": "items",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `price_minor` INTEGER NOT NULL, `currency` TEXT NOT NULL, `added_at` INTEGER NOT NULL, `cooling_ends_at` INTEGER NOT NULL, `kind` TEXT NOT NULL, `status` TEXT NOT NULL, `link` TEXT, `image_ref` TEXT, `category` TEXT, `notes` TEXT, `target_date` TEXT, `recheck_at` INTEGER, `priority_slot` INTEGER, `marked_as_need_at` INTEGER)",
@@ -276,7 +305,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c9db48ee7005b7e055b19cd324d3b615')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6ac0f7c0b8bc217225a67c17261f30c5')"
     ]
   }
 }

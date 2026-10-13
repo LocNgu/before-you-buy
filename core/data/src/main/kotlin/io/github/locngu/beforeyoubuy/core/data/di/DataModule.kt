@@ -10,9 +10,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
 import io.github.locngu.beforeyoubuy.core.data.item.RoomItemRepository
-import io.github.locngu.beforeyoubuy.core.data.settings.DataStoreSettingsRepository
+import io.github.locngu.beforeyoubuy.core.data.settings.DataStorePreferencesRepository
+import io.github.locngu.beforeyoubuy.core.data.settings.RoomPolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
-import io.github.locngu.beforeyoubuy.core.domain.settings.SettingsRepository
+import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
+import io.github.locngu.beforeyoubuy.core.domain.settings.PreferencesRepository
+import io.github.locngu.beforeyoubuy.core.domain.settings.defaultCurrency
 import javax.inject.Singleton
 
 /**
@@ -21,21 +24,30 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-object DataModule {
+internal object DataModule {
     @Provides
     @Singleton
-    fun provideItemRepository(@ApplicationContext context: Context): ItemRepository =
-        RoomItemRepository(BeforeYouBuyDatabase.create(context))
+    fun provideDatabase(@ApplicationContext context: Context): BeforeYouBuyDatabase =
+        BeforeYouBuyDatabase.create(context) {
+            // The device's region decides the first currency. Not Locale.getDefault(): a per-app language replaces
+            // it, often without a region.
+            defaultCurrency(Resources.getSystem().configuration.locales[0])
+        }
 
     @Provides
     @Singleton
-    fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
-        DataStoreSettingsRepository(
-            DataStoreSettingsRepository.createDataStore { context.preferencesDataStoreFile(SETTINGS_FILE) },
-            // The device's region decides the default currency. Not Locale.getDefault(): a per-app language
-            // replaces it, often without a region.
-            locale = { Resources.getSystem().configuration.locales[0] }
+    fun provideItemRepository(database: BeforeYouBuyDatabase): ItemRepository = RoomItemRepository(database)
+
+    @Provides
+    @Singleton
+    fun providePolicyRepository(database: BeforeYouBuyDatabase): PolicyRepository = RoomPolicyRepository(database)
+
+    @Provides
+    @Singleton
+    fun providePreferencesRepository(@ApplicationContext context: Context): PreferencesRepository =
+        DataStorePreferencesRepository(
+            DataStorePreferencesRepository.createDataStore { context.preferencesDataStoreFile(PREFERENCES_FILE) }
         )
 
-    private const val SETTINGS_FILE = "settings"
+    private const val PREFERENCES_FILE = "preferences"
 }

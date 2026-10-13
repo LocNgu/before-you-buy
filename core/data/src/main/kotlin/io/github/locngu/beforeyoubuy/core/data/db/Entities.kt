@@ -10,6 +10,22 @@ import androidx.room.PrimaryKey
 // millis, dates are ISO-8601 text, enums are their names and are read defensively. Never a stage column (ADR-0007).
 // M2 adds `allocations` and `pool_entries` next to these, referencing `items.id`.
 
+/**
+ * The app's currency and cooling-off tiers (`Policy`): one row, id [ID]. Next to the items so a tier or currency
+ * change rewrites them in one transaction (ADR-0031, ADR-0033). [coolingOffRules] is `CoolingOffRulesJson`, or null
+ * for the defaults in [currency].
+ */
+@Entity(tableName = "policy")
+internal data class PolicyEntity(
+    @PrimaryKey val id: Int = ID,
+    val currency: String,
+    @ColumnInfo(name = "cooling_off_rules") val coolingOffRules: String?
+) {
+    companion object {
+        const val ID = 1
+    }
+}
+
 /** One row per item: the stored facts of `Item` (brief §4.1). */
 @Entity(tableName = "items", indices = [Index("status")])
 internal data class ItemEntity(

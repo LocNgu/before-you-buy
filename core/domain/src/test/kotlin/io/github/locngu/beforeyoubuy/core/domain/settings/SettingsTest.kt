@@ -32,15 +32,15 @@ class SettingsTest {
     }
 
     @Test
-    fun `defaults are notifications on and onboarding not done`() {
-        val settings = Settings("EUR", CoolingOffRules.defaults("EUR"))
+    fun `preference defaults are notifications on and onboarding not done`() {
+        val preferences = AppPreferences()
 
-        assertEquals(NotificationPrefs(waitingPeriods = true, reflectionReminders = true), settings.notifications)
-        assertEquals(false, settings.onboardingComplete)
+        assertEquals(NotificationPrefs(waitingPeriods = true, reflectionReminders = true), preferences.notifications)
+        assertEquals(false, preferences.onboardingComplete)
     }
 
     @Test
-    fun `rules must be in the settings' currency`() {
-        assertThrows(IllegalArgumentException::class.java) { Settings("EUR", CoolingOffRules.defaults("USD")) }
+    fun `a policy's rules must be in its currency`() {
+        assertThrows(IllegalArgumentException::class.java) { Policy("EUR", CoolingOffRules.defaults("USD")) }
     }
 }

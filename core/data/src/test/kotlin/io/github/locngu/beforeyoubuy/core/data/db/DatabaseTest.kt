@@ -7,7 +7,7 @@ import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
-/** A fresh in-memory [BeforeYouBuyDatabase] per test. */
+/** A fresh in-memory [BeforeYouBuyDatabase] per test, created with [DEFAULT_CURRENCY] as the app's currency. */
 @RunWith(RobolectricTestRunner::class)
 internal abstract class DatabaseTest {
     protected lateinit var database: BeforeYouBuyDatabase
@@ -17,7 +17,7 @@ internal abstract class DatabaseTest {
         database = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
             BeforeYouBuyDatabase::class.java
-        ).allowMainThreadQueries().build()
+        ).withPolicyRow { DEFAULT_CURRENCY }.allowMainThreadQueries().build()
     }
 
     @After
@@ -37,4 +37,8 @@ internal abstract class DatabaseTest {
         database.openHelper.readableDatabase.query(sql).use { cursor ->
             buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
         }
+
+    companion object {
+        const val DEFAULT_CURRENCY = "EUR"
+    }
 }
