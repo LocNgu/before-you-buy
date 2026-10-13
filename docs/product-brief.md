@@ -76,7 +76,7 @@ Rules:
 
 - The cooling-off end is fixed when the item is added: `coolingEndsAt = addedAt + period(price)`.
 - **Editing the price can only extend, never shorten** the period: `coolingEndsAt = max(current, addedAt + period(newPrice))`. (Prevents gaming by entering a low price first.)
-- Changing the tier settings affects new items only.
+- Changing the tier settings also moves the end of items that are still cooling off, longer or shorter: `coolingEndsAt = addedAt + period(price)` under the new tiers (ADR-0031). Items whose wait has ended keep it.
 - *"Wanting something immediately does not make it immediately purchasable."*
 
 ### 4.3 Reflection

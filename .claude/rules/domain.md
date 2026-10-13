@@ -7,7 +7,7 @@ paths:
   - "core/domain/src/**/lifecycle/**/*"
 ---
 
-# Items, lifecycle and cooling-off (ADR-0005 – ADR-0009, ADR-0018)
+# Items, lifecycle and cooling-off (ADR-0005 – ADR-0009, ADR-0018, ADR-0031)
 
 ## Model (`item/`)
 
@@ -28,7 +28,8 @@ paths:
 
 - `CoolingOffRules` can only exist valid: `CoolingOffRules.from(tiers)` returns `Valid` or `Invalid` with every `CoolingOffRulesError` (by tier index, for Settings); `defaults(currency)` scales `DEFAULT_COOLING_OFF_TIERS` (major units, the one source of the defaults) to the currency's minor units. Thresholds in mixed currencies throw.
 - Periods are whole days (`Period.ofDays`); months or years are rejected because their length varies. Add them with `ZonedDateTime` in an explicit `ZoneId` (calendar days across DST), never as seconds.
-- The cooling-off end is set once, by `initialCoolingEnd` (a `NEED` ends at `addedAt`). A price edit only extends it: `coolingEndAfterPriceEdit` takes the max with the current end. The one exception is `changeKind` from `NEED` to want, which recomputes it from `addedAt` like a new want, even if that is sooner (owner's call on #60). Never write a function that recomputes existing items when the rules change (ADR-0005).
+- The cooling-off end is set at capture by `initialCoolingEnd` (a `NEED` ends at `addedAt`). A price edit only extends it: `coolingEndAfterPriceEdit` takes the max with the current end (ADR-0005). Only two things may shorten it (ADR-0031): `changeKind` from `NEED` to want, which recomputes it from `addedAt` like a new want, and a tier change.
+- When the tiers change, apply `coolingEndAfterRulesChange` to every item (ADR-0031): it recomputes the end of active wants that are still cooling off, longer or shorter, from `addedAt` and the current price. Items whose wait has ended, needs and ended items keep their end.
 - Every cooling-off function throws up front if a price isn't in the rules' currency or is negative, whatever the item's kind.
 - `changeKind` is the only way to change kind. Want → `NEED` sets `markedAsNeedAt` and keeps `coolingEndsAt`; `NEED` → want clears `markedAsNeedAt`.
 

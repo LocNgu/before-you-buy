@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoolingOffTest {
@@ -165,6 +166,65 @@ class CoolingOffTest {
     fun `a price edit to another currency is a programming error`() {
         assertThrows(IllegalArgumentException::class.java) {
             coolingEndAfterPriceEdit(item(eur(5_000)), Money(5_000, "USD"), rules, utc)
+        }
+    }
+
+    private fun tiers(vararg tiers: Pair<Long, Int>): CoolingOffRules = (
+        CoolingOffRules.from(tiers.map { (min, days) -> CoolingOffTier(eur(min), Period.ofDays(days)) }) as
+            CoolingOffRulesResult.Valid
+        ).rules
+
+    @Test
+    fun `shorter tiers shorten the wait of an item still cooling off`() {
+        val shorter = tiers(0L to 3, 10_000L to 10)
+        assertEquals(daysAfterAdded(10), coolingEndAfterRulesChange(item(eur(12_000)), shorter, daysAfterAdded(5), utc))
+    }
+
+    @Test
+    fun `longer tiers extend the wait of an item still cooling off`() {
+        val longer = tiers(0L to 14, 10_000L to 45)
+        assertEquals(daysAfterAdded(45), coolingEndAfterRulesChange(item(eur(12_000)), longer, daysAfterAdded(5), utc))
+    }
+
+    @Test
+    fun `an item cools off at once when its new end has already passed`() {
+        val shorter = tiers(0L to 3, 10_000L to 10)
+        val now = daysAfterAdded(20)
+        val end = coolingEndAfterRulesChange(item(eur(12_000)), shorter, now, utc)
+        assertEquals(daysAfterAdded(10), end)
+        assertTrue(end <= now)
+    }
+
+    @Test
+    fun `an item whose wait has ended keeps its end when the tiers get longer`() {
+        val longer = tiers(0L to 14, 10_000L to 45)
+        assertEquals(daysAfterAdded(30), coolingEndAfterRulesChange(item(eur(12_000)), longer, daysAfterAdded(30), utc))
+        assertEquals(daysAfterAdded(30), coolingEndAfterRulesChange(item(eur(12_000)), longer, daysAfterAdded(31), utc))
+    }
+
+    @Test
+    fun `a tier change recomputes from the current price`() {
+        // Captured at 120 € (30 days), lowered to 50 € (end kept), then the tiers change: 50 € now means 3 days.
+        val lowered = item(eur(12_000)).copy(price = eur(5_000))
+        val shorter = tiers(0L to 3, 10_000L to 10)
+        assertEquals(daysAfterAdded(3), coolingEndAfterRulesChange(lowered, shorter, daysAfterAdded(1), utc))
+    }
+
+    @Test
+    fun `a tier change leaves needs and ended items alone`() {
+        val longer = tiers(0L to 14, 10_000L to 45)
+        val need = item(eur(12_000), ItemKind.NEED)
+        assertEquals(added, coolingEndAfterRulesChange(need, longer, daysAfterAdded(1), utc))
+        for (status in listOf(ItemStatus.PURCHASED, ItemStatus.REJECTED)) {
+            val ended = item(eur(12_000)).copy(status = status)
+            assertEquals(daysAfterAdded(30), coolingEndAfterRulesChange(ended, longer, daysAfterAdded(1), utc))
+        }
+    }
+
+    @Test
+    fun `a tier change in another currency is a programming error`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            coolingEndAfterRulesChange(item(eur(12_000)), CoolingOffRules.defaults("USD"), daysAfterAdded(1), utc)
         }
     }
 

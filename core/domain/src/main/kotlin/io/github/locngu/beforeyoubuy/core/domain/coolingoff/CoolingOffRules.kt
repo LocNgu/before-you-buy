@@ -10,8 +10,8 @@ data class CoolingOffTier(val minPriceInclusive: Money, val period: Period)
  * The price tiers that decide how long a want cools off (brief §4.2, ADR-0005). Always valid: build one with
  * [from] (user input, e.g. Settings) or [defaults].
  *
- * Rules only decide the cooling-off end of new items, fixed at capture. Changing them never recomputes existing
- * items, so there is deliberately no function for that (ADR-0005).
+ * Changing the rules also moves the end of items that are still cooling off, in both directions: see
+ * [coolingEndAfterRulesChange] (ADR-0031).
  */
 class CoolingOffRules private constructor(val tiers: List<CoolingOffTier>) {
     /** The currency of every threshold; prices must be in it. */

@@ -3,6 +3,7 @@ package io.github.locngu.beforeyoubuy.core.domain.coolingoff
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import java.time.Instant
 import java.time.Period
@@ -41,6 +42,19 @@ fun coolingEndAfterPriceEdit(item: Item, newPrice: Money, rules: CoolingOffRules
         "New price in ${newPrice.currency} doesn't match the item's currency ${item.price.currency}"
     }
     return maxOf(item.coolingEndsAt, initialCoolingEnd(item.addedAt, newPrice, item.kind, rules, zone))
+}
+
+/**
+ * The item's cooling-off end after the user changes the tiers to [rules] at [now] (ADR-0031): an active want that
+ * is still cooling off gets the end a new item at its current price would have had on the same [Item.addedAt],
+ * longer or shorter than before. If that end has already passed, the item has cooled off. Items whose wait has
+ * already ended, needs, and purchased or rejected items keep their end, so lengthening the tiers never puts a
+ * Ready item back into cooling off. Apply it to every item when the tiers change.
+ */
+fun coolingEndAfterRulesChange(item: Item, rules: CoolingOffRules, now: Instant, zone: ZoneId): Instant {
+    requireFits(item.price, rules)
+    if (item.status != ItemStatus.ACTIVE || isCooledOff(item, now)) return item.coolingEndsAt
+    return initialCoolingEnd(item.addedAt, item.price, item.kind, rules, zone)
 }
 
 /**
