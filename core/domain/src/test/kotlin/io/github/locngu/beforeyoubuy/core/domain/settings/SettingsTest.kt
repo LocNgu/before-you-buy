@@ -3,7 +3,9 @@ package io.github.locngu.beforeyoubuy.core.domain.settings
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
 import java.util.Locale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsTest {
@@ -21,6 +23,12 @@ class SettingsTest {
         assertEquals("EUR", defaultCurrency(Locale.ROOT))
         // Antarctica has no currency.
         assertEquals("EUR", defaultCurrency(Locale.forLanguageTag("en-AQ")))
+    }
+
+    @Test
+    fun `usable currencies are real money with fixed minor units`() {
+        listOf("EUR", "USD", "JPY", "BHD", "CHF").forEach { assertTrue(it, isUsableCurrency(it)) }
+        listOf("XXX", "XTS", "XAU", "eur", "Euro", "", "ABC").forEach { assertFalse(it, isUsableCurrency(it)) }
     }
 
     @Test

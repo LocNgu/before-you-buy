@@ -30,13 +30,13 @@ internal class DaoTest : DatabaseTest() {
     }
 
     @Test
-    fun `insert assigns increasing ids and statusOf reads the stored text`() = runTest {
+    fun `insert assigns increasing ids and getById reads the row back`() = runTest {
         val first = items.insert(newItem().toEntity())
         val second = items.insert(newItem().toEntity())
 
         assertTrue(second > first)
-        assertEquals("ACTIVE", items.statusOf(first))
-        assertNull(items.statusOf(999))
+        assertEquals(newItem().copy(id = ItemId(first)).toEntity(), items.getById(first))
+        assertNull(items.getById(999))
     }
 
     @Test

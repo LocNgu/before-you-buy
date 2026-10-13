@@ -2,7 +2,6 @@ package io.github.locngu.beforeyoubuy.core.data.di
 
 import android.content.Context
 import android.content.res.Resources
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.preferencesDataStoreFile
 import dagger.Module
 import dagger.Provides
@@ -32,7 +31,7 @@ object DataModule {
     @Singleton
     fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository =
         DataStoreSettingsRepository(
-            PreferenceDataStoreFactory.create { context.preferencesDataStoreFile(SETTINGS_FILE) },
+            DataStoreSettingsRepository.createDataStore { context.preferencesDataStoreFile(SETTINGS_FILE) },
             // The device's region decides the default currency. Not Locale.getDefault(): a per-app language
             // replaces it, often without a region.
             locale = { Resources.getSystem().configuration.locales[0] }

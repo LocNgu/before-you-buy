@@ -10,15 +10,18 @@ import kotlinx.coroutines.flow.Flow
  * so a read-back instant is truncated to milliseconds.
  */
 interface ItemRepository {
-    /** Stores a new item and returns its id. The id of [item] is ignored; pass [ItemId.NEW]. */
+    /** Stores a new, active item and returns its id. The id of [item] is ignored; pass [ItemId.NEW]. */
     suspend fun add(item: Item): ItemId
 
     /**
-     * Saves edits to a stored item (name, price, cooling-off end, kind, …). The status can't change here: that's
-     * [recordDecision]. Returns false and writes nothing if the item is gone or its stored status differs from
-     * [item]'s, e.g. "Let it go" from a notification ended it meanwhile; reload and show the current state.
+     * Replaces [current], the item as the caller read it, with [edited] (name, price, cooling-off end, kind, …).
+     * The id and status can't change here: status changes go through [recordDecision]; anything else throws.
+     *
+     * Writes only if the stored item still equals [current]. Returns false and writes nothing if it changed
+     * meanwhile, e.g. "Let it go" or "Wait" from a notification, so an edit never undoes a decision. Reload and
+     * show the current state.
      */
-    suspend fun update(item: Item): Boolean
+    suspend fun update(current: Item, edited: Item): Boolean
 
     /** Active items, oldest first. */
     fun observeActive(): Flow<List<Item>>
@@ -28,7 +31,7 @@ interface ItemRepository {
 
     /**
      * Items with [status] (`PURCHASED` or `REJECTED`, brief §6.6) together with the decision that ended them,
-     * most recently decided first.
+     * most recently decided first. `ACTIVE` throws: active items have no ending decision.
      */
     fun observeHistory(status: ItemStatus): Flow<List<HistoryEntry>>
 
@@ -42,12 +45,15 @@ interface ItemRepository {
     suspend fun setReflection(id: ItemId, reflection: Reflection)
 
     /**
-     * Appends [decision] and stores [item], the item's new state from
-     * [io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision], in one transaction: both are written or
-     * neither is. Returns false and writes nothing if the stored item is gone or no longer active, so an item is
-     * never ended twice (e.g. "Let it go" in a notification and "Buy" in the app at the same moment).
+     * Appends [decision] about [current], the active item as the caller read it, and stores [result], its new state
+     * from [io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision], in one transaction: both are written
+     * or neither is.
+     *
+     * Writes only if the stored item still equals [current], the state the decision was checked against. Returns
+     * false and writes nothing if it changed meanwhile: ended (e.g. "Let it go" in a notification and "Buy" in the
+     * app at the same moment), edited, or gone. A [current] that isn't active, or a [result] with another id, throws.
      */
-    suspend fun recordDecision(item: Item, decision: Decision): Boolean
+    suspend fun recordDecision(current: Item, decision: Decision, result: Item): Boolean
 }
 
 /** A purchased or rejected [item] with the [decision] that ended it (brief §6.6 History). */

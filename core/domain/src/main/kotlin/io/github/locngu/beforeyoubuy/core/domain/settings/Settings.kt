@@ -29,14 +29,17 @@ data class Settings(
  */
 data class NotificationPrefs(val waitingPeriods: Boolean = true, val reflectionReminders: Boolean = true)
 
-/** Stores [Settings]. Implemented in `:core:data` (DataStore). */
+/**
+ * Stores [Settings]. Implemented in `:core:data` (DataStore). Until the user saves a setting, the currency follows the
+ * device region; saving any setting fixes it, so the tiers saved with it keep applying.
+ */
 interface SettingsRepository {
     /** The current settings; emits again on every change. */
     val settings: Flow<Settings>
 
     /**
-     * Sets the app's currency (an ISO 4217 code). Cooling-off rules in another currency no longer apply: until
-     * rules in the new currency are set, [Settings.coolingOffRules] are the defaults in it.
+     * Sets the app's currency; anything not [usable][isUsableCurrency] throws. Cooling-off rules in another currency
+     * no longer apply: until rules in the new currency are set, [Settings.coolingOffRules] are the defaults in it.
      */
     suspend fun setCurrency(currency: String)
 

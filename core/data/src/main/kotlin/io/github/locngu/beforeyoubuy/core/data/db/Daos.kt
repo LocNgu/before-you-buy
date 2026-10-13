@@ -18,9 +18,8 @@ internal interface ItemDao {
     @Update
     suspend fun update(item: ItemEntity): Int
 
-    /** The stored status as written, or null if the item doesn't exist. */
-    @Query("SELECT status FROM items WHERE id = :id")
-    suspend fun statusOf(id: Long): String?
+    @Query("SELECT * FROM items WHERE id = :id")
+    suspend fun getById(id: Long): ItemEntity?
 
     @Query("SELECT * FROM items WHERE status = :status ORDER BY added_at, id")
     fun observeByStatus(status: String): Flow<List<ItemEntity>>

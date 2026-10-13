@@ -57,8 +57,8 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 - Room, schema version 1: `items` (every stored `Item` fact), `reflections` (1:1 with the item; `reasons_against` is a JSON array of strings, not a child table), `decisions` (append-only history). Children reference `items(id)` with `ON DELETE CASCADE`. No stage column. M2 adds `allocations` and `pool_entries`.
 - Schema JSON goes to `core/data/schemas/` and is committed (ADR-0019).
 - `ItemRepository` and `SettingsRepository` (interfaces in `:core:domain`) are bound by `:core:data`'s own Hilt module `DataModule`; the implementations stay `internal`. `:app` just injects the interfaces.
-- `recordDecision` writes the decision and the item's new state in one transaction, only while the stored item is active; `update` never changes the status. Both return false when they write nothing.
-- Settings (DataStore Preferences) store only what the user set; defaults (currency from the device region, else EUR; default tiers in that currency) are computed on read.
+- Item writes are compare-and-set: `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored row still equals what the caller read, and return false otherwise. `recordDecision` writes the decision and the item's new state in one transaction; `update` never changes the status.
+- Settings (DataStore Preferences) store only what the user set; defaults (currency from the device region, else EUR; default tiers in that currency) are computed on read. The first saved setting also stores the currency.
 - Conventions and tests: `.claude/rules/data.md`.
 
 ## Pitfalls (common Android traps — apply from day one)
