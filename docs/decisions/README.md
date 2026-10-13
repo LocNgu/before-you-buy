@@ -45,3 +45,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0029](0029-github-releases-signed-apk.md) | technical | Signed APKs on GitHub Releases for tags `vX.Y.Z` on `main`; version from the tag; one release key, later also Play's app signing key |
 | [0030](0030-release-button.md) | technical | Releases start from the Release workflow's "Run workflow" button on `main`; it tags only after a successful build |
 | [0031](0031-tier-changes-apply-to-waiting-items.md) | product | Changed cooling-off tiers also apply to items still cooling off, in both directions |
+| [0032](0032-storage-layout-and-defensive-reads.md) | technical | Storage: reasons against as JSON, append-only decisions, status-guarded writes, settings defaults computed on read |

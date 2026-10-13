@@ -6,7 +6,12 @@ import java.time.LocalDate
 
 /** Identifies an [Item]; assigned by the database. */
 @JvmInline
-value class ItemId(val value: Long)
+value class ItemId(val value: Long) {
+    companion object {
+        /** The id of an item that isn't stored yet. [ItemRepository.add] assigns the real one. */
+        val NEW = ItemId(0)
+    }
+}
 
 /** `NEED` skips cooling-off and reflection (brief §4.4, ADR-0008). */
 enum class ItemKind { WANT, NEED }

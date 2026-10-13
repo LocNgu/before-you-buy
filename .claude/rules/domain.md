@@ -12,6 +12,7 @@ paths:
 ## Model (`item/`)
 
 - `Item` holds the stored facts only: `status` (`ACTIVE`/`PURCHASED`/`REJECTED`), `coolingEndsAt`, `recheckAt`, … **Never add a stage field** (ADR-0007). `Reflection` and `Decision` are stored next to the item, not inside it.
+- `ItemId.NEW` is the id of an item not stored yet; `ItemRepository.add` assigns the real one. Repository interfaces live here, implementations in `:core:data` (`.claude/rules/data.md`).
 - Optional reflection answers are nullable/empty: reflection is filled in a bit at a time after capture (ADR-0009).
 - `Decision` throws if a purchase lacks `actualPrice` or a field belongs to another type (`actualPrice` on a non-purchase, `earlyReason` off `BUY_EARLY`, `waitUntil` off `WAIT`). That's a programming error, not user input.
 
