@@ -1,6 +1,6 @@
 # ADR-0005: Price-tiered cooling-off; price edits only extend it
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0031 (tier changes apply to items still cooling off)
 **Type**: product
 **Date**: 2026-10-04
 
