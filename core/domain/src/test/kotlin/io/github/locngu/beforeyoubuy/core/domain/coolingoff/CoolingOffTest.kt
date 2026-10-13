@@ -186,12 +186,12 @@ class CoolingOffTest {
     }
 
     @Test
-    fun `turning a want into a need and back never shortens the wait`() {
-        // Captured at 1,200 € (90 days), price lowered to 50 € (end kept), then need and back to want.
+    fun `turning a want into a need and back waits as long as its current price calls for`() {
+        // Captured at 1,200 € (90 days), price lowered to 50 € (end kept), then need and back to want: 7 days.
         val lowered = item(eur(120_000)).copy(price = eur(5_000))
         val need = changeKind(lowered, ItemKind.NEED, daysAfterAdded(1), rules, utc)
         val wantAgain = changeKind(need, ItemKind.WANT, daysAfterAdded(2), rules, utc)
-        assertEquals(daysAfterAdded(90), wantAgain.coolingEndsAt)
+        assertEquals(daysAfterAdded(7), wantAgain.coolingEndsAt)
     }
 
     @Test

@@ -48,8 +48,8 @@ fun coolingEndAfterPriceEdit(item: Item, newPrice: Money, rules: CoolingOffRules
  *
  * - Want → `NEED`: allowed any time (ADR-0008), recorded in [Item.markedAsNeedAt] for history. The cooling-off end
  *   is kept, in case the item turns back into a want.
- * - `NEED` → want: cools off from [Item.addedAt] like a new want under the current rules, but never ends sooner
- *   than the end it already had (ADR-0005), so turning a want into a need and back can't shorten the wait.
+ * - `NEED` → want: cools off from [Item.addedAt] like a new want at its current price under the current rules,
+ *   replacing any earlier end, so a want that was a need before gets the wait its price calls for now.
  *   Clears [Item.markedAsNeedAt].
  */
 fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, zone: ZoneId): Item {
@@ -62,10 +62,7 @@ fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, 
         ItemKind.WANT -> item.copy(
             kind = ItemKind.WANT,
             markedAsNeedAt = null,
-            coolingEndsAt = maxOf(
-                item.coolingEndsAt,
-                initialCoolingEnd(item.addedAt, item.price, ItemKind.WANT, rules, zone)
-            )
+            coolingEndsAt = initialCoolingEnd(item.addedAt, item.price, ItemKind.WANT, rules, zone)
         )
     }
 }
