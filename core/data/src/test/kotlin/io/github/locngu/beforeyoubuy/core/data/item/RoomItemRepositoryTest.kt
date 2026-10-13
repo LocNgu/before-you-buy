@@ -14,8 +14,12 @@ import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -139,6 +143,12 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun `setReflection writes nothing for a missing item`() = runTest {
+        assertFalse(repository.setReflection(ItemId(999), FULL_REFLECTION))
+        assertEquals(emptyList<String>(), queryStrings("SELECT item_id FROM reflections"))
+    }
+
+    @Test
     fun `recordDecision stores the applied item and appends the decision`() = runTest {
         val item = addAndRead()
         val reflection = Reflection("Hikes", UsageFrequency.WEEKLY, listOf("Heavy"))
@@ -174,6 +184,20 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
         assertEquals(ItemStatus.REJECTED, stored(item.id).status)
         assertEquals(listOf(DecisionType.REJECT), repository.observeDecisions(item.id).first().map { it.type })
+    }
+
+    @Test
+    fun `of two decisions at the same moment, exactly one is recorded`() = runTest {
+        // Repeated so that, without the check inside the transaction, both would very likely get through at least once.
+        val items = List(20) { addAndRead() }
+
+        val results = withContext(Dispatchers.IO) {
+            items.map { item -> listOf(async { decide(item, reject()) }, async { decide(item, buy()) }) }
+                .map { it.awaitAll() }
+        }
+
+        results.forEach { assertEquals(listOf(true, false), it.sorted().reversed()) }
+        items.forEach { assertEquals(1, repository.observeDecisions(it.id).first().size) }
     }
 
     @Test

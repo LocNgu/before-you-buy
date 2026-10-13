@@ -31,7 +31,8 @@ import kotlinx.coroutines.flow.retryWhen
  * [SettingsRepository] on DataStore Preferences (ADR-0032). Only values the user set are stored; everything else is a
  * default computed on read. The currency follows [locale] until the first setting is saved, which also stores the
  * currency, so saved tiers never lose their currency to a later region change. Unreadable values read as their
- * default; a corrupt file is replaced by an empty one, and a failed read shows defaults until a retry succeeds.
+ * default; a corrupt file is replaced by an empty one, and a failed read is retried without emitting anything, so a
+ * returning user never sees defaults (e.g. onboarding) because of a disk hiccup.
  */
 internal class DataStoreSettingsRepository(
     private val dataStore: DataStore<Preferences>,
@@ -41,7 +42,6 @@ internal class DataStoreSettingsRepository(
         // Unlike catch, retryWhen keeps the flow alive, so later changes still arrive after a failed read.
         .retryWhen { cause, _ ->
             if (cause !is IOException) return@retryWhen false
-            emit(emptyPreferences())
             delay(READ_RETRY_DELAY_MILLIS)
             true
         }

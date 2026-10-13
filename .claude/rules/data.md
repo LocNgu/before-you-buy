@@ -22,15 +22,15 @@ paths:
 
 ## Repositories
 
-- Item writes are compare-and-set (`writeIfUnchanged`): `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored **row** still equals `current.toEntity()`, in one `withTransaction`; otherwise they write nothing and return false. `update` never changes id or status; `recordDecision` needs an active `current` and appends the decision + stores `result` atomically. Status changes go only through `applyDecision` + `recordDecision`. `add` takes active items only.
+- Item writes are compare-and-set (`writeIfUnchanged`): `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored **row** still equals `current.toEntity()`, in one `withTransaction`; otherwise they write nothing and return false. `update` never changes id or status; `recordDecision` needs an active `current` and appends the decision + stores `result` atomically. Status changes go only through `applyDecision` + `recordDecision`. `add` takes active items only. `setReflection` returns false for a missing item. An item read with a fallback (unknown enum, unreadable date) never matches its row, so it is read-only (ADR-0032).
 - History: the ending decision is the last appended (max id), ordered by its `decided_at`, newest first.
 - Settings store only values the user set; defaults are computed on read (currency from the system locale's region, else EUR; tiers = `CoolingOffRules.defaults(currency)`). Every write also stores the currency in effect. Currencies must pass `isUsableCurrency` (`:core:domain`). Stored tiers apply only in their own currency. Unreadable values read as defaults; `setCoolingOffRules` throws for rules not in the current currency.
-- Create the DataStore with `DataStoreSettingsRepository.createDataStore` (corruption handler: replace with empty). The settings flow uses `retryWhen`, not `catch`, so it survives a failed read.
+- Create the DataStore with `DataStoreSettingsRepository.createDataStore` (corruption handler: replace with empty). The settings flow uses `retryWhen`, not `catch`, so it survives a failed read, and emits nothing until a read succeeds (never defaults in place of the user's values).
 
 ## Tests
 
 - Room: Robolectric + `Room.inMemoryDatabaseBuilder` via `db/DatabaseTest`. Raw SQL for odd states goes through `execSql`, which refreshes the invalidation tracker (otherwise observed queries don't re-emit).
-- Atomicity: a trigger that aborts the item update; the decision must not be stored either.
+- Atomicity: a trigger that aborts the item update; the decision must not be stored either. Races: concurrent `recordDecision`s on `Dispatchers.IO`, repeated over many items; exactly one per item may succeed.
 - DataStore: plain JVM test with a `TemporaryFolder` file and `backgroundScope`. Only **one** DataStore per file may be active; a "restart" cancels and joins the first one's scope. A failed read is simulated with a delegating `DataStore` whose `data` throws once.
 - Suspending `require`s: `testing/assertThrowsIllegalArgument`.
 - Fixtures in `item/Fixtures.kt` use millisecond-precision instants, so round trips compare equal.

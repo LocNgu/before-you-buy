@@ -45,7 +45,11 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
     override fun observeDecisions(id: ItemId): Flow<List<Decision>> =
         decisions.observeForItem(id.value).map { rows -> rows.mapNotNull { it.toDomain() } }
 
-    override suspend fun setReflection(id: ItemId, reflection: Reflection) = reflections.upsert(reflection.toEntity(id))
+    override suspend fun setReflection(id: ItemId, reflection: Reflection): Boolean = database.withTransaction {
+        if (items.getById(id.value) == null) return@withTransaction false
+        reflections.upsert(reflection.toEntity(id))
+        true
+    }
 
     override suspend fun recordDecision(current: Item, decision: Decision, result: Item): Boolean {
         require(current.status == ItemStatus.ACTIVE) { "Only active items can be decided, was ${current.status}" }

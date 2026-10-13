@@ -111,7 +111,7 @@ class DataStoreSettingsRepositoryTest {
     }
 
     @Test
-    fun `after a failed read, defaults show and later changes still arrive`() = runTest {
+    fun `a failed read is retried without showing defaults, and later changes still arrive`() = runTest {
         val real = storeIn(backgroundScope)
         var failNextRead = true
         val flaky = object : DataStore<Preferences> by real {
@@ -127,8 +127,7 @@ class DataStoreSettingsRepositoryTest {
         val repository = repository(flaky)
 
         repository.settings.test {
-            assertEquals("EUR", awaitItem().currency) // defaults while the read fails
-            assertEquals("CHF", awaitItem().currency) // the retry reads the file
+            assertEquals("CHF", awaitItem().currency) // the retry reads the file; no defaults before it
             repository.setOnboardingComplete(true)
             assertEquals(true, awaitItem().onboardingComplete)
         }

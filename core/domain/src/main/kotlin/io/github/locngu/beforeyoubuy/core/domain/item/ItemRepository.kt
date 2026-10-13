@@ -41,8 +41,11 @@ interface ItemRepository {
     /** Every decision about the item, oldest first. Decisions are only ever appended. */
     fun observeDecisions(id: ItemId): Flow<List<Decision>>
 
-    /** Replaces the item's reflection answers; reflection is filled in a bit at a time. */
-    suspend fun setReflection(id: ItemId, reflection: Reflection)
+    /**
+     * Replaces the item's reflection answers; reflection is filled in a bit at a time. Returns false and writes
+     * nothing if the item no longer exists.
+     */
+    suspend fun setReflection(id: ItemId, reflection: Reflection): Boolean
 
     /**
      * Appends [decision] about [current], the active item as the caller read it, and stores [result], its new state
