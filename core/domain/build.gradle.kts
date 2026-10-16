@@ -25,5 +25,8 @@ lint {
 }
 
 dependencies {
+    // Repository interfaces expose Flow.
+    api(libs.kotlinx.coroutines.core)
+
     testImplementation(libs.bundles.unit.test)
 }

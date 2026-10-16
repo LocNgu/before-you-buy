@@ -1,6 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.domain.coolingoff
 
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.money.relabeled
 import java.time.Period
 
 /** Items priced at [minPriceInclusive] or more (up to the next tier) cool off for [period]. */
@@ -16,6 +17,17 @@ data class CoolingOffTier(val minPriceInclusive: Money, val period: Period)
 class CoolingOffRules private constructor(val tiers: List<CoolingOffTier>) {
     /** The currency of every threshold; prices must be in it. */
     val currency: String get() = tiers.first().minPriceInclusive.currency
+
+    /**
+     * The same tiers with thresholds [relabeled][io.github.locngu.beforeyoubuy.core.domain.money.relabeled] to
+     * [currency] (ADR-0033): the numbers stay, the periods stay. If rounding to fewer minor-unit digits makes
+     * thresholds equal (0,40 € and 0 € both become 0 ¥), the pricier tier wins, as it would for a price at that
+     * threshold; so the result is always valid.
+     */
+    fun relabeled(currency: String): CoolingOffRules {
+        val relabeled = tiers.map { it.copy(minPriceInclusive = it.minPriceInclusive.relabeled(currency)) }
+        return CoolingOffRules(relabeled.asReversed().distinctBy { it.minPriceInclusive }.asReversed())
+    }
 
     override fun equals(other: Any?): Boolean = other is CoolingOffRules && other.tiers == tiers
 

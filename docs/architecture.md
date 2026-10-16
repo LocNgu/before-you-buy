@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist; features don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12) and persistence (#13) exist; screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -34,7 +34,7 @@ Dependencies: Apache-2.0/MIT/BSD only in what ships (test and build tools exempt
 ```
 :app            Activities, Compose screens (package-by-feature), ViewModels, Hilt wiring, workers, notifications
 :core:domain    Pure Kotlin/JVM: models, lifecycle stage, cooling-off, money math, allowance, opportunity cost, share-text parsing
-:core:data      Room, DAOs, DataStore, repositories, export/import
+:core:data      Room, DAOs, DataStore, repositories (+ their Hilt module), export/import
 ```
 
 - **All business rules live in `:core:domain`** with JVM unit tests. ViewModels orchestrate; Composables render.
@@ -50,9 +50,17 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 
 `ui/theme/` is the fixed calm theme (ADR-0028), `ui/components/` the shared components, and `ui/format/` the locale-aware text helpers (current locale, dates, day plurals). Money formatting and parsing live in `:core:domain` `money/` (ADR-0027). Conventions: `.claude/rules/ui.md`.
 
-Room schema JSON goes to `core/data/schemas/` (ADR-0019).
-
 `build-logic/` is not a module but an included build with the project's own Gradle check plugins (ADR-0025).
+
+## Persistence (`:core:data`, ADR-0019, ADR-0032)
+
+- Room, schema version 1: `policy` (one row: the app's currency and cooling-off tiers, ADR-0033), `items` (every stored `Item` fact), `reflections` (1:1 with the item; `reasons_against` is a JSON array of strings, not a child table), `decisions` (append-only history). Children reference `items(id)` with `ON DELETE CASCADE`. No stage column. M2 adds `allocations` and `pool_entries`.
+- Schema JSON goes to `core/data/schemas/` and is committed (ADR-0019).
+- `ItemRepository`, `PolicyRepository` and `PreferencesRepository` (interfaces in `:core:domain`) are bound by `:core:data`'s own Hilt module `DataModule`; everything in `:core:data` stays `internal`. `:app` just injects the interfaces.
+- Item writes are compare-and-set: `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored row still equals what the caller read, and return false otherwise. `recordDecision` writes the decision and the item's new state in one transaction; `update` never changes the status.
+- The currency is fixed on first start (device region, else EUR). A tier change rewrites waiting items' ends in the same transaction (ADR-0031); a currency change relabels every amount, keeping the numbers (ADR-0033). Every stored amount is in the app's currency.
+- Preferences (notifications, onboarding) are in DataStore; defaults are computed on read.
+- Conventions and tests: `.claude/rules/data.md`.
 
 ## Pitfalls (common Android traps — apply from day one)
 
