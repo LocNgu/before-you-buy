@@ -63,14 +63,14 @@ class ComponentTextTest {
     @Config(qualifiers = "de-rDE")
     fun `money follows the UI language`() {
         composeRule.setContent { BeforeYouBuyTheme { MoneyText(Money(123_456, "EUR")) } }
-        composeRule.onNodeWithText("1.234,56 €").assertIsDisplayed()
+        composeRule.onNodeWithText("1.235 €").assertIsDisplayed()
     }
 
     @Test
     @Config(qualifiers = "en-rGB")
     fun `money in British English`() {
         composeRule.setContent { BeforeYouBuyTheme { MoneyText(Money(123_456, "EUR")) } }
-        composeRule.onNodeWithText("€1,234.56").assertIsDisplayed()
+        composeRule.onNodeWithText("€1,235").assertIsDisplayed()
     }
 
     @Test

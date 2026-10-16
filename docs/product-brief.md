@@ -49,7 +49,7 @@ Anything the user is considering buying.
 | Field | Required | Notes |
 |---|---|---|
 | Name | yes | |
-| Price | yes | Integer minor units + the app's currency |
+| Price | yes | Integer minor units + the app's currency. Shown in whole units, rounded (`20 €` for 19,99 €, ADR-0034) |
 | Link (URL) | no | Usually from the share sheet |
 | Image | no | From photo picker; copied into app storage. **De-emphasized** while cooling off (see §6) |
 | Category | no | Free text or simple list |

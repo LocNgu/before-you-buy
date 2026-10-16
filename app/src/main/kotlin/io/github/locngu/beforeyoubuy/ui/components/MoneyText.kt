@@ -12,8 +12,8 @@ import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 
 /**
- * An amount formatted for the UI's locale (`1.234,56 €` / `€1,234.56`), with tabular digits so
- * amounts line up in lists. Never colour amounts to signal "affordable" or "deal" (ADR-0014).
+ * An amount in whole units, rounded, for the UI's locale (`1.235 €` / `€1,235`, ADR-0034), with
+ * tabular digits so amounts line up in lists. Never colour amounts to signal "affordable" or "deal" (ADR-0014).
  */
 @Composable
 fun MoneyText(
