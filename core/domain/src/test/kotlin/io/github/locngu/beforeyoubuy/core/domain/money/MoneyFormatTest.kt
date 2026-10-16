@@ -116,7 +116,7 @@ class MoneyFormatTest {
                 Money(1_234, "JPY"),
                 Money(Long.MAX_VALUE, "JPY"),
                 Money(1_234, "BHD"),
-                Money(1_234_567, "BHD"),
+                Money(1_234_567, "BHD")
             )
         for (locale in locales) {
             for (money in amounts) {
@@ -124,7 +124,7 @@ class MoneyFormatTest {
                 assertEquals(
                     "$money as \"$text\" in $locale",
                     MoneyParseResult.Success(money),
-                    parseMoney(text, money.currency, locale),
+                    parseMoney(text, money.currency, locale)
                 )
             }
         }
