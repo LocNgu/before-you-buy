@@ -30,17 +30,19 @@ class MoneyFormatTest {
     }
 
     @Test
-    fun `any minor units round up to the next whole unit`() {
+    fun `rounds to the nearest whole unit, halves up`() {
         assertEquals("20 €", Money(1_999, "EUR").format(germany))
-        assertEquals("20 €", Money(1_901, "EUR").format(germany))
         assertEquals("€20", Money(1_999, "EUR").format(us))
-        assertEquals("1 €", Money(5, "EUR").format(germany))
+        assertEquals("20 €", Money(1_950, "EUR").format(germany))
+        assertEquals("19 €", Money(1_949, "EUR").format(germany))
+        assertEquals("19 €", Money(1_901, "EUR").format(germany))
     }
 
     @Test
     fun `zero stays zero`() {
         assertEquals("0 €", Money(0, "EUR").format(germany))
         assertEquals("€0", Money(0, "EUR").format(uk))
+        assertEquals("0 €", Money(5, "EUR").format(germany))
     }
 
     @Test
@@ -49,18 +51,14 @@ class MoneyFormatTest {
     }
 
     @Test
-    fun `currencies with three minor-unit digits round up too`() {
-        assertEquals("2 BHD", Money(1_001, "BHD").format(germany))
-    }
-
-    @Test
-    fun `negative amounts round away from zero, never towards it`() {
-        assertEquals("-20 €", Money(-1_999, "EUR").format(germany))
+    fun `currencies with three minor-unit digits round the same way`() {
+        assertEquals("2 BHD", Money(1_500, "BHD").format(germany))
+        assertEquals("1 BHD", Money(1_499, "BHD").format(germany))
     }
 
     @Test
     fun `large amounts group and don't overflow`() {
-        assertEquals("1.234.568 €", Money(123_456_701, "EUR").format(germany))
+        assertEquals("1.234.568 €", Money(123_456_750, "EUR").format(germany))
         // The largest amount parseMoney accepts.
         assertEquals("€92,233,720,368,547,758", Money(Long.MAX_VALUE, "EUR").format(uk))
         assertEquals("¥9,223,372,036,854,775,807", Money(Long.MAX_VALUE, "JPY").format(us))
@@ -68,10 +66,10 @@ class MoneyFormatTest {
 
     @Test
     fun `totals add the exact amounts and round once`() {
-        val cent = Money(1, "EUR")
-        assertEquals(Money(2, "EUR"), listOf(cent, cent).total("EUR"))
-        assertEquals("1 €", listOf(cent, cent).total("EUR").format(germany))
-        assertEquals("40 €", listOf(Money(1_999, "EUR"), Money(1_999, "EUR")).total("EUR").format(germany))
+        // Each shows as 20 €, but together they are 39 €.
+        val price = Money(1_950, "EUR")
+        assertEquals(Money(3_900, "EUR"), listOf(price, price).total("EUR"))
+        assertEquals("39 €", listOf(price, price).total("EUR").format(germany))
     }
 
     @Test

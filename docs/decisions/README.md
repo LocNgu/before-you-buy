@@ -47,4 +47,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0031](0031-tier-changes-apply-to-waiting-items.md) | product | Changed cooling-off tiers also apply to items still cooling off, in both directions |
 | [0032](0032-storage-layout-and-defensive-reads.md) | technical | Storage: reasons against as JSON, append-only decisions, compare-and-set item writes, preference defaults computed on read |
 | [0033](0033-policy-in-room-currency-relabel.md) | product | Currency and tiers stored with the items (one transaction for tier changes); changing the currency relabels every amount |
-| [0034](0034-whole-units-rounded-up.md) | product | Amounts shown in whole units, rounded up (`20 €` for 19,99 €); storage, input and sums stay exact |
+| [0034](0034-whole-units-in-display.md) | product | Amounts shown in whole units, rounded (`20 €` for 19,99 €); storage, input and sums stay exact |

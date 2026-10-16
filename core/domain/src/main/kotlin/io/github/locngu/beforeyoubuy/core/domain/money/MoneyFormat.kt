@@ -8,12 +8,10 @@ import java.util.Currency
 import java.util.Locale
 
 /**
- * This amount as [locale] writes it, in whole units rounded up (ADR-0034): `20 €` for 19,99 € in de-DE,
- * `€1,235` for €1,234.01 in en-US, `£1,234` for GBP in en-GB.
+ * This amount as [locale] writes it, rounded to whole units, halves up (ADR-0034): `20 €` for 19,99 €
+ * in de-DE, `€1,234` for €1,234.49 in en-US, `£1,235` for £1,234.50 in en-GB.
  *
- * Rounding is away from zero, so the app never shows an amount smaller than the real one. For the
- * amounts it shows (never negative) that is the ceiling. Sum exact amounts first and format the total
- * once ([total]); never add up formatted or rounded values.
+ * Sum exact amounts first and format the total once ([total]); never add up formatted or rounded values.
  */
 fun Money.format(locale: Locale): String {
     val digits = Money.fractionDigits(currency)
@@ -24,7 +22,7 @@ fun Money.format(locale: Locale): String {
             minimumFractionDigits = 0
             maximumFractionDigits = 0
         }
-    return format.format(BigDecimal.valueOf(minorUnits, digits).setScale(0, RoundingMode.UP))
+    return format.format(BigDecimal.valueOf(minorUnits, digits).setScale(0, RoundingMode.HALF_UP))
 }
 
 /**

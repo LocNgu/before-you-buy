@@ -1,6 +1,6 @@
 # ADR-0027: Money formatting and input live in the domain; input accepts either decimal separator
 
-**Status**: amended by ADR-0034 (formatting shows whole units, rounded up)
+**Status**: amended by ADR-0034 (formatting shows whole units, rounded)
 **Type**: technical
 **Date**: 2026-10-10
 
