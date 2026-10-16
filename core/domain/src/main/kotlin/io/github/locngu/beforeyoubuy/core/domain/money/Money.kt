@@ -40,3 +40,9 @@ data class Money(val minorUnits: Long, val currency: String) : Comparable<Money>
             Currency.getInstance(currency).defaultFractionDigits.coerceAtLeast(0)
     }
 }
+
+/**
+ * The exact sum of these amounts, zero in [currency] when empty; throws on mixed currencies or overflow.
+ * Format the total once, never add up rounded parts: `0,01 € + 0,01 €` shows as `1 €`, not `2 €` (ADR-0034).
+ */
+fun Iterable<Money>.total(currency: String): Money = fold(Money(0, currency), Money::plus)
