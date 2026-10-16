@@ -47,7 +47,7 @@ abstract class ComponentScreenshotTest(private val german: Boolean) {
     fun moneyText() = capture {
         MoneyText(Money(123_456, "EUR"), style = MaterialTheme.typography.headlineSmall)
         MoneyText(Money(120_000, "EUR"))
-        MoneyText(Money(5, "EUR"), style = MaterialTheme.typography.bodySmall)
+        MoneyText(Money(1_999, "EUR"), style = MaterialTheme.typography.bodySmall)
     }
 
     @Test
