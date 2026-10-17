@@ -98,6 +98,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.bundles.unit.test)

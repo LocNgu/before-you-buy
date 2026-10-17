@@ -14,4 +14,35 @@
     <!-- Relative Datumsangaben, in Kalendertagen. -->
     <string name="relative_today">Heute</string>
     <string name="relative_yesterday">Gestern</string>
+
+    <!-- Schnell hinzufügen (Brief §6.2). Keine Reflexionsfragen hier; die kommen nach dem Erfassen (ADR-0009). -->
+    <string name="quick_add_open">Hinzufügen</string>
+    <string name="quick_add_title">Schnell hinzufügen</string>
+    <string name="quick_add_save">Speichern</string>
+    <string name="quick_add_name">Name</string>
+    <string name="quick_add_name_missing">Gib einen Namen ein</string>
+    <string name="quick_add_price">Preis</string>
+    <string name="quick_add_price_missing">Gib einen Preis ein</string>
+    <!-- %1$s: ein Beispielbetrag, wie man ihn tippt, z. B. 12,50 -->
+    <string name="quick_add_price_invalid">Gib einen Betrag wie %1$s ein</string>
+    <string name="quick_add_price_invalid_no_example">Gib einen Betrag ein</string>
+    <string name="quick_add_price_whole_only">Gib einen ganzen Betrag ohne Nachkommastellen ein</string>
+    <string name="quick_add_price_too_large">Dieser Betrag ist zu groß</string>
+    <string name="quick_add_link">Link (optional)</string>
+    <string name="quick_add_need">Das ist notwendig</string>
+    <string name="quick_add_need_explained">Notwendiges hat keine Wartezeit</string>
+    <string name="quick_add_more_details">Mehr Details</string>
+    <string name="quick_add_fewer_details">Weniger Details</string>
+    <string name="quick_add_category">Kategorie (optional)</string>
+    <string name="quick_add_notes">Notizen (optional)</string>
+    <string name="quick_add_target_date_none">Zieldatum (optional)</string>
+    <!-- %1$s: das gewählte Datum -->
+    <string name="quick_add_target_date">Zieldatum: %1$s</string>
+    <string name="quick_add_target_date_remove">Datum entfernen</string>
+    <!-- Snackbar nach dem Hinzufügen von etwas Notwendigem. Wünsche nennen ihre Wartezeit: Plural quick_add_saved_want. -->
+    <string name="quick_add_saved_need">Als notwendig hinzugefügt.</string>
+
+    <!-- Dialog-Schaltflächen. -->
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Abbrechen</string>
 </resources>

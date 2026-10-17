@@ -4,6 +4,10 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### Added
+
+- Quick add: tap "Add" on Home, type a name and a price, save. Optional link, "This is a need" (needs skip the waiting period) and more details (category, notes, target date). Prices can be typed as "1.234,56" or "1,234.56". After saving, the app says how long the item waits, e.g. "Added. You can decide in 30 days."
+
 ### Changed
 
 - Amounts are shown in whole units, rounded: "20 €" instead of "19,99 €", "120 €" instead of "120,00 €". The exact price is still stored and shown when editing.

@@ -17,4 +17,16 @@
         <item quantity="one">vor %d Tag</item>
         <item quantity="other">vor %d Tagen</item>
     </plurals>
+
+    <!-- Snackbar nach dem Schnell-Hinzufügen: wie lange der neue Wunsch wartet (seine Wartezeit). -->
+    <plurals name="quick_add_saved_want">
+        <item quantity="one">Hinzugefügt. Du kannst in %d Tag entscheiden.</item>
+        <item quantity="other">Hinzugefügt. Du kannst in %d Tagen entscheiden.</item>
+    </plurals>
+
+    <!-- Ein getippter Preis hat mehr Nachkommastellen als die Währung. -->
+    <plurals name="quick_add_price_too_many_decimals">
+        <item quantity="one">Höchstens %d Nachkommastelle</item>
+        <item quantity="other">Höchstens %d Nachkommastellen</item>
+    </plurals>
 </resources>
