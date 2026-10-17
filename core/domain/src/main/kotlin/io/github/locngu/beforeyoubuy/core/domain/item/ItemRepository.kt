@@ -38,6 +38,9 @@ interface ItemRepository {
     /** The item's reflection answers, or null if none were given yet (ADR-0009). */
     fun observeReflection(id: ItemId): Flow<Reflection?>
 
+    /** The reflection answers of every item that has some, by item id; the wishlist derives all stages from it. */
+    fun observeReflections(): Flow<Map<ItemId, Reflection>>
+
     /** Every decision about the item, oldest first. Decisions are only ever appended. */
     fun observeDecisions(id: ItemId): Flow<List<Decision>>
 

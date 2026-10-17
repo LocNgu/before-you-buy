@@ -10,8 +10,11 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
+import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZoneOffset
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -19,6 +22,7 @@ import kotlinx.coroutines.flow.map
 /** Keeps added items in memory. Only what view model tests use so far; the rest throws. */
 class FakeItemRepository : ItemRepository {
     private val items = MutableStateFlow(emptyList<Item>())
+    private val reflections = MutableStateFlow(emptyMap<ItemId, Reflection>())
 
     /** Every stored item, in the order added. */
     val stored: List<Item> get() = items.value
@@ -45,7 +49,19 @@ class FakeItemRepository : ItemRepository {
 
     override fun observeHistory(status: ItemStatus): Flow<List<HistoryEntry>> = TODO("Not needed yet")
 
-    override fun observeReflection(id: ItemId): Flow<Reflection?> = TODO("Not needed yet")
+    override fun observeReflection(id: ItemId): Flow<Reflection?> = reflections.map { it[id] }
+
+    override fun observeReflections(): Flow<Map<ItemId, Reflection>> = reflections
+
+    /** Stores [reflection] for [id], as the reflection flow will. */
+    fun reflect(id: ItemId, reflection: Reflection) {
+        reflections.value += id to reflection
+    }
+
+    /** Replaces an item as stored, e.g. to move its cooling-off end or end it. */
+    fun replace(item: Item) {
+        items.value = items.value.map { if (it.id == item.id) item else it }
+    }
 
     override fun observeDecisions(id: ItemId): Flow<List<Decision>> = TODO("Not needed yet")
 
@@ -64,4 +80,17 @@ class FakePolicyRepository(initial: Policy = Policy("EUR", CoolingOffRules.defau
     }
 
     override suspend fun changeCurrency(currency: String) = TODO("Not needed yet")
+}
+
+/** A [Clock] that only moves when a test says so. */
+class MutableClock(private var now: Instant, private val zone: ZoneId = ZoneOffset.UTC) : Clock() {
+    override fun getZone(): ZoneId = zone
+
+    override fun withZone(zone: ZoneId): Clock = MutableClock(now, zone)
+
+    override fun instant(): Instant = now
+
+    fun advance(duration: Duration) {
+        now += duration
+    }
 }

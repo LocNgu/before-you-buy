@@ -11,6 +11,17 @@
     <!-- Countdown on items that are cooling off. -->
     <string name="countdown_over">Cooling-off over</string>
 
+    <!-- Wishlist (brief §6.3). Stage names are shown as group headings and as chips on each row. -->
+    <string name="wishlist_title">Wishlist</string>
+    <string name="wishlist_open">Wishlist</string>
+    <string name="wishlist_empty_title">Your wishlist is empty</string>
+    <string name="wishlist_empty_body">Add something you want. It waits here while you think it over.</string>
+    <string name="wishlist_ready_to_decide">Ready to decide</string>
+    <string name="stage_cooling_off">Cooling off</string>
+    <string name="stage_needs_reflection">Needs reflection</string>
+    <string name="stage_saving">Saving</string>
+    <string name="stage_ready">Ready</string>
+
     <!-- Relative dates, in calendar days. -->
     <string name="relative_today">Today</string>
     <string name="relative_yesterday">Yesterday</string>

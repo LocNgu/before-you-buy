@@ -15,25 +15,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
-import io.github.locngu.beforeyoubuy.feature.capture.QuickAddHost
-import io.github.locngu.beforeyoubuy.feature.capture.QuickAddViewModel
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
+import io.github.locngu.beforeyoubuy.ui.components.SecondaryButton
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 
-/** Home with quick add. The dashboard itself is still a placeholder. */
+/**
+ * Home. The dashboard itself is still a placeholder (#21); for now it links to the wishlist. Quick add is hosted by
+ * the navigation, so this only asks to open it with [onAdd].
+ */
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier, quickAdd: QuickAddViewModel = hiltViewModel()) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    HomeContent(onAdd = { quickAdd.open() }, snackbarHostState = snackbarHostState, modifier = modifier)
-    QuickAddHost(viewModel = quickAdd, snackbarHostState = snackbarHostState)
+fun HomeScreen(
+    onAdd: () -> Unit,
+    onOpenWishlist: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier
+) {
+    HomeContent(
+        onAdd = onAdd,
+        onOpenWishlist = onOpenWishlist,
+        snackbarHostState = snackbarHostState,
+        modifier = modifier
+    )
 }
 
 /** Placeholder until the real Home screen is built. */
 @Composable
-fun HomeContent(onAdd: () -> Unit, snackbarHostState: SnackbarHostState, modifier: Modifier = Modifier) {
+fun HomeContent(
+    onAdd: () -> Unit,
+    onOpenWishlist: () -> Unit,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier
+) {
     Scaffold(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -50,7 +64,8 @@ fun HomeContent(onAdd: () -> Unit, snackbarHostState: SnackbarHostState, modifie
             )
             EmptyState(
                 title = stringResource(R.string.home_empty_title),
-                body = stringResource(R.string.home_empty_body)
+                body = stringResource(R.string.home_empty_body),
+                action = { SecondaryButton(text = stringResource(R.string.wishlist_open), onClick = onOpenWishlist) }
             )
         }
     }
@@ -59,5 +74,7 @@ fun HomeContent(onAdd: () -> Unit, snackbarHostState: SnackbarHostState, modifie
 @Preview(showBackground = true)
 @Composable
 private fun HomeContentPreview() {
-    BeforeYouBuyTheme { HomeContent(onAdd = {}, snackbarHostState = remember { SnackbarHostState() }) }
+    BeforeYouBuyTheme {
+        HomeContent(onAdd = {}, onOpenWishlist = {}, snackbarHostState = remember { SnackbarHostState() })
+    }
 }
