@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Currency
 import java.util.Locale
 
 /**
@@ -22,6 +23,13 @@ fun currentLocale(): Locale = LocalConfiguration.current.locales[0]
 /** [date] in [locale]'s medium style: `10.10.2026`, `10 Oct 2026`, `Oct 10, 2026`. */
 fun formatDate(date: LocalDate, locale: Locale): String =
     DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date)
+
+/** [currency]'s sign in [locale], e.g. `€` or `$`; the ISO code where the locale has no sign for it. */
+fun currencySymbol(currency: String, locale: Locale): String = Currency.getInstance(currency).getSymbol(locale)
+
+@Composable
+@ReadOnlyComposable
+fun currencySymbol(currency: String): String = currencySymbol(currency, currentLocale())
 
 @Composable
 @ReadOnlyComposable

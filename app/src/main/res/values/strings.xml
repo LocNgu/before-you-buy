@@ -14,4 +14,35 @@
     <!-- Relative dates, in calendar days. -->
     <string name="relative_today">Today</string>
     <string name="relative_yesterday">Yesterday</string>
+
+    <!-- Quick add (brief §6.2). No reflection questions here; they come after capture (ADR-0009). -->
+    <string name="quick_add_open">Add</string>
+    <string name="quick_add_title">Quick add</string>
+    <string name="quick_add_save">Save</string>
+    <string name="quick_add_name">Name</string>
+    <string name="quick_add_name_missing">Enter a name</string>
+    <string name="quick_add_price">Price</string>
+    <string name="quick_add_price_missing">Enter a price</string>
+    <!-- %1$s: an example amount as it would be typed, e.g. 12.50 -->
+    <string name="quick_add_price_invalid">Enter an amount like %1$s</string>
+    <string name="quick_add_price_invalid_no_example">Enter an amount</string>
+    <string name="quick_add_price_whole_only">Enter a whole amount, without decimals</string>
+    <string name="quick_add_price_too_large">That amount is too large</string>
+    <string name="quick_add_link">Link (optional)</string>
+    <string name="quick_add_need">This is a need</string>
+    <string name="quick_add_need_explained">Needs skip the waiting period</string>
+    <string name="quick_add_more_details">More details</string>
+    <string name="quick_add_fewer_details">Fewer details</string>
+    <string name="quick_add_category">Category (optional)</string>
+    <string name="quick_add_notes">Notes (optional)</string>
+    <string name="quick_add_target_date_none">Target date (optional)</string>
+    <!-- %1$s: the chosen date -->
+    <string name="quick_add_target_date">Target date: %1$s</string>
+    <string name="quick_add_target_date_remove">Remove date</string>
+    <!-- Snackbar after adding a need. Wants say how long they wait: plural quick_add_saved_want. -->
+    <string name="quick_add_saved_need">Added as a need.</string>
+
+    <!-- Dialog buttons. -->
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
 </resources>

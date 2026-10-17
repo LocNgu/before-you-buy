@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12) and persistence (#13) exist; screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13) and quick add (#14) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -73,6 +73,7 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 - **Images:** don't delete a photo file eagerly when an item changes; a periodic sweep removes files no row references. Photo Picker URIs are copied into app storage (no persistable permission needed afterwards).
 - **UI tests assert what the user perceives** (text, content descriptions, state descriptions, actions), never tree structure (child counts, testTag topology).
 - Collect UI state with `collectAsStateWithLifecycle()`; `StateFlow` for state, a channel/`SharedFlow` for one-shot events.
+- ViewModels are `@HiltViewModel`s obtained with `hiltViewModel()` (`androidx.hilt:hilt-lifecycle-viewmodel-compose`). Navigation 3 entries have no ViewModel store of their own yet, so they're scoped to the activity. A ViewModel that needs the locale (e.g. to read typed prices) gets `currentLocale()` from the UI, never `Locale.getDefault()`.
 
 ## Hard constraints (checked by `verify` and CI)
 
