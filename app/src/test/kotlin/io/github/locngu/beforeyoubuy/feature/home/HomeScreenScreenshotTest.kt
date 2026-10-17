@@ -1,6 +1,7 @@
 package io.github.locngu.beforeyoubuy.feature.home
 
 import androidx.activity.ComponentActivity
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.locngu.beforeyoubuy.testing.captureContent
@@ -21,7 +22,9 @@ class HomeScreenScreenshotTest {
 
     @Test
     fun homeScreen() {
-        composeRule.setContent { BeforeYouBuyTheme { HomeScreen() } }
+        composeRule.setContent {
+            BeforeYouBuyTheme { HomeContent(onAdd = {}, snackbarHostState = SnackbarHostState()) }
+        }
         composeRule.captureContent()
     }
 }

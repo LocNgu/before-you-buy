@@ -48,3 +48,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0032](0032-storage-layout-and-defensive-reads.md) | technical | Storage: reasons against as JSON, append-only decisions, compare-and-set item writes, preference defaults computed on read |
 | [0033](0033-policy-in-room-currency-relabel.md) | product | Currency and tiers stored with the items (one transaction for tier changes); changing the currency relabels every amount |
 | [0034](0034-whole-units-in-display.md) | product | Amounts shown in whole units, rounded (`20 €` for 19,99 €); storage, input and sums stay exact |
+| [0035](0035-quick-add-form-behaviour.md) | product | Quick add: errors once a field held text, keyboard Done saves, closing discards the draft |
