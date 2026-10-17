@@ -49,6 +49,9 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
 
     override fun observeReflection(id: ItemId): Flow<Reflection?> = reflections.observe(id.value).map { it?.toDomain() }
 
+    override fun observeReflections(): Flow<Map<ItemId, Reflection>> =
+        reflections.observeAll().map { rows -> rows.associate { ItemId(it.itemId) to it.toDomain() } }
+
     override fun observeDecisions(id: ItemId): Flow<List<Decision>> =
         decisions.observeForItem(id.value).map { rows -> rows.mapNotNull { it.toDomain() } }
 

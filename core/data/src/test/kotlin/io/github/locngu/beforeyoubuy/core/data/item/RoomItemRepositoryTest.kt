@@ -143,6 +143,23 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun `observeReflections holds the answers of every item that has some and follows changes`() = runTest {
+        val withAnswers = repository.add(newItem("Camera"))
+        val without = repository.add(newItem("Tent"))
+
+        repository.observeReflections().test {
+            assertEquals(emptyMap<ItemId, Reflection>(), awaitItem())
+
+            repository.setReflection(withAnswers, Reflection(why = "Hikes"))
+            assertEquals(mapOf(withAnswers to Reflection(why = "Hikes")), awaitItem())
+
+            repository.setReflection(withAnswers, FULL_REFLECTION)
+            assertEquals(mapOf(withAnswers to FULL_REFLECTION), awaitItem())
+            assertFalse(without in repository.observeReflections().first())
+        }
+    }
+
+    @Test
     fun `setReflection writes nothing for a missing item`() = runTest {
         assertFalse(repository.setReflection(ItemId(999), FULL_REFLECTION))
         assertEquals(emptyList<String>(), queryStrings("SELECT item_id FROM reflections"))

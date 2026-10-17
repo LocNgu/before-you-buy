@@ -69,6 +69,9 @@ internal interface ReflectionDao {
 
     @Query("SELECT * FROM reflections WHERE item_id = :itemId")
     fun observe(itemId: Long): Flow<ReflectionEntity?>
+
+    @Query("SELECT * FROM reflections")
+    fun observeAll(): Flow<List<ReflectionEntity>>
 }
 
 /**

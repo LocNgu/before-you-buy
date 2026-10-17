@@ -8,6 +8,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 - Quick add: tap "Add" on Home, type a name and a price, save. Optional link, "This is a need" (needs skip the waiting period) and more details (category, notes, target date). Prices can be typed as "1.234,56" or "1,234.56". After saving, the app says how long the item waits, e.g. "Added. You can decide in 30 days."
 
+- Wishlist: your items grouped as Ready, Needs reflection and Cooling off, soonest first, each with its price and days left. Open it from Home; "Add" is there too. Groups update by themselves when a waiting period ends or the day changes.
+
 ### Changed
 
 - Amounts are shown in whole units, rounded: "20 €" instead of "19,99 €", "120 €" instead of "120,00 €". The exact price is still stored and shown when editing.

@@ -23,7 +23,7 @@ class HomeScreenScreenshotTest {
     @Test
     fun homeScreen() {
         composeRule.setContent {
-            BeforeYouBuyTheme { HomeContent(onAdd = {}, snackbarHostState = SnackbarHostState()) }
+            BeforeYouBuyTheme { HomeContent(onAdd = {}, onOpenWishlist = {}, snackbarHostState = SnackbarHostState()) }
         }
         composeRule.captureContent()
     }

@@ -11,6 +11,17 @@
     <!-- Countdown bei Artikeln in der Wartezeit. -->
     <string name="countdown_over">Wartezeit vorbei</string>
 
+    <!-- Wunschliste (Brief §6.3). Die Phasen sind Gruppenüberschriften und Chips in jeder Zeile. -->
+    <string name="wishlist_title">Wunschliste</string>
+    <string name="wishlist_open">Wunschliste</string>
+    <string name="wishlist_empty_title">Deine Wunschliste ist leer</string>
+    <string name="wishlist_empty_body">Füge etwas hinzu, das du gern hättest. Es wartet hier, während du darüber nachdenkst.</string>
+    <string name="wishlist_ready_to_decide">Bereit zur Entscheidung</string>
+    <string name="stage_cooling_off">Wartezeit</string>
+    <string name="stage_needs_reflection">Zum Überdenken</string>
+    <string name="stage_saving">Sparen</string>
+    <string name="stage_ready">Bereit</string>
+
     <!-- Relative Datumsangaben, in Kalendertagen. -->
     <string name="relative_today">Heute</string>
     <string name="relative_yesterday">Gestern</string>
