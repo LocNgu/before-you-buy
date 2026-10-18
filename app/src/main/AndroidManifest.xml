@@ -25,6 +25,22 @@
             </intent-filter>
         </activity>
 
+        <!-- Share capture (#15): text shared from a shop or browser opens quick add over that app. An empty task
+             affinity, so a share that starts a new task doesn't bring the app's own task forward, and finishing
+             returns to the app the share came from. The share sheet shows the application's label. -->
+        <activity
+            android:name=".feature.capture.ShareReceiverActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.BeforeYouBuy.Translucent">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <!-- WorkManager starts on demand with the Application's configuration, not at process start. -->
         <provider
             android:name="androidx.startup.InitializationProvider"
