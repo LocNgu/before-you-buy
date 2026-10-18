@@ -4,6 +4,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-18
+
 ### Added
 
 - Quick add: tap "Add" on Home, type a name and a price, save. Optional link, "This is a need" (needs skip the waiting period) and more details (category, notes, target date). Prices can be typed as "1.234,56" or "1,234.56". After saving, the app says how long the item waits, e.g. "Added. You can decide in 30 days."
@@ -31,6 +33,7 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 - The app language can be chosen per app in Android settings (Android 13 and newer).
 - Signed APKs on GitHub Releases for each version, which install on the phone and update in place with data kept (`docs/releasing.md`).
 
-[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/LocNgu/before-you-buy/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/LocNgu/before-you-buy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/LocNgu/before-you-buy/releases/tag/v0.1.0
