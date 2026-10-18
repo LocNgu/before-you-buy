@@ -29,4 +29,10 @@
         <item quantity="one">Use at most %d decimal place</item>
         <item quantity="other">Use at most %d decimal places</item>
     </plurals>
+
+    <!-- Item detail header: how long the item has been wanted, in calendar days (0 is item_added_today). -->
+    <plurals name="item_wanted_for_days">
+        <item quantity="one">Wanted for %d day</item>
+        <item quantity="other">Wanted for %d days</item>
+    </plurals>
 </resources>

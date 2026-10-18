@@ -1,5 +1,6 @@
 package io.github.locngu.beforeyoubuy.feature.wishlist
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistGroup
@@ -43,12 +45,19 @@ import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 @Composable
 fun WishlistScreen(
     onAdd: () -> Unit,
+    onOpenItem: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     viewModel: WishlistViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    WishlistContent(state = state, onAdd = onAdd, snackbarHostState = snackbarHostState, modifier = modifier)
+    WishlistContent(
+        state = state,
+        onAdd = onAdd,
+        onOpenItem = onOpenItem,
+        snackbarHostState = snackbarHostState,
+        modifier = modifier
+    )
 }
 
 /** Stateless wishlist, for screenshots. Items are grouped by stage; the soonest cooling-off end comes first. */
@@ -57,6 +66,7 @@ fun WishlistScreen(
 fun WishlistContent(
     state: WishlistUiState,
     onAdd: () -> Unit,
+    onOpenItem: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -82,26 +92,31 @@ fun WishlistContent(
                     )
                 }
 
-            else -> WishlistList(groups, Modifier.padding(innerPadding))
+            else -> WishlistList(groups, onOpenItem, Modifier.padding(innerPadding))
         }
     }
 }
 
 @Composable
-private fun WishlistList(groups: List<WishlistGroup>, modifier: Modifier = Modifier) {
+private fun WishlistList(groups: List<WishlistGroup>, onOpenItem: (ItemId) -> Unit, modifier: Modifier = Modifier) {
     // Leaves room for the floating button, so the last row isn't hidden behind it.
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
         groups.forEach { group ->
             item(key = "header-${group.stage}") { SectionHeader(stageLabel(group.stage)) }
-            items(group.entries, key = { it.item.id.value }) { WishlistRow(it) }
+            items(group.entries, key = { it.item.id.value }) { entry ->
+                WishlistRow(entry, onClick = { onOpenItem(entry.item.id) })
+            }
         }
     }
 }
 
 @Composable
-private fun WishlistRow(entry: WishlistEntry, modifier: Modifier = Modifier) {
+private fun WishlistRow(entry: WishlistEntry, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -113,7 +128,7 @@ private fun WishlistRow(entry: WishlistEntry, modifier: Modifier = Modifier) {
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StageChip(entry.stage)
-                StageStatus(entry)
+                StageStatus(entry.stage, entry.daysLeft)
             }
         }
         MoneyText(
@@ -126,10 +141,10 @@ private fun WishlistRow(entry: WishlistEntry, modifier: Modifier = Modifier) {
 
 /** A countdown while cooling off, otherwise what the item is waiting for. Informational, never urgent. */
 @Composable
-private fun StageStatus(entry: WishlistEntry) {
+internal fun StageStatus(stage: Stage, daysLeft: Int) {
     val style = MaterialTheme.typography.bodyMedium
-    when (entry.stage) {
-        Stage.COOLING_OFF -> CountdownText(entry.daysLeft, style = style)
+    when (stage) {
+        Stage.COOLING_OFF -> CountdownText(daysLeft, style = style)
 
         Stage.NEEDS_REFLECTION -> CountdownText(0, style = style)
 
@@ -145,7 +160,7 @@ private fun StageStatus(entry: WishlistEntry) {
 }
 
 @Composable
-private fun StageChip(stage: Stage) {
+internal fun StageChip(stage: Stage) {
     Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(
             text = stageLabel(stage),
@@ -157,7 +172,7 @@ private fun StageChip(stage: Stage) {
 }
 
 @Composable
-private fun stageLabel(stage: Stage): String = stringResource(
+internal fun stageLabel(stage: Stage): String = stringResource(
     when (stage) {
         Stage.COOLING_OFF -> R.string.stage_cooling_off
         Stage.NEEDS_REFLECTION -> R.string.stage_needs_reflection

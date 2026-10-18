@@ -54,22 +54,8 @@ data class QuickAddUiState(
 )
 
 /** What the user can do in the quick-add sheet. */
-interface QuickAddActions {
-    fun onNameChange(name: String)
-
-    fun onPriceChange(price: String)
-
-    fun onLinkChange(link: String)
-
-    fun onNeedChange(need: Boolean)
-
+interface QuickAddActions : ItemFormActions {
     fun onDetailsExpandedChange(expanded: Boolean)
-
-    fun onCategoryChange(category: String)
-
-    fun onNotesChange(notes: String)
-
-    fun onTargetDateChange(date: LocalDate?)
 
     fun save()
 }

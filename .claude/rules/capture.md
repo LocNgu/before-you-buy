@@ -20,6 +20,7 @@ paths:
 - `QuickAddViewModel` (Hilt, `hiltViewModel()` from `androidx.hilt:hilt-lifecycle-viewmodel-compose`) owns the sheet: `open(prefill)` starts a fresh form, `dismiss()` discards it, `save()` stores via `ItemRepository.add` and emits `QuickAddSaved` on `saved`. The form stays in place while the sheet slides away and is reset on the next `open`.
 - Errors show once a field has held text (typed or prefilled); Save is disabled until valid; "Done" on the price keyboard saves a valid form (ADR-0035).
 - The view model needs the UI's locale to read prices: `QuickAddHost` passes `currentLocale()` via `setLocale`. Until then nothing can be saved.
+- The fields (`NameField`, `PriceField`, `LinkField`, `NeedToggle`, `DetailFields`) and `ItemFormActions` live in `ItemFields.kt` and are shared with item edit (`.claude/rules/wishlist.md`). Change them there, for both.
 - A screen offers quick add with `QuickAddButton` (FAB) and an `onAdd` that calls `QuickAddViewModel.open()`. `QuickAddHost(viewModel, snackbarHostState)` is composed **once**, in `AppNavigation`, with the `SnackbarHostState` the screens share: `saved` is a channel, and each event reaches one collector.
 - Share capture (#15) opens it with `QuickAddPrefill(name, price, link)`; prefill the price with `Money.formatForInput(locale)`, never `format`.
 - Snackbar: "Added. You can decide in N days." (plural) or "Added as a need." Never money, deals or urgency (ADR-0014).

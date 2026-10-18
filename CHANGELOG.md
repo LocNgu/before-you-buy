@@ -4,6 +4,11 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### Added
+
+- Item detail: tap an item on the wishlist to see your reasons first, then its price, stage, days left and how long you've wanted it. While it's cooling off, the shop link is only in the ⋮ menu ("Copy link", "Open link"); afterwards "Open link" shows on the page. "Mark as need" ends the waiting period after asking.
+- Edit an item: name, price, link, need, category, notes and target date. A lower price never shortens the waiting period; a higher one can extend it, and the form says so before you save ("Waiting period extended to …").
+
 ## [0.2.0] - 2026-10-18
 
 ### Added
