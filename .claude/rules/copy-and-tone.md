@@ -13,4 +13,4 @@ paths:
 - **Never:** "you have money available", "you can afford", "you saved!", streaks, badges, urgency words ("only", "hurry", "last chance"), deal/price language (ADR-0012, ADR-0014).
 - Name the alternative concretely on decision surfaces: "Don't buy — keep 1,200 € for your Camera (#2)" beats "Cancel" (ADR-0014 context, research §1).
 - "Decided against", not "saved" or "resisted".
-- Every string exists in `values/` (English) and `values-de/` (German). German uses "du". Terms: Wartezeit (cooling-off), Wunschliste, Prioritäten, Dagegen entschieden — confirm or extend in issue #29.
+- Every string exists in `values/` (English) and `values-de/` (German). German uses "du". Write German as people talk, not as a 1:1 translation of the English: short, relaxed phrasing ("Was dagegen spricht", not "Gründe dagegen"; "Versuch’s nochmal"); common anglicisms (Link, Upgrade) are fine (owner, PR #68). Terms: Wartezeit (cooling-off), Wunschliste, Prioritäten, Dagegen entschieden — confirm or extend in issue #29.
