@@ -7,6 +7,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
@@ -30,6 +31,7 @@ class WishlistViewModelTest {
     private val start = Instant.parse("2026-10-16T10:00:00Z")
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
+    private val images = FakeItemImageStore()
     private lateinit var viewModel: WishlistViewModel
 
     private val reflection =
@@ -38,7 +40,7 @@ class WishlistViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        viewModel = WishlistViewModel(items, clock)
+        viewModel = WishlistViewModel(items, images, clock)
     }
 
     @After
@@ -121,6 +123,17 @@ class WishlistViewModelTest {
         pass(Duration.ofHours(14)) // midnight
 
         assertEquals(2, groups!!.single().entries.single().daysLeft)
+    }
+
+    @Test
+    fun `items with a photo get a thumbnail`() = runTest(UnconfinedTestDispatcher()) {
+        viewModel.uiState.launchIn(backgroundScope)
+        val withPhoto = add("Camera", endsInHours = 24)
+        add("Book", endsInHours = 24)
+
+        items.replace(withPhoto.copy(imageRef = "camera.jpg"))
+
+        assertEquals(mapOf(withPhoto.id to images.fileFor("camera.jpg")), viewModel.uiState.value.photos)
     }
 
     @Test

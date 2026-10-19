@@ -106,4 +106,14 @@
     <!-- %1$s: das Enddatum, wenn Notwendiges zum Wunsch wird -->
     <string name="item_edit_wait_starts">Wartezeit bis %1$s</string>
     <string name="item_edit_conflict">Der Artikel hat sich inzwischen geändert, daher wurde nichts gespeichert. Prüf deine Änderungen und speichere noch einmal.</string>
+
+    <!-- Artikelfotos (ADR-0013, ADR-0038): klein während der Wartezeit, zum Ansehen antippen. -->
+    <string name="item_photo">Foto</string>
+    <string name="item_photo_tap_to_view">Zum Ansehen tippen</string>
+    <!-- %1$s: der Name des Artikels -->
+    <string name="item_photo_description">Foto von %1$s</string>
+    <string name="item_edit_photo_add">Foto hinzufügen</string>
+    <string name="item_edit_photo_change">Foto ändern</string>
+    <string name="item_edit_photo_remove">Foto entfernen</string>
+    <string name="item_edit_photo_failed">Dieses Foto konnte nicht hinzugefügt werden. Versuch ein anderes.</string>
 </resources>

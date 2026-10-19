@@ -38,10 +38,20 @@ fun editFormOf(item: Item, locale: Locale): CaptureForm = CaptureForm(
  * - A new kind goes through [changeKind], after the price: a need that becomes a want cools off from
  *   [Item.addedAt] like a new want at the new price (ADR-0031); a want that becomes a need keeps its end.
  *
+ * [imageRef] is the photo to keep: the stored one unless the user picked another or removed it.
+ *
  * Only call it for an active [item] in the policy's currency and a form that [checkCapture] accepts; anything else
  * is a programming error and throws.
  */
-fun editedItem(item: Item, form: CaptureForm, policy: Policy, locale: Locale, at: Instant, zone: ZoneId): Item {
+fun editedItem(
+    item: Item,
+    form: CaptureForm,
+    policy: Policy,
+    locale: Locale,
+    at: Instant,
+    zone: ZoneId,
+    imageRef: String? = item.imageRef
+): Item {
     require(item.status == ItemStatus.ACTIVE) { "Only active items are edited; ${item.id} is ${item.status}" }
     val check = checkCapture(form, policy.currency, locale)
     val price = (check.price as? MoneyParseResult.Success)?.money
@@ -57,7 +67,8 @@ fun editedItem(item: Item, form: CaptureForm, policy: Policy, locale: Locale, at
         link = form.link.trimmedOrNull(),
         category = form.category.trimmedOrNull(),
         notes = form.notes.trimmedOrNull(),
-        targetDate = form.targetDate
+        targetDate = form.targetDate,
+        imageRef = imageRef
     )
 }
 

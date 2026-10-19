@@ -57,6 +57,17 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun `imageRefs names the photo of every item, active or ended`() = runTest {
+        val active = addAndRead(newItem().copy(imageRef = "a.jpg"))
+        val ended = addAndRead(newItem().copy(imageRef = "b.jpg"))
+        addAndRead(newItem().copy(imageRef = null))
+        decide(ended, reject())
+
+        assertEquals(setOf("a.jpg", "b.jpg"), repository.imageRefs())
+        assertEquals("a.jpg", active.imageRef)
+    }
+
+    @Test
     fun `add refuses an item that already ended`() = runTest {
         assertThrowsIllegalArgument { repository.add(newItem().copy(status = ItemStatus.PURCHASED)) }
     }

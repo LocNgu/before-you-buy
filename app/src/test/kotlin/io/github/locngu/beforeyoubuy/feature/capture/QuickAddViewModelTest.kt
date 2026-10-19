@@ -23,6 +23,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -221,17 +222,24 @@ class QuickAddViewModelTest {
 
     @Test
     fun `a failed save leaves the form open and usable`() {
-        viewModel.open()
-        fill("Camera", "120")
-        items.failNextAdd = true
+        // The failure itself still surfaces, as the coroutine's uncaught exception. runTest collects it and rethrows
+        // it at the end; outside one it would be handed to whichever test runs next.
+        val thrown = assertThrows(IllegalStateException::class.java) {
+            runTest {
+                viewModel.open()
+                fill("Camera", "120")
+                items.failNextAdd = true
 
-        viewModel.save() // The failure itself still surfaces, as the coroutine's uncaught exception.
+                viewModel.save()
 
-        assertTrue(state.visible)
-        assertTrue(state.canSave)
-        viewModel.onNameChange("Camera 2")
-        assertEquals("Camera 2", state.form.name)
-        assertTrue(items.stored.isEmpty())
+                assertTrue(state.visible)
+                assertTrue(state.canSave)
+                viewModel.onNameChange("Camera 2")
+                assertEquals("Camera 2", state.form.name)
+                assertTrue(items.stored.isEmpty())
+            }
+        }
+        assertEquals("Storing failed", thrown.message)
     }
 
     @Test

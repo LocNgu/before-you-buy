@@ -31,6 +31,7 @@ class ItemDetailTest {
         assertEquals(14, detail.wantedForDays)
         assertFalse(detail.reflected)
         assertFalse(detail.linkProminent)
+        assertFalse(detail.imageProminent)
     }
 
     @Test
@@ -41,6 +42,7 @@ class ItemDetailTest {
         assertEquals(0, detail.daysLeft)
         assertTrue(detail.reflected)
         assertTrue(detail.linkProminent)
+        assertTrue(detail.imageProminent)
     }
 
     @Test

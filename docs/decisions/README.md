@@ -51,3 +51,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0035](0035-quick-add-form-behaviour.md) | product | Quick add: errors once a field held text, keyboard Done saves, closing discards the draft |
 | [0036](0036-share-capture-over-the-sharing-app.md) | product | Share capture: quick add over the sharing app, toast on save, cursor in the price, shop-named fallback, tracking removed |
 | [0037](0037-viewmodels-per-nav-entry.md) | technical | ViewModels are scoped to their Navigation 3 entry; per-item screens use assisted injection |
+| [0038](0038-item-photos-in-app-storage.md) | technical | Item photos: Photo Picker, re-encoded JPEG copies (≤ 1600 px, no metadata) in app storage, unreferenced files swept at app start |

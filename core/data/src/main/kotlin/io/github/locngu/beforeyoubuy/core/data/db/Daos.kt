@@ -30,6 +30,9 @@ internal interface ItemDao {
     @Query("SELECT * FROM items")
     suspend fun getAll(): List<ItemEntity>
 
+    @Query("SELECT DISTINCT image_ref FROM items WHERE image_ref IS NOT NULL")
+    suspend fun getImageRefs(): List<String>
+
     /** Changes only the cooling-off end, so columns this version can't read are kept as stored. */
     @Query("UPDATE items SET cooling_ends_at = :coolingEndsAt WHERE id = :id")
     suspend fun setCoolingEnd(id: Long, coolingEndsAt: Long)

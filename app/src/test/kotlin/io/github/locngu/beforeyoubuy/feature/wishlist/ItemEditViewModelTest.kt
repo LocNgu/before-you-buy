@@ -7,6 +7,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
+import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -36,6 +37,7 @@ class ItemEditViewModelTest {
     private val clock = MutableClock(Instant.parse("2026-10-16T10:00:00Z"))
     private val items = FakeItemRepository()
     private val policies = FakePolicyRepository()
+    private val images = FakeItemImageStore()
     private lateinit var item: Item
     private lateinit var viewModel: ItemEditViewModel
 
@@ -53,7 +55,7 @@ class ItemEditViewModelTest {
             )
         )
         item = items.stored.single { it.id == id }
-        viewModel = ItemEditViewModel(id.value, items, policies, clock)
+        viewModel = ItemEditViewModel(id.value, items, policies, images, clock)
         viewModel.setLocale(Locale.GERMANY)
     }
 
@@ -118,7 +120,9 @@ class ItemEditViewModelTest {
         assertNull(state.waitNote)
 
         items.replace(item.copy(kind = ItemKind.NEED, coolingEndsAt = added))
-        val needEditor = ItemEditViewModel(item.id.value, items, policies, clock).apply { setLocale(Locale.GERMANY) }
+        val needEditor = ItemEditViewModel(item.id.value, items, policies, images, clock).apply {
+            setLocale(Locale.GERMANY)
+        }
         needEditor.onNeedChange(false)
 
         assertEquals(WaitNote.Starts(LocalDate.of(2026, 10, 31)), needEditor.uiState.value.waitNote)
@@ -203,6 +207,53 @@ class ItemEditViewModelTest {
         }
         assertEquals("Camera body", items.stored.single().name)
     }
+
+    @Test
+    fun `a picked photo is copied, shown and saved with the item`() = runTest(UnconfinedTestDispatcher()) {
+        assertNull(state.photo)
+
+        viewModel.onPhotoPicked("content://picker/42")
+
+        assertEquals(listOf("content://picker/42"), images.imported)
+        assertEquals(images.fileFor("42.jpg"), state.photo)
+        assertNull(items.stored.single().imageRef)
+        viewModel.saved.test {
+            viewModel.save()
+            awaitItem()
+        }
+        assertEquals("42.jpg", items.stored.single().imageRef)
+    }
+
+    @Test
+    fun `an unreadable pick keeps the photo there was and says so`() = runTest(UnconfinedTestDispatcher()) {
+        viewModel.onPhotoPicked("content://picker/42")
+
+        viewModel.onPhotoPicked(FakeItemImageStore.UNREADABLE)
+
+        assertTrue(state.photoFailed)
+        assertEquals(images.fileFor("42.jpg"), state.photo)
+        assertTrue(state.canSave)
+    }
+
+    @Test
+    fun `a removed photo is gone once saved, and leaving without saving keeps it`() =
+        runTest(UnconfinedTestDispatcher()) {
+            items.replace(item.copy(imageRef = "old.jpg"))
+            val editor = ItemEditViewModel(item.id.value, items, policies, images, clock).apply {
+                setLocale(Locale.GERMANY)
+            }
+            assertEquals(images.fileFor("old.jpg"), editor.uiState.value.photo)
+
+            editor.onRemovePhoto()
+
+            assertNull(editor.uiState.value.photo)
+            assertEquals("old.jpg", items.stored.single().imageRef)
+            editor.saved.test {
+                editor.save()
+                awaitItem()
+            }
+            assertNull(items.stored.single().imageRef)
+        }
 
     @Test
     fun `an item ended meanwhile is gone`() {

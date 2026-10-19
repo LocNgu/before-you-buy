@@ -41,6 +41,12 @@ interface ItemRepository {
     /** The reflection answers of every item that has some, by item id; the wishlist derives all stages from it. */
     fun observeReflections(): Flow<Map<ItemId, Reflection>>
 
+    /**
+     * The [Item.imageRef] of every stored item, active or ended: the photos that must be kept
+     * ([ItemImageStore.deleteUnreferenced]).
+     */
+    suspend fun imageRefs(): Set<String>
+
     /** Every decision about the item, oldest first. Decisions are only ever appended. */
     fun observeDecisions(id: ItemId): Flow<List<Decision>>
 

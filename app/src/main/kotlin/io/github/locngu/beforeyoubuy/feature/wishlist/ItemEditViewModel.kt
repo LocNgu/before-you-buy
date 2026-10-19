@@ -10,6 +10,7 @@ import io.github.locngu.beforeyoubuy.core.domain.capture.CaptureForm
 import io.github.locngu.beforeyoubuy.core.domain.capture.checkCapture
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
@@ -22,6 +23,7 @@ import io.github.locngu.beforeyoubuy.core.domain.wishlist.editFormOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.editedItem
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.waitChange
 import io.github.locngu.beforeyoubuy.feature.capture.ItemFormActions
+import java.io.File
 import java.time.Clock
 import java.time.LocalDate
 import java.util.Locale
@@ -45,6 +47,9 @@ import kotlinx.coroutines.launch
  * @property gone the item was ended or deleted meanwhile, so there's nothing to edit.
  * @property waitNote how saving would change the wait, shown under the price ("Waiting period extended to …").
  * @property conflict the last save found the item changed meanwhile and wrote nothing.
+ * @property photo the photo saving keeps: the stored one, a newly picked one, or none once removed.
+ * @property importingPhoto a picked photo is being copied; saving waits for it.
+ * @property photoFailed the last picked image couldn't be read; the previous photo stays.
  */
 data class ItemEditUiState(
     val form: CaptureForm? = null,
@@ -55,7 +60,10 @@ data class ItemEditUiState(
     val currency: String? = null,
     val today: LocalDate? = null,
     val waitNote: WaitNote? = null,
-    val conflict: Boolean = false
+    val conflict: Boolean = false,
+    val photo: File? = null,
+    val importingPhoto: Boolean = false,
+    val photoFailed: Boolean = false
 )
 
 /** How saving would change the wait, with the end date in the device's zone (from the injected clock). */
@@ -67,6 +75,11 @@ sealed interface WaitNote {
 
 /** What the user can do on the edit screen. */
 interface ItemEditActions : ItemFormActions {
+    /** The Photo Picker returned [uri]. */
+    fun onPhotoPicked(uri: String)
+
+    fun onRemovePhoto()
+
     fun save()
 }
 
@@ -80,6 +93,7 @@ class ItemEditViewModel @AssistedInject constructor(
     @Assisted itemId: Long,
     private val items: ItemRepository,
     policies: PolicyRepository,
+    private val images: ItemImageStore,
     private val clock: Clock
 ) : ViewModel(),
     ItemEditActions {
@@ -113,7 +127,10 @@ class ItemEditViewModel @AssistedInject constructor(
         viewModelScope.launch {
             val (loaded, locale) = combine(stored, locale) { s, l -> s to l }.first { (s, l) -> s != null && l != null }
             val item = loaded!!.item?.takeIf { it.status == ItemStatus.ACTIVE } ?: return@launch
-            editor.update { if (it.form == null) it.copy(form = editFormOf(item, locale!!), base = item) else it }
+            editor.update {
+                if (it.form != null) return@update it
+                it.copy(form = editFormOf(item, locale!!), base = item, imageRef = item.imageRef)
+            }
         }
     }
 
@@ -137,6 +154,28 @@ class ItemEditViewModel @AssistedInject constructor(
     override fun onTargetDateChange(date: LocalDate?) = editForm { it.copy(targetDate = date) }
 
     /**
+     * Copies the picked image into app storage (ADR-0038). It replaces the photo only once saved; an unsaved copy is
+     * swept later ([io.github.locngu.beforeyoubuy.ImageCleanup]).
+     */
+    override fun onPhotoPicked(uri: String) {
+        if (editor.value.saving || editor.value.form == null) return
+        editor.update { it.copy(importing = it.importing + 1, photoFailed = false) }
+        viewModelScope.launch {
+            val ref = try {
+                images.import(uri)
+            } finally {
+                editor.update { it.copy(importing = it.importing - 1) }
+            }
+            editor.update { if (ref == null) it.copy(photoFailed = true) else it.copy(imageRef = ref) }
+        }
+    }
+
+    /** Ignored while a pick is importing: its result would bring a photo back right after. */
+    override fun onRemovePhoto() = editor.update {
+        if (it.saving || it.importing > 0) it else it.copy(imageRef = null, photoFailed = false)
+    }
+
+    /**
      * Stores the edit and emits [saved]. It's written only if the item is still as it was when the form was filled
      * (or when the last conflict was shown): a change made elsewhere meanwhile (e.g. "Mark as need") is never
      * silently undone. Then nothing is written and [ItemEditUiState.conflict] says so; saving again applies the
@@ -148,11 +187,14 @@ class ItemEditViewModel @AssistedInject constructor(
         val item = current.base ?: return
         val policy = policy.value ?: return
         val locale = locale.value ?: return
-        if (current.saving || !canEdit(item, form, policy, locale)) return
+        if (current.saving || current.importing > 0 || !canEdit(item, form, policy, locale)) return
         editor.value = current.copy(saving = true, conflict = false)
         viewModelScope.launch {
             val written = try {
-                items.update(item, editedItem(item, form, policy, locale, clock.instant(), clock.zone))
+                items.update(
+                    item,
+                    editedItem(item, form, policy, locale, clock.instant(), clock.zone, current.imageRef)
+                )
             } finally {
                 editor.update { it.copy(saving = false) }
             }
@@ -192,7 +234,7 @@ class ItemEditViewModel @AssistedInject constructor(
             form = form,
             showNameMissing = check.nameMissing,
             priceError = check.price.takeIf { it !is MoneyParseResult.Success },
-            canSave = editable && !editor.saving,
+            canSave = editable && !editor.saving && editor.importing == 0,
             currency = policy.currency,
             today = clock.today(),
             waitNote = if (editable) {
@@ -202,7 +244,10 @@ class ItemEditViewModel @AssistedInject constructor(
             } else {
                 null
             },
-            conflict = editor.conflict
+            conflict = editor.conflict,
+            photo = editor.imageRef?.let(images::fileFor),
+            importingPhoto = editor.importing > 0,
+            photoFailed = editor.photoFailed
         )
     }
 
@@ -218,10 +263,14 @@ class ItemEditViewModel @AssistedInject constructor(
     /**
      * The form's own state. Unlike quick add, every field starts filled, so errors show as soon as they occur.
      * [base] is the item the form is saved against: as first loaded, then as seen when a conflict was shown.
+     * [imageRef] is the photo saving keeps; [importing] counts picked photos still being copied.
      */
     private data class Editor(
         val form: CaptureForm? = null,
         val base: Item? = null,
+        val imageRef: String? = null,
+        val importing: Int = 0,
+        val photoFailed: Boolean = false,
         val saving: Boolean = false,
         val conflict: Boolean = false
     )
