@@ -66,44 +66,44 @@
     <string name="item_copy_link">Link kopieren</string>
     <string name="item_open_link">Link öffnen</string>
     <string name="item_link_copied">Link kopiert</string>
-    <string name="item_link_not_opened">Dieser Link lässt sich nicht öffnen</string>
-    <string name="item_added_today">Seit heute auf der Liste</string>
-    <string name="item_need">Notwendig, also keine Wartezeit</string>
+    <string name="item_link_not_opened">Keine App kann diesen Link öffnen</string>
+    <string name="item_added_today">Heute hinzugefügt</string>
+    <string name="item_need">Notwendig, daher ohne Wartezeit</string>
     <string name="item_reasons_title">Deine Gründe</string>
-    <string name="item_reason_why">Warum du das willst</string>
-    <string name="item_reason_usage">Wie oft du das nutzt</string>
-    <string name="item_reasons_against">Was dagegen spricht</string>
-    <string name="item_reason_problem_solved">Welches Problem das löst</string>
-    <string name="item_reason_current_alternative">Was du bisher nutzt</string>
-    <string name="item_reason_replaces">Was das ersetzt</string>
+    <string name="item_reason_why">Warum du es willst</string>
+    <string name="item_reason_usage">Wie oft du es nutzen wirst</string>
+    <string name="item_reasons_against">Gründe dagegen</string>
+    <string name="item_reason_problem_solved">Welches Problem es löst</string>
+    <string name="item_reason_current_alternative">Was du stattdessen jetzt nutzt</string>
+    <string name="item_reason_replaces">Was es ersetzt</string>
     <string name="item_reason_why_now">Warum jetzt</string>
     <string name="item_reason_upgrade_or_new">Upgrade oder neu</string>
-    <string name="item_reflect_prompt_title">Warum willst du das haben?</string>
+    <string name="item_reflect_prompt_title">Warum willst du das?</string>
     <string name="item_reflect_prompt_title_started">Ein paar Antworten fehlen noch</string>
-    <string name="item_reflect_prompt_body">Nimm dir eine Minute: Was spricht dafür, was dagegen? Wenn du dich entscheidest, siehst du deine Antworten wieder.</string>
+    <string name="item_reflect_prompt_body">Nimm dir eine Minute für deine Gründe, dafür und dagegen. Du siehst sie wieder, wenn du entscheidest.</string>
     <string name="item_details_title">Details</string>
     <string name="item_category">Kategorie</string>
     <string name="item_notes">Notizen</string>
     <string name="item_target_date">Zieldatum</string>
-    <string name="item_mark_as_need">Ist notwendig</string>
-    <string name="item_mark_as_need_title">Als notwendig speichern?</string>
-    <string name="item_mark_as_need_body">Dann fällt die Wartezeit weg und du musst keine Fragen beantworten. Im Verlauf siehst du später, dass es als notwendig gespeichert wurde.</string>
-    <string name="item_changed_meanwhile">Das wurde zwischendurch geändert. Versuch’s bitte nochmal.</string>
-    <string name="item_gone">Das ist nicht mehr auf deiner Wunschliste</string>
+    <string name="item_mark_as_need">Als notwendig markieren</string>
+    <string name="item_mark_as_need_title">Als notwendig markieren?</string>
+    <string name="item_mark_as_need_body">Notwendiges hat keine Wartezeit und braucht keine Reflexion. Im Verlauf steht es als notwendig.</string>
+    <string name="item_changed_meanwhile">Der Artikel hat sich inzwischen geändert. Versuch es bitte noch einmal.</string>
+    <string name="item_gone">Dieser Artikel ist nicht mehr auf deiner Wunschliste</string>
 
     <!-- Antworten auf „Wie oft wirst du es nutzen?“ und „Upgrade oder wirklich neu?“ (Brief §4.3). -->
     <string name="usage_daily">Täglich</string>
     <string name="usage_weekly">Wöchentlich</string>
     <string name="usage_monthly">Monatlich</string>
     <string name="usage_rarely">Selten</string>
-    <string name="usage_once">Nur einmal</string>
+    <string name="usage_once">Einmal</string>
     <string name="upgrade_or_new_upgrade">Ein Upgrade</string>
-    <string name="upgrade_or_new_new">Was ganz Neues</string>
+    <string name="upgrade_or_new_new">Wirklich neu</string>
 
     <!-- Artikel bearbeiten. Eine Preisänderung verlängert die Wartezeit höchstens (ADR-0005). -->
     <!-- %1$s: das neue Enddatum -->
-    <string name="item_edit_wait_extended">Die Wartezeit geht jetzt bis %1$s</string>
+    <string name="item_edit_wait_extended">Wartezeit verlängert bis %1$s</string>
     <!-- %1$s: das Enddatum, wenn Notwendiges zum Wunsch wird -->
-    <string name="item_edit_wait_starts">Die Wartezeit läuft bis %1$s</string>
-    <string name="item_edit_conflict">Das wurde zwischendurch geändert, deshalb ist nichts gespeichert. Schau kurz drüber und speicher nochmal.</string>
+    <string name="item_edit_wait_starts">Wartezeit bis %1$s</string>
+    <string name="item_edit_conflict">Der Artikel hat sich inzwischen geändert, daher wurde nichts gespeichert. Prüf deine Änderungen und speichere noch einmal.</string>
 </resources>

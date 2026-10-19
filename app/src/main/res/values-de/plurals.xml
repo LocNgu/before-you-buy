@@ -32,7 +32,7 @@
 
     <!-- Kopf der Artikeldetails: wie lange der Artikel schon gewünscht ist, in Kalendertagen (0 ist item_added_today). -->
     <plurals name="item_wanted_for_days">
-        <item quantity="one">Seit %d Tag auf der Liste</item>
-        <item quantity="other">Seit %d Tagen auf der Liste</item>
+        <item quantity="one">Seit %d Tag gewünscht</item>
+        <item quantity="other">Seit %d Tagen gewünscht</item>
     </plurals>
 </resources>
