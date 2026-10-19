@@ -383,15 +383,21 @@ class ReflectionViewModelTest {
     }
 
     @Test
-    fun `an item ended meanwhile is gone`() = runTest(UnconfinedTestDispatcher()) {
-        val item = add(endsInHours = -1)
-        val flow = reflectionFor(item)
+    fun `an item ended meanwhile is gone and keeps the answers it was decided with`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val item = add(endsInHours = -1)
+            val flow = reflectionFor(item)
+            flow.onWhyChange("Hikes")
 
-        items.replace(item.copy(status = ItemStatus.REJECTED))
+            items.replace(item.copy(status = ItemStatus.REJECTED))
+            // Typed as the item ended, then closed.
+            flow.onWhyChange("Hikes and city trips")
+            flow.close()
 
-        assertTrue(flow.uiState.value.gone)
-        assertNull(flow.uiState.value.form)
-    }
+            assertTrue(flow.uiState.value.gone)
+            assertNull(flow.uiState.value.form)
+            assertEquals(listOf(Reflection(why = "Hikes")), items.reflectionWrites)
+        }
 
     @Test
     fun `a deleted item is gone`() = runTest(UnconfinedTestDispatcher()) {

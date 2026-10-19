@@ -184,6 +184,8 @@ class ReflectionViewModel @AssistedInject constructor(@Assisted itemId: Long, pr
     private suspend fun writeLatest() = writeLock.withLock {
         withContext(NonCancellable) {
             while (true) {
+                // An item ended meanwhile (e.g. "Let it go" from a notification) keeps the answers it was decided with.
+                if (stored.value?.item?.status != ItemStatus.ACTIVE) break
                 val reflection = editor.value?.form?.let(::reflectionOf) ?: break
                 if (reflection == written) break
                 // False only once the item is deleted; the screen shows it's gone and nothing more is written.
