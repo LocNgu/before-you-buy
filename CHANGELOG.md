@@ -6,7 +6,7 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ### Added
 
-- Reflection: tap "Start" on an item's "Why do you want this?" card to answer a few questions, one at a time: why you want it, how often you'll use it and what speaks against it (add as many reasons as you like), then five optional ones you can skip. Answers are kept as you type, so you can leave at any point and continue later. Once the first three are answered, the item can become Ready when its waiting period ends. Change them anytime with "Edit answers"; that never changes the waiting period.
+- Reflection: tap "Start" on an item's "Why do you want this?" card to answer a few questions, one at a time: why you want it, how often you'll use it and what speaks against it (add as many reasons as you like), then five optional ones you can skip. Answers are kept as you type, so you can leave at any point and continue later. Once the first three are answered, the item can become Ready when its waiting period ends. Change them anytime with "Edit answers"; that never changes the waiting period. Needs don't need reasons, but you can add some with "Add your reasons".
 
 ## [0.3.0] - 2026-10-19
 

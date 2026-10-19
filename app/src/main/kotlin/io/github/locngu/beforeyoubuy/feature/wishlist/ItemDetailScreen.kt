@@ -1,6 +1,7 @@
 package io.github.locngu.beforeyoubuy.feature.wishlist
 
 import android.content.ClipData
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -315,24 +316,36 @@ private fun PhotoViewer(photo: File, description: String, onClose: () -> Unit) {
 
 /**
  * The reflection answers given so far. While the required ones are missing, a card asking for them opens the
- * questions; once they're there, "Edit answers" does. Editing them never changes the wait.
+ * questions; once they're there, "Edit answers" does. A need without answers gets only "Add your reasons". Editing
+ * them never changes the wait.
  */
 @Composable
 private fun Reasons(detail: ItemDetail, onReflect: () -> Unit) {
     val reflection = detail.reflection
     val answers = reflection?.let { answersOf(it) }.orEmpty()
-    if (answers.isEmpty() && detail.reflected) return
+    if (answers.isEmpty() && detail.reflected) {
+        // Only a need is reflected without answers. It skips reflection (ADR-0008), so its reasons are optional:
+        // a quiet way in, no card asking for them (ADR-0039).
+        ReflectLink(R.string.item_reasons_add, onReflect)
+        return
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(stringResource(R.string.item_reasons_title))
         answers.forEach { (label, value) -> Answer(label, value) }
         if (!detail.reflected) {
             ReflectPrompt(started = answers.isNotEmpty(), onReflect = onReflect)
         } else {
-            // Lines the label up with the answers; the button's own padding stays part of the touch target.
-            TextButton(onClick = onReflect, modifier = Modifier.padding(horizontal = 16.dp).offset(x = (-12).dp)) {
-                Text(stringResource(R.string.item_reasons_edit))
-            }
+            ReflectLink(R.string.item_reasons_edit, onReflect)
         }
+    }
+}
+
+/** A plain text button that opens the questions. */
+@Composable
+private fun ReflectLink(@StringRes label: Int, onReflect: () -> Unit) {
+    // Lines the label up with the text around it; the button's own padding stays part of the touch target.
+    TextButton(onClick = onReflect, modifier = Modifier.padding(horizontal = 16.dp).offset(x = (-12).dp)) {
+        Text(stringResource(label))
     }
 }
 

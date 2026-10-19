@@ -84,6 +84,7 @@
     <string name="item_reflect_start">Beginnen</string>
     <string name="item_reflect_continue">Fortsetzen</string>
     <string name="item_reasons_edit">Antworten bearbeiten</string>
+    <string name="item_reasons_add">Deine Gründe hinzufügen</string>
     <string name="item_details_title">Details</string>
     <string name="item_category">Kategorie</string>
     <string name="item_notes">Notizen</string>
