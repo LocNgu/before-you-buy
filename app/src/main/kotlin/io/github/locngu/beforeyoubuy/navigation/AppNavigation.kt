@@ -14,6 +14,7 @@ import androidx.navigation3.ui.NavDisplay
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddHost
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddViewModel
 import io.github.locngu.beforeyoubuy.feature.home.HomeScreen
+import io.github.locngu.beforeyoubuy.feature.reflection.ReflectionScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemEditScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.WishlistScreen
@@ -31,6 +32,10 @@ data class ItemDetail(val itemId: Long) : NavKey
 
 @Serializable
 data class ItemEdit(val itemId: Long) : NavKey
+
+/** The reflection questions for one item (brief §6.4). The decision screen and nudges send unanswered items here. */
+@Serializable
+data class ItemReflection(val itemId: Long) : NavKey
 
 @Composable
 fun AppNavigation() {
@@ -64,12 +69,23 @@ fun AppNavigation() {
                     )
                 }
                 entry<ItemDetail> { key ->
-                    ItemDetailScreen(itemId = key.itemId, onEdit = { backStack.open(ItemEdit(key.itemId)) })
+                    ItemDetailScreen(
+                        itemId = key.itemId,
+                        onEdit = { backStack.open(ItemEdit(key.itemId)) },
+                        onReflect = { backStack.open(ItemReflection(key.itemId)) }
+                    )
                 }
                 entry<ItemEdit> { key ->
                     ItemEditScreen(
                         itemId = key.itemId,
                         // Only the edit screen itself closes, even if the save lands after another tap.
+                        onDone = { if (backStack.lastOrNull() == key) backStack.removeLastOrNull() }
+                    )
+                }
+                entry<ItemReflection> { key ->
+                    ReflectionScreen(
+                        itemId = key.itemId,
+                        // As for edit: only the flow itself closes, even if "Done" lands after another tap.
                         onDone = { if (backStack.lastOrNull() == key) backStack.removeLastOrNull() }
                     )
                 }

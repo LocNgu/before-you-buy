@@ -87,11 +87,30 @@ class FakeItemRepository : ItemRepository {
         items.value = items.value.map { if (it.id == item.id) item else it }
     }
 
+    /** Deletes an item with its answers, as the user may (brief §5). */
+    fun delete(id: ItemId) {
+        items.value = items.value.filterNot { it.id == id }
+        reflections.value -= id
+    }
+
     override suspend fun imageRefs(): Set<String> = items.value.mapNotNullTo(mutableSetOf()) { it.imageRef }
 
     override fun observeDecisions(id: ItemId): Flow<List<Decision>> = TODO("Not needed yet")
 
-    override suspend fun setReflection(id: ItemId, reflection: Reflection): Boolean = TODO("Not needed yet")
+    /** Reflections written by [setReflection], in order. */
+    val reflectionWrites = mutableListOf<Reflection>()
+
+    /** While set, [setReflection] waits for it, like a slow database. */
+    var reflectionGate: CompletableDeferred<Unit>? = null
+
+    /** Like the real one: replaces the answers, false for a missing item. */
+    override suspend fun setReflection(id: ItemId, reflection: Reflection): Boolean {
+        reflectionGate?.await()
+        if (items.value.none { it.id == id }) return false
+        reflectionWrites += reflection
+        reflections.value += id to reflection
+        return true
+    }
 
     override suspend fun recordDecision(current: Item, decision: Decision, result: Item): Boolean =
         TODO("Not needed yet")

@@ -61,11 +61,11 @@ import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.MAX_IMAGE_SIZE_PX
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
-import io.github.locngu.beforeyoubuy.core.domain.item.UpgradeOrNew
-import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.ItemDetail
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.webLink
+import io.github.locngu.beforeyoubuy.feature.reflection.upgradeOrNewLabel
+import io.github.locngu.beforeyoubuy.feature.reflection.usageLabel
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
@@ -75,12 +75,13 @@ import kotlinx.coroutines.launch
 
 /**
  * One item (brief §6.3): the user's reasons and the countdown first, the shop link out of the way while cooling off
- * (ADR-0013). [onEdit] opens the edit screen.
+ * (ADR-0013). [onEdit] opens the edit screen, [onReflect] the reflection questions (brief §6.4).
  */
 @Composable
 fun ItemDetailScreen(
     itemId: Long,
     onEdit: () -> Unit,
+    onReflect: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ItemDetailViewModel =
         hiltViewModel<ItemDetailViewModel, ItemDetailViewModel.Factory> { it.create(itemId) }
@@ -103,6 +104,7 @@ fun ItemDetailScreen(
     ItemDetailContent(
         state = state,
         onEdit = onEdit,
+        onReflect = onReflect,
         onMarkAsNeed = viewModel::markAsNeed,
         onCopyLink = { link ->
             scope.launch {
@@ -133,6 +135,7 @@ fun ItemDetailScreen(
 fun ItemDetailContent(
     state: ItemDetailUiState,
     onEdit: () -> Unit,
+    onReflect: () -> Unit,
     onMarkAsNeed: () -> Unit,
     onCopyLink: (String) -> Unit,
     onOpenLink: (String) -> Unit,
@@ -161,7 +164,8 @@ fun ItemDetailContent(
                     EmptyState(title = stringResource(R.string.item_gone))
                 }
 
-            detail != null -> Detail(detail, state.photo, onMarkAsNeed, onOpenLink, Modifier.padding(innerPadding))
+            detail != null ->
+                Detail(detail, state.photo, onReflect, onMarkAsNeed, onOpenLink, Modifier.padding(innerPadding))
         }
     }
 }
@@ -202,6 +206,7 @@ private fun LinkMenu(link: String, onCopyLink: (String) -> Unit, onOpenLink: (St
 private fun Detail(
     detail: ItemDetail,
     photo: File?,
+    onReflect: () -> Unit,
     onMarkAsNeed: () -> Unit,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -212,7 +217,7 @@ private fun Detail(
     ) {
         Header(detail)
         // The user's own reasons come before anything about the product (ADR-0013).
-        Reasons(detail)
+        Reasons(detail, onReflect)
         if (photo != null) Photo(detail, photo)
         Details(detail)
         Actions(detail, onMarkAsNeed, onOpenLink)
@@ -308,23 +313,34 @@ private fun PhotoViewer(photo: File, description: String, onClose: () -> Unit) {
     }
 }
 
-/** The reflection answers given so far, and while the required ones are missing, a card asking for them. */
+/**
+ * The reflection answers given so far. While the required ones are missing, a card asking for them opens the
+ * questions; once they're there, "Edit answers" does. Editing them never changes the wait.
+ */
 @Composable
-private fun Reasons(detail: ItemDetail) {
+private fun Reasons(detail: ItemDetail, onReflect: () -> Unit) {
     val reflection = detail.reflection
     val answers = reflection?.let { answersOf(it) }.orEmpty()
     if (answers.isEmpty() && detail.reflected) return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(stringResource(R.string.item_reasons_title))
         answers.forEach { (label, value) -> Answer(label, value) }
-        if (!detail.reflected) ReflectPrompt(started = answers.isNotEmpty())
+        if (!detail.reflected) {
+            ReflectPrompt(started = answers.isNotEmpty(), onReflect = onReflect)
+        } else {
+            // Lines the label up with the answers; the button's own padding stays part of the touch target.
+            TextButton(onClick = onReflect, modifier = Modifier.padding(horizontal = 16.dp).offset(x = (-12).dp)) {
+                Text(stringResource(R.string.item_reasons_edit))
+            }
+        }
     }
 }
 
-/** Asks for the reasons; once some are given, for the rest. */
+/** Asks for the reasons; once some are given, for the rest. The whole card opens the questions. */
 @Composable
-private fun ReflectPrompt(started: Boolean) {
+private fun ReflectPrompt(started: Boolean, onReflect: () -> Unit) {
     Card(
+        onClick = onReflect,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
@@ -335,6 +351,12 @@ private fun ReflectPrompt(started: Boolean) {
                 stringResource(R.string.item_reflect_prompt_body),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                stringResource(if (started) R.string.item_reflect_continue else R.string.item_reflect_start),
+                modifier = Modifier.padding(top = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -356,25 +378,6 @@ private fun answersOf(reflection: Reflection): List<Pair<String, String>> = buil
     add(stringResource(R.string.item_reason_why_now), reflection.whyNow)
     add(stringResource(R.string.item_reason_upgrade_or_new), reflection.upgradeOrNew?.let { upgradeOrNewLabel(it) })
 }
-
-@Composable
-private fun usageLabel(usage: UsageFrequency): String = stringResource(
-    when (usage) {
-        UsageFrequency.DAILY -> R.string.usage_daily
-        UsageFrequency.WEEKLY -> R.string.usage_weekly
-        UsageFrequency.MONTHLY -> R.string.usage_monthly
-        UsageFrequency.RARELY -> R.string.usage_rarely
-        UsageFrequency.ONCE -> R.string.usage_once
-    }
-)
-
-@Composable
-private fun upgradeOrNewLabel(value: UpgradeOrNew): String = stringResource(
-    when (value) {
-        UpgradeOrNew.UPGRADE -> R.string.upgrade_or_new_upgrade
-        UpgradeOrNew.NEW -> R.string.upgrade_or_new_new
-    }
-)
 
 @Composable
 private fun Details(detail: ItemDetail) {

@@ -5,6 +5,8 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.reflection.ReflectionStep
+import io.github.locngu.beforeyoubuy.core.domain.reflection.isAnswered
 import java.time.Instant
 
 /** The displayed stage of an active item: derived, never stored (brief §5, ADR-0007). */
@@ -14,15 +16,14 @@ enum class Stage { COOLING_OFF, NEEDS_REFLECTION, SAVING, READY }
 fun isCooledOff(item: Item, now: Instant): Boolean = item.kind == ItemKind.NEED || now >= item.coolingEndsAt
 
 /**
- * Brief §4.3 and §5 `reflected`: the required answers are there (ADR-0009). That is a non-blank "why",
- * a usage frequency and at least one non-blank reason against. Always true for a `NEED` (ADR-0008).
+ * Brief §4.3 and §5 `reflected`: the required answers are there (ADR-0009). That is every required
+ * [ReflectionStep] [answered][isAnswered]: a non-blank "why", a usage frequency and at least one non-blank reason
+ * against. Always true for a `NEED` (ADR-0008).
  */
 fun isReflected(item: Item, reflection: Reflection?): Boolean {
     if (item.kind == ItemKind.NEED) return true
     if (reflection == null) return false
-    return !reflection.why.isNullOrBlank() &&
-        reflection.usageFrequency != null &&
-        reflection.reasonsAgainst.any { it.isNotBlank() }
+    return ReflectionStep.entries.filter { it.required }.all { isAnswered(it, reflection) }
 }
 
 /**
