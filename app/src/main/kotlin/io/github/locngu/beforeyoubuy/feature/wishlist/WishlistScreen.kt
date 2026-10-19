@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -37,6 +39,7 @@ import io.github.locngu.beforeyoubuy.ui.components.CountdownText
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
+import java.io.File
 
 /**
  * The wishlist (brief §6.3). Quick add is hosted by the navigation, so this only asks to open it with [onAdd]
@@ -92,26 +95,31 @@ fun WishlistContent(
                     )
                 }
 
-            else -> WishlistList(groups, onOpenItem, Modifier.padding(innerPadding))
+            else -> WishlistList(groups, state.photos, onOpenItem, Modifier.padding(innerPadding))
         }
     }
 }
 
 @Composable
-private fun WishlistList(groups: List<WishlistGroup>, onOpenItem: (ItemId) -> Unit, modifier: Modifier = Modifier) {
+private fun WishlistList(
+    groups: List<WishlistGroup>,
+    photos: Map<ItemId, File>,
+    onOpenItem: (ItemId) -> Unit,
+    modifier: Modifier = Modifier
+) {
     // Leaves room for the floating button, so the last row isn't hidden behind it.
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
         groups.forEach { group ->
             item(key = "header-${group.stage}") { SectionHeader(stageLabel(group.stage)) }
             items(group.entries, key = { it.item.id.value }) { entry ->
-                WishlistRow(entry, onClick = { onOpenItem(entry.item.id) })
+                WishlistRow(entry, photos[entry.item.id], onClick = { onOpenItem(entry.item.id) })
             }
         }
     }
 }
 
 @Composable
-private fun WishlistRow(entry: WishlistEntry, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -120,6 +128,16 @@ private fun WishlistRow(entry: WishlistEntry, onClick: () -> Unit, modifier: Mod
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Small and only if there is one: the name and the reasons matter more than the picture (ADR-0013).
+        // Decorative for screen readers; the name follows.
+        val thumbnail = photo?.let { rememberPhoto(it, THUMBNAIL_SIZE_PX) }
+        if (thumbnail != null) {
+            ItemPhoto(
+                bitmap = thumbnail,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp).clip(MaterialTheme.shapes.small)
+            )
+        }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = entry.item.name,
@@ -180,3 +198,6 @@ internal fun stageLabel(stage: Stage): String = stringResource(
         Stage.READY -> R.string.stage_ready
     }
 )
+
+/** Decoded size of photo thumbnails: enough for 48 dp on the densest screens. */
+internal const val THUMBNAIL_SIZE_PX = 192

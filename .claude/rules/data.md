@@ -10,8 +10,8 @@ paths:
 
 ## Layout
 
-- `db/`: entities, DAOs, `BeforeYouBuyDatabase` (+ `withPolicyRow`). `item/`: mappers + `RoomItemRepository`. `settings/`: `RoomPolicyRepository`, `DataStorePreferencesRepository`, `CoolingOffRulesJson`. `di/DataModule`: Hilt bindings (singletons: one database, one DataStore per file and process).
-- Repository **interfaces live in `:core:domain`** (`item/ItemRepository`, `settings/PolicyRepository`, `settings/PreferencesRepository`); everything here is `internal`, including `DataModule` (Hilt handles internal modules across modules).
+- `db/`: entities, DAOs, `BeforeYouBuyDatabase` (+ `withPolicyRow`). `item/`: mappers + `RoomItemRepository`. `image/`: `FileItemImageStore` (photos in `filesDir/images`, ADR-0038). `settings/`: `RoomPolicyRepository`, `DataStorePreferencesRepository`, `CoolingOffRulesJson`. `di/DataModule`: Hilt bindings (singletons: one database, one DataStore per file and process).
+- Repository **interfaces live in `:core:domain`** (`item/ItemRepository`, `item/ItemImageStore`, `settings/PolicyRepository`, `settings/PreferencesRepository`); everything here is `internal`, including `DataModule` (Hilt handles internal modules across modules).
 
 ## Schema (version 1)
 
@@ -24,6 +24,7 @@ paths:
 ## Repositories
 
 - Item writes are compare-and-set (`writeIfUnchanged`): `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored **row** still equals `current.toEntity()`, in one `withTransaction`; otherwise they write nothing and return false. `update` never changes id or status; `recordDecision` needs an active `current` and appends the decision + stores `result` atomically. Status changes go only through `applyDecision` + `recordDecision`. `add` takes active items only. `setReflection` returns false for a missing item. An item read with a fallback (unknown enum, unreadable date) never matches its row, so it is read-only (ADR-0032).
+- Photos (ADR-0038): `ItemImageStore.import` decodes, turns upright (EXIF), scales to ≤ `MAX_IMAGE_SIZE_PX` and writes a new JPEG `<uuid>.jpg` (via a `.partial` file and rename), so no metadata or location survives; it returns null for anything unreadable, never throws for it. `fileFor` accepts only names of that form. `deleteUnreferenced(referenced, writtenBefore)` uses `unreferencedImages` (domain) on file mtimes; `ItemRepository.imageRefs()` is every item's ref, ended items included. Never delete a photo when an item changes.
 - `observeReflections()` is one query over `reflections` (id → answers), so the wishlist derives every stage without a flow per item.
 - History: the ending decision is the last appended (max id), ordered by its `decided_at`, newest first.
 - Every stored amount is in the policy currency: `add`/`update` require it. `PolicyRepository.changeCoolingOffRules(rules, changedAt, zone)` writes the tiers and `coolingEndAfterRulesChange` for active items in one transaction (targeted `setCoolingEnd`, so unreadable columns survive). `changeCurrency` relabels item prices, actual prices (`DecisionDao.setActualPrice`, the one decision write) and tiers in one transaction; null tiers stay null. Currencies must pass `isUsableCurrency`.
@@ -34,5 +35,6 @@ paths:
 - Room: Robolectric + `Room.inMemoryDatabaseBuilder` via `db/DatabaseTest`. Raw SQL for odd states goes through `execSql`, which refreshes the invalidation tracker (otherwise observed queries don't re-emit).
 - Atomicity: a trigger that aborts the item update; the decision must not be stored either. Races: concurrent `recordDecision`s on `Dispatchers.IO`, repeated over many items; exactly one per item may succeed.
 - DataStore: plain JVM test with a `TemporaryFolder` file and `backgroundScope`. Only **one** DataStore per file may be active; a "restart" cancels and joins the first one's scope. A failed read is simulated with a delegating `DataStore` whose `data` throws once.
+- Photos: `FileItemImageStore` with Robolectric `@GraphicsMode(NATIVE)` and a `TemporaryFolder`; sources are `file:` URIs, EXIF set with `android.media.ExifInterface`.
 - Suspending `require`s: `testing/assertThrowsIllegalArgument`.
 - Fixtures in `item/Fixtures.kt` use millisecond-precision instants, so round trips compare equal.

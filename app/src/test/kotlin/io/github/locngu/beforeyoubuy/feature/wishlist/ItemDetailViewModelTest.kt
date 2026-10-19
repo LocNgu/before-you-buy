@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -37,6 +38,7 @@ class ItemDetailViewModelTest {
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
     private val policies = FakePolicyRepository()
+    private val images = FakeItemImageStore()
 
     private val reflection =
         Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))
@@ -60,7 +62,7 @@ class ItemDetailViewModelTest {
         return items.stored.single { it.id == id }
     }
 
-    private fun viewModelFor(item: Item) = ItemDetailViewModel(item.id.value, items, policies, clock)
+    private fun viewModelFor(item: Item) = ItemDetailViewModel(item.id.value, items, policies, images, clock)
 
     private fun TestScope.pass(duration: Duration) {
         clock.advance(duration)
@@ -109,6 +111,18 @@ class ItemDetailViewModelTest {
 
         assertEquals(reflection, viewModel.uiState.value.detail!!.reflection)
         assertEquals(Stage.READY, viewModel.uiState.value.detail!!.stage)
+    }
+
+    @Test
+    fun `shows the item's photo, once it has one`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 24)
+        val viewModel = viewModelFor(item)
+        viewModel.uiState.launchIn(backgroundScope)
+        assertNull(viewModel.uiState.value.photo)
+
+        items.replace(item.copy(imageRef = "camera.jpg"))
+
+        assertEquals(images.fileFor("camera.jpg"), viewModel.uiState.value.photo)
     }
 
     @Test

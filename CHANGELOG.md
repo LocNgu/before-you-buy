@@ -6,6 +6,7 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ### Added
 
+- Photos: add a photo to an item when editing it ("Add photo"), picked from your gallery without giving the app access to it. While an item is cooling off, its photo is a small thumbnail ("Tap to view"); afterwards it shows larger. Items with a photo get a small thumbnail on the wishlist. The app keeps its own smaller copy, without the original's location data.
 - Share to the app: share a product from a shop app or browser and choose "Before You Buy". Quick add opens over the app you came from with the name and link filled in, and the cursor in the price. Save or close it and you're back where you were. Works without internet: the app reads only what the share contains, and removes tracking from the link.
 - Item detail: tap an item on the wishlist to see your reasons first, then its price, stage, days left and how long you've wanted it. While it's cooling off, the shop link is only in the ⋮ menu ("Copy link", "Open link"); afterwards "Open link" shows on the page. "Mark as need" ends the waiting period after asking.
 - Edit an item: name, price, link, need, category, notes and target date. A lower price never shortens the waiting period; a higher one can extend it, and the form says so before you save ("Waiting period extended to …").

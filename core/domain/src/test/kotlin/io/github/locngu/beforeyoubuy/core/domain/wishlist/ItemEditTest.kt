@@ -132,6 +132,16 @@ class ItemEditTest {
     }
 
     @Test
+    fun `the photo is kept unless another is picked or it's removed`() {
+        val stored = camera.copy(imageRef = "old.jpg")
+        val form = editFormOf(stored, german)
+
+        assertEquals("old.jpg", edit(form, stored).imageRef)
+        assertEquals("new.jpg", editedItem(stored, form, policy, german, DURING_COOLING, zone, "new.jpg").imageRef)
+        assertNull(editedItem(stored, form, policy, german, DURING_COOLING, zone, imageRef = null).imageRef)
+    }
+
+    @Test
     fun `text is trimmed and blank optional fields are cleared`() {
         val stored = camera.copy(link = "https://shop.example", category = "Photo", notes = "Silver")
         val form = editFormOf(stored, german).copy(name = "  Camera body ", link = " ", category = "", notes = "  ")

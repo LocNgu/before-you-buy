@@ -7,15 +7,17 @@ import com.github.takahirom.roborazzi.RoborazziRule
 import io.github.locngu.beforeyoubuy.core.domain.capture.CaptureForm
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.LocalDate
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** The edit screen: a price that extends the wait, an invalid form, a save that met a change. */
+/** The edit screen: a price that extends the wait, an invalid form, a save that met a change, photos. */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 abstract class ItemEditScreenshotTest(private val german: Boolean) {
@@ -24,6 +26,9 @@ abstract class ItemEditScreenshotTest(private val german: Boolean) {
 
     @get:Rule(order = 1)
     val roborazziRule = RoborazziRule()
+
+    @get:Rule(order = 2)
+    val folder = TemporaryFolder()
 
     private fun t(en: String, de: String) = if (german) de else en
 
@@ -54,8 +59,16 @@ abstract class ItemEditScreenshotTest(private val german: Boolean) {
     @Test
     fun conflict() = capture(state.copy(conflict = true))
 
+    @Test
+    fun withPhoto() = capture(state.copy(photo = testPhoto(folder.root)))
+
+    @Test
+    fun photoFailed() = capture(state.copy(photoFailed = true))
+
     private fun capture(state: ItemEditUiState) {
-        composeRule.setContent { BeforeYouBuyTheme { ItemEditContent(state = state, actions = NoActions) } }
+        composeRule.setContent {
+            BeforeYouBuyTheme { ItemEditContent(state = state, actions = NoActions, onPickPhoto = {}) }
+        }
         composeRule.captureContent()
     }
 
@@ -73,6 +86,10 @@ abstract class ItemEditScreenshotTest(private val german: Boolean) {
         override fun onNotesChange(notes: String) = Unit
 
         override fun onTargetDateChange(date: LocalDate?) = Unit
+
+        override fun onPhotoPicked(uri: String) = Unit
+
+        override fun onRemovePhoto() = Unit
 
         override fun save() = Unit
     }

@@ -1,14 +1,18 @@
 package io.github.locngu.beforeyoubuy.feature.wishlist
 
 import android.content.ClipData
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -38,6 +42,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalResources
@@ -47,10 +53,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
+import io.github.locngu.beforeyoubuy.core.domain.item.MAX_IMAGE_SIZE_PX
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UpgradeOrNew
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
@@ -61,6 +70,7 @@ import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 import io.github.locngu.beforeyoubuy.ui.format.formattedDate
+import java.io.File
 import kotlinx.coroutines.launch
 
 /**
@@ -151,7 +161,7 @@ fun ItemDetailContent(
                     EmptyState(title = stringResource(R.string.item_gone))
                 }
 
-            detail != null -> Detail(detail, onMarkAsNeed, onOpenLink, Modifier.padding(innerPadding))
+            detail != null -> Detail(detail, state.photo, onMarkAsNeed, onOpenLink, Modifier.padding(innerPadding))
         }
     }
 }
@@ -191,6 +201,7 @@ private fun LinkMenu(link: String, onCopyLink: (String) -> Unit, onOpenLink: (St
 @Composable
 private fun Detail(
     detail: ItemDetail,
+    photo: File?,
     onMarkAsNeed: () -> Unit,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -202,6 +213,7 @@ private fun Detail(
         Header(detail)
         // The user's own reasons come before anything about the product (ADR-0013).
         Reasons(detail)
+        if (photo != null) Photo(detail, photo)
         Details(detail)
         Actions(detail, onMarkAsNeed, onOpenLink)
     }
@@ -224,6 +236,75 @@ private fun Header(detail: ItemDetail) {
         }
         SecondaryText(wanted)
         if (item.kind == ItemKind.NEED) SecondaryText(stringResource(R.string.item_need))
+    }
+}
+
+/**
+ * The item's photo, after the reasons. While cooling off it's a small thumbnail to tap: imagining the product
+ * increases desire (ADR-0013). Once cooled off it shows larger, cropped to a band. A tap shows it whole, full screen.
+ */
+@Composable
+private fun Photo(detail: ItemDetail, photo: File) {
+    var viewing by rememberSaveable { mutableStateOf(false) }
+    val description = stringResource(R.string.item_photo_description, detail.item.name)
+    val size = if (detail.imageProminent) MAX_IMAGE_SIZE_PX else THUMBNAIL_SIZE_PX
+    // Nothing until it's loaded, and nothing at all if the file is gone: never an empty "Tap to view".
+    val bitmap = rememberPhoto(photo, size) ?: return
+    if (detail.imageProminent) {
+        // A fixed-height crop; the viewer shows the whole photo.
+        ItemPhoto(
+            bitmap = bitmap,
+            contentDescription = description,
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .clickable { viewing = true }
+        )
+    } else {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { viewing = true }
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ItemPhoto(
+                bitmap = bitmap,
+                contentDescription = description,
+                modifier = Modifier.size(48.dp).clip(MaterialTheme.shapes.small)
+            )
+            Column {
+                Text(stringResource(R.string.item_photo), style = MaterialTheme.typography.bodyLarge)
+                SecondaryText(stringResource(R.string.item_photo_tap_to_view))
+            }
+        }
+    }
+    if (viewing) PhotoViewer(photo, description, onClose = { viewing = false })
+}
+
+/** The photo on its own, as large as the screen allows. A tap or back closes it. */
+@Composable
+private fun PhotoViewer(photo: File, description: String, onClose: () -> Unit) {
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim)
+                .clickable(onClick = onClose),
+            contentAlignment = Alignment.Center
+        ) {
+            rememberPhoto(photo, MAX_IMAGE_SIZE_PX)?.let {
+                ItemPhoto(
+                    bitmap = it,
+                    contentDescription = description,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
     }
 }
 

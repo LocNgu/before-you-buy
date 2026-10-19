@@ -19,6 +19,7 @@ import java.time.temporal.ChronoUnit
  * @property reflected the required reflection answers are there; if not, detail asks for them.
  * @property linkProminent the shop link may show as a normal button. False while cooling off: browsing during the
  *   delay defeats it, so the link is only in the overflow menu then (ADR-0013).
+ * @property imageProminent the photo may show large. While cooling off it's a small thumbnail to tap (ADR-0013).
  */
 data class ItemDetail(
     val item: Item,
@@ -27,7 +28,8 @@ data class ItemDetail(
     val daysLeft: Int,
     val wantedForDays: Int,
     val reflected: Boolean,
-    val linkProminent: Boolean
+    val linkProminent: Boolean,
+    val imageProminent: Boolean
 )
 
 /**
@@ -44,7 +46,8 @@ fun itemDetailOf(item: Item, reflection: Reflection?, now: Instant, zone: ZoneId
         wantedForDays = wantedForDays(item, now, zone),
         // A need skips reflection (ADR-0008), so it's never asked for one.
         reflected = isReflected(item, reflection),
-        linkProminent = isCooledOff(item, now)
+        linkProminent = isCooledOff(item, now),
+        imageProminent = isCooledOff(item, now)
     )
 }
 

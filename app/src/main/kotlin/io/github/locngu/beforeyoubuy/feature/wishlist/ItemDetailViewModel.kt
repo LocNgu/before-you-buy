@@ -8,6 +8,7 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.changeKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
@@ -16,6 +17,7 @@ import io.github.locngu.beforeyoubuy.core.domain.wishlist.ItemDetail
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
+import java.io.File
 import java.time.Clock
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -32,9 +34,9 @@ import kotlinx.coroutines.launch
 
 /**
  * What item detail shows (brief §6.3). [detail] is null until loaded and while [gone]: the item was ended (e.g.
- * "Let it go" from a notification) or deleted.
+ * "Let it go" from a notification) or deleted. [photo] is the item's photo file, if it has one.
  */
-data class ItemDetailUiState(val detail: ItemDetail? = null, val gone: Boolean = false)
+data class ItemDetailUiState(val detail: ItemDetail? = null, val gone: Boolean = false, val photo: File? = null)
 
 /** A message for the snackbar. */
 enum class ItemDetailMessage {
@@ -51,6 +53,7 @@ class ItemDetailViewModel @AssistedInject constructor(
     @Assisted itemId: Long,
     private val items: ItemRepository,
     private val policies: PolicyRepository,
+    private val images: ItemImageStore,
     private val clock: Clock
 ) : ViewModel() {
     @AssistedFactory
@@ -71,7 +74,12 @@ class ItemDetailViewModel @AssistedInject constructor(
                     }
                     while (true) {
                         val now = clock.instant()
-                        emit(ItemDetailUiState(itemDetailOf(item, reflection, now, clock.zone)))
+                        emit(
+                            ItemDetailUiState(
+                                detail = itemDetailOf(item, reflection, now, clock.zone),
+                                photo = item.imageRef?.let(images::fileFor)
+                            )
+                        )
                         delay(untilWishlistChanges(listOf(item), now, clock.zone).toMillis().coerceAtLeast(1))
                     }
                 }

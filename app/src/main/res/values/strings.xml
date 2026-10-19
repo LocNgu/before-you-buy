@@ -106,4 +106,14 @@
     <!-- %1$s: the end date, when a need becomes a want -->
     <string name="item_edit_wait_starts">Waiting period until %1$s</string>
     <string name="item_edit_conflict">This item changed in the meantime, so nothing was saved. Check your changes and save again.</string>
+
+    <!-- Item photos (ADR-0013, ADR-0038): small while cooling off, tap to view. -->
+    <string name="item_photo">Photo</string>
+    <string name="item_photo_tap_to_view">Tap to view</string>
+    <!-- %1$s: the item's name -->
+    <string name="item_photo_description">Photo of %1$s</string>
+    <string name="item_edit_photo_add">Add photo</string>
+    <string name="item_edit_photo_change">Change photo</string>
+    <string name="item_edit_photo_remove">Remove photo</string>
+    <string name="item_edit_photo_failed">This photo couldn’t be added. Try another one.</string>
 </resources>

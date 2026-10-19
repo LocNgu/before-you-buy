@@ -5,11 +5,13 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.HistoryEntry
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
+import java.io.File
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -85,6 +87,8 @@ class FakeItemRepository : ItemRepository {
         items.value = items.value.map { if (it.id == item.id) item else it }
     }
 
+    override suspend fun imageRefs(): Set<String> = items.value.mapNotNullTo(mutableSetOf()) { it.imageRef }
+
     override fun observeDecisions(id: ItemId): Flow<List<Decision>> = TODO("Not needed yet")
 
     override suspend fun setReflection(id: ItemId, reflection: Reflection): Boolean = TODO("Not needed yet")
@@ -114,5 +118,30 @@ class MutableClock(private var now: Instant, private val zone: ZoneId = ZoneOffs
 
     fun advance(duration: Duration) {
         now += duration
+    }
+}
+
+/** Photos in [directory]: an import "succeeds" for any source except [UNREADABLE], naming the photo after it. */
+class FakeItemImageStore(private val directory: File = File("photos")) : ItemImageStore {
+    /** Sources imported so far. */
+    val imported = mutableListOf<String>()
+
+    /** What the last sweep was asked to keep, and its cutoff. */
+    var lastSweep: Pair<Set<String>, Instant>? = null
+
+    override suspend fun import(source: String): String? {
+        imported += source
+        return if (source == UNREADABLE) null else "${source.substringAfterLast('/')}.jpg"
+    }
+
+    override fun fileFor(ref: String): File = File(directory, ref)
+
+    override suspend fun deleteUnreferenced(referenced: Set<String>, writtenBefore: Instant): Set<String> {
+        lastSweep = referenced to writtenBefore
+        return emptySet()
+    }
+
+    companion object {
+        const val UNREADABLE = "content://picker/not-an-image"
     }
 }

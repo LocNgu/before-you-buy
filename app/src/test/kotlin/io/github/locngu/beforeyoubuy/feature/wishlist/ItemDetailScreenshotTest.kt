@@ -13,19 +13,22 @@ import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
 import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
+import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Item detail while cooling off (no reasons yet, and with some), when Ready, for a need and once gone, in English
- * and German. Record: `./gradlew :app:recordRoborazziDebug`.
+ * Item detail while cooling off (no reasons yet, and with some), when Ready, for a need, with a photo (small while
+ * cooling off, larger when Ready) and once gone, in English and German. Record: `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -36,6 +39,9 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
     // Names images after the concrete subclass, not this base class.
     @get:Rule(order = 1)
     val roborazziRule = RoborazziRule()
+
+    @get:Rule(order = 2)
+    val folder = TemporaryFolder()
 
     private fun t(en: String, de: String) = if (german) de else en
 
@@ -87,10 +93,17 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
     )
 
     @Test
+    fun coolingOffWithPhoto() = capture(camera, Reflection(why = reasons.why), testPhoto(folder.root))
+
+    @Test
+    fun readyWithPhoto() =
+        capture(camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600)), reasons, testPhoto(folder.root))
+
+    @Test
     fun gone() = capture(ItemDetailUiState(gone = true))
 
-    private fun capture(item: Item, reflection: Reflection?) =
-        capture(ItemDetailUiState(itemDetailOf(item, reflection, now, ZoneOffset.UTC)))
+    private fun capture(item: Item, reflection: Reflection?, photo: File? = null) =
+        capture(ItemDetailUiState(itemDetailOf(item, reflection, now, ZoneOffset.UTC), photo = photo))
 
     private fun capture(state: ItemDetailUiState) {
         composeRule.setContent {

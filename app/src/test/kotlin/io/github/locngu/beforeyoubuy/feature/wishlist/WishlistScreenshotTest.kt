@@ -13,18 +13,20 @@ import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
 import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
 import java.time.ZoneOffset
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The wishlist with an item in each stage, empty, and while loading, in English and German. Record:
- * `./gradlew :app:recordRoborazziDebug`.
+ * The wishlist with an item in each stage, with photo thumbnails, empty, and while loading, in English and German.
+ * Record: `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -35,6 +37,9 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
     // Names images after the concrete subclass, not this base class.
     @get:Rule(order = 1)
     val roborazziRule = RoborazziRule()
+
+    @get:Rule(order = 2)
+    val folder = TemporaryFolder()
 
     private fun t(en: String, de: String) = if (german) de else en
 
@@ -66,6 +71,17 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
                 mapOf(ready.id to reflection),
                 now,
                 ZoneOffset.UTC
+            )
+        )
+    )
+
+    @Test
+    fun withPhotos() = capture(
+        WishlistUiState(
+            wishlistOf(listOf(coolingLater, unreflected, ready), mapOf(ready.id to reflection), now, ZoneOffset.UTC),
+            photos = mapOf(
+                ready.id to testPhoto(folder.root, "camera.jpg"),
+                coolingLater.id to testPhoto(folder.root, "bike.jpg", width = 600, height = 900)
             )
         )
     )
