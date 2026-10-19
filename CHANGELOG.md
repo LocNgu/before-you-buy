@@ -4,6 +4,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-19
+
 ### Added
 
 - Photos: add a photo to an item when editing it ("Add photo"), picked from your gallery without giving the app access to it. While an item is cooling off, its photo is a small thumbnail ("Tap to view"); afterwards it shows larger. Items with a photo get a small thumbnail on the wishlist. The app keeps its own smaller copy, without the original's location data.
@@ -40,7 +42,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 - The app language can be chosen per app in Android settings (Android 13 and newer).
 - Signed APKs on GitHub Releases for each version, which install on the phone and update in place with data kept (`docs/releasing.md`).
 
-[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/LocNgu/before-you-buy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/LocNgu/before-you-buy/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/LocNgu/before-you-buy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/LocNgu/before-you-buy/releases/tag/v0.1.0
