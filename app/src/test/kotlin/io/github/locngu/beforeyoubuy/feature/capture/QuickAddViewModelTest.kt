@@ -12,6 +12,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -243,5 +244,51 @@ class QuickAddViewModelTest {
         assertFalse(fresh.uiState.value.canSave)
         fresh.save()
         assertTrue(items.stored.isEmpty())
+    }
+
+    @Test
+    fun `the cursor starts in the price when a share filled in only the name`() {
+        viewModel.open()
+        assertEquals(QuickAddField.NAME, state.startField)
+
+        viewModel.open(QuickAddPrefill(name = "Headphones", link = "https://example.com/p"))
+        assertEquals(QuickAddField.PRICE, state.startField)
+
+        viewModel.open(QuickAddPrefill(link = "https://example.com/p"))
+        assertEquals(QuickAddField.NAME, state.startField)
+
+        viewModel.open(QuickAddPrefill(name = "Headphones", price = "120"))
+        assertEquals(QuickAddField.NAME, state.startField)
+    }
+
+    @Test
+    fun `openOnce opens only the first time and then says whether the sheet is still open`() {
+        assertTrue(viewModel.openOnce(QuickAddPrefill(name = "Headphones")))
+        viewModel.onPriceChange("120")
+
+        // Recreated, e.g. rotated: what was typed stays.
+        assertTrue(viewModel.openOnce(QuickAddPrefill(name = "Headphones")))
+        assertEquals("120", state.form.price)
+
+        // Closed: recreating doesn't open it again.
+        viewModel.dismiss()
+        assertFalse(viewModel.openOnce(QuickAddPrefill(name = "Headphones")))
+        assertFalse(state.visible)
+    }
+
+    @Test
+    fun `closing while saving waits for the save`() {
+        viewModel.open()
+        fill("Camera", "120")
+        val gate = CompletableDeferred<Unit>()
+        items.addGate = gate
+
+        viewModel.save()
+        viewModel.dismiss()
+        assertTrue(state.visible)
+
+        gate.complete(Unit)
+        assertFalse(state.visible)
+        assertEquals(1, items.stored.size)
     }
 }

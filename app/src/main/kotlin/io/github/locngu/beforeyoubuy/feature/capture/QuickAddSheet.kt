@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -59,6 +60,8 @@ import io.github.locngu.beforeyoubuy.ui.format.formattedDate
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import kotlinx.coroutines.flow.dropWhile
+import kotlinx.coroutines.flow.first
 
 /** Opens quick add. Every screen that lists items shows it (Home, the wishlist). */
 @Composable
@@ -72,26 +75,41 @@ fun QuickAddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
  * Quick add on a screen (brief §6.2): the bottom sheet while [viewModel] has it open, and after saving a
  * snackbar in [snackbarHostState] that says how long the item waits. Open it with [QuickAddViewModel.open].
  */
+@Composable
+fun QuickAddHost(viewModel: QuickAddViewModel, snackbarHostState: SnackbarHostState) =
+    QuickAddHost(viewModel = viewModel, onSaved = { snackbarHostState.showSnackbar(it) })
+
+/**
+ * Quick add without a screen behind it, e.g. over the app a share came from (#15): [onSaved] shows the message
+ * that says how long the item waits, and [onClosed] runs once the sheet was open and has slid away again, after
+ * saving or closing.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickAddHost(viewModel: QuickAddViewModel, snackbarHostState: SnackbarHostState) {
+fun QuickAddHost(viewModel: QuickAddViewModel, onSaved: suspend (message: String) -> Unit, onClosed: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val locale = currentLocale()
     LaunchedEffect(viewModel, locale) { viewModel.setLocale(locale) }
 
-    // Not a key: a restart would cancel a showing snackbar, and its event is already taken from the channel.
+    // Not keys: a restart would cancel a showing snackbar, and its event is already taken from the channel.
     val resources by rememberUpdatedState(LocalResources.current)
-    LaunchedEffect(viewModel, snackbarHostState) {
-        viewModel.saved.collect { snackbarHostState.showSnackbar(savedMessage(resources, it)) }
+    val currentOnSaved by rememberUpdatedState(onSaved)
+    LaunchedEffect(viewModel) {
+        viewModel.saved.collect { currentOnSaved(savedMessage(resources, it)) }
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     // Saving closes the sheet in the view model; slide it away instead of removing it at once. Opening it again
     // while it slides away has to bring it back, since the sheet never left the composition.
     LaunchedEffect(state.visible) { if (state.visible) sheetState.show() else sheetState.hide() }
+    val currentOnClosed by rememberUpdatedState(onClosed)
+    LaunchedEffect(viewModel, sheetState) {
+        snapshotFlow { state.visible || sheetState.isVisible }.dropWhile { !it }.first { !it }
+        currentOnClosed()
+    }
     if (state.visible || sheetState.isVisible) {
         ModalBottomSheet(onDismissRequest = viewModel::dismiss, sheetState = sheetState) {
-            QuickAddForm(state = state, actions = viewModel, focusNameOnStart = true)
+            QuickAddForm(state = state, actions = viewModel, focusOnStart = true)
         }
     }
 }
@@ -99,7 +117,8 @@ fun QuickAddHost(viewModel: QuickAddViewModel, snackbarHostState: SnackbarHostSt
 /**
  * The quick-add form: name and price, an optional link and the need toggle, more details on request. Save stays
  * disabled until name and price are valid; errors show under a field once it has been typed in. No reflection
- * questions here: they come after capture (ADR-0009).
+ * questions here: they come after capture (ADR-0009). With [focusOnStart], the cursor starts in
+ * [QuickAddUiState.startField].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,10 +126,18 @@ fun QuickAddForm(
     state: QuickAddUiState,
     actions: QuickAddActions,
     modifier: Modifier = Modifier,
-    focusNameOnStart: Boolean = false
+    focusOnStart: Boolean = false
 ) {
     val nameFocus = remember { FocusRequester() }
-    if (focusNameOnStart) LaunchedEffect(Unit) { nameFocus.requestFocus() }
+    val priceFocus = remember { FocusRequester() }
+    if (focusOnStart) {
+        LaunchedEffect(Unit) {
+            when (state.startField) {
+                QuickAddField.NAME -> nameFocus.requestFocus()
+                QuickAddField.PRICE -> priceFocus.requestFocus()
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -147,7 +174,7 @@ fun QuickAddForm(
         OutlinedTextField(
             value = state.form.price,
             onValueChange = actions::onPriceChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().focusRequester(priceFocus),
             label = { Text(stringResource(R.string.quick_add_price)) },
             suffix = state.currency?.let { currency -> { Text(currencySymbol(currency)) } },
             isError = priceError != null,

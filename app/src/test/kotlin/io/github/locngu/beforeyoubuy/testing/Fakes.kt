@@ -15,6 +15,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -30,7 +31,11 @@ class FakeItemRepository : ItemRepository {
     /** Makes the next [add] throw, like a database error. */
     var failNextAdd = false
 
+    /** While set, [add] waits for it, like a slow database. */
+    var addGate: CompletableDeferred<Unit>? = null
+
     override suspend fun add(item: Item): ItemId {
+        addGate?.await()
         if (failNextAdd) {
             failNextAdd = false
             throw IllegalStateException("Storing failed")

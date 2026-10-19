@@ -53,6 +53,9 @@
     <!-- Snackbar nach dem Hinzufügen von etwas Notwendigem. Wünsche nennen ihre Wartezeit: Plural quick_add_saved_want. -->
     <string name="quick_add_saved_need">Als notwendig hinzugefügt.</string>
 
+    <!-- Teilen (#15): Name eines geteilten Links, der ohne Namen kam. %1$s: Adresse des Shops, z. B. amazon.de -->
+    <string name="share_fallback_name">Artikel von %1$s</string>
+
     <!-- Dialog-Schaltflächen. -->
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Abbrechen</string>

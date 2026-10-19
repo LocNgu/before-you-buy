@@ -53,6 +53,9 @@
     <!-- Snackbar after adding a need. Wants say how long they wait: plural quick_add_saved_want. -->
     <string name="quick_add_saved_need">Added as a need.</string>
 
+    <!-- Share capture (#15): the name of a shared link that came without one. %1$s: the shop's address, e.g. amazon.de -->
+    <string name="share_fallback_name">%1$s item</string>
+
     <!-- Dialog buttons. -->
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>

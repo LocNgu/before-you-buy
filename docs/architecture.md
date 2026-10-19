@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13) and quick add (#14) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14) and share capture (#15) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 

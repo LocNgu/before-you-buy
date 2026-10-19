@@ -4,6 +4,10 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### Added
+
+- Share to the app: share a product from a shop app or browser and choose "Before You Buy". Quick add opens over the app you came from with the name and link filled in, and the cursor in the price. Save or close it and you're back where you were. Works without internet: the app reads only what the share contains, and removes tracking from the link.
+
 ## [0.2.0] - 2026-10-18
 
 ### Added
