@@ -1,4 +1,4 @@
-# ADR-0036: ViewModels belong to their navigation entry; per-item screens use assisted injection
+# ADR-0037: ViewModels belong to their navigation entry; per-item screens use assisted injection
 
 **Status**: accepted
 **Type**: technical

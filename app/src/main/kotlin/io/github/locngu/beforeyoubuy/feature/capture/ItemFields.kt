@@ -98,13 +98,14 @@ internal fun PriceField(
     currency: String?,
     actions: ItemFormActions,
     onDone: KeyboardActionScope.() -> Unit,
+    modifier: Modifier = Modifier,
     note: String? = null
 ) {
     val error = priceError?.let { priceErrorMessage(it, currency) }
     OutlinedTextField(
         value = form.price,
         onValueChange = actions::onPriceChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         label = { Text(stringResource(R.string.quick_add_price)) },
         suffix = currency?.let { { Text(currencySymbol(it)) } },
         isError = error != null,

@@ -7,7 +7,7 @@ paths:
   - "app/src/main/kotlin/**/navigation/**/*"
 ---
 
-# Wishlist and item detail (brief §6.3, ADR-0005, ADR-0007, ADR-0013, ADR-0018, ADR-0036)
+# Wishlist and item detail (brief §6.3, ADR-0005, ADR-0007, ADR-0013, ADR-0018, ADR-0037)
 
 ## Rules (`:core:domain` `wishlist/`)
 
@@ -24,7 +24,7 @@ paths:
 - `groups == null` / `detail == null` means "not loaded yet": show nothing, never the empty state. An item ended or deleted meanwhile is `gone` on detail and edit.
 - Each screen has a stateless `…Content` used for screenshots. Row: name, price, stage chip, countdown / "Cooling-off over" / "Ready to decide"; tapping opens detail.
 - Detail order: header (name, price, stage, countdown, "Wanted for N days", need line) → **reasons** (answers given so far, then a prompt card while the required ones are missing) → details → actions. "Open link" as a text button only once cooled off; copy/open always in the overflow menu. "Mark as need" asks first. No image yet (next slice of #16); the reflection (#17) and decision (#18) entry points aren't wired yet.
-- Per-item view models get the id via assisted injection (`hiltViewModel<VM, VM.Factory> { it.create(id) }`); every navigation entry has its own ViewModel store (ADR-0036). Writes go through `ItemRepository.update(current, edited)` (compare-and-set): on `false` say the item changed meanwhile, never retry silently.
+- Per-item view models get the id via assisted injection (`hiltViewModel<VM, VM.Factory> { it.create(id) }`); every navigation entry has its own ViewModel store (ADR-0037). Writes go through `ItemRepository.update(current, edited)` (compare-and-set): on `false` say the item changed meanwhile, never retry silently.
 - Edit: fields from `feature/capture/ItemFields.kt` (shared with quick add), all shown. Save closes the screen; back discards. The form is filled once from the first load; later item changes don't overwrite typing, and saving applies the form to the newest item.
 - Quick add is hosted once, in `AppNavigation`, outside the entries: `saved` events reach one collector and two entries can compose during a transition. Screens get `onAdd` and the shared `SnackbarHostState`.
 

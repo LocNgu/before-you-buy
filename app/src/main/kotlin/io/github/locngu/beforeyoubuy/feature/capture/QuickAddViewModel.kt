@@ -31,6 +31,9 @@ import kotlinx.coroutines.launch
 /** Values quick add opens with, e.g. from the share sheet (#15): text as the user would have typed it. */
 data class QuickAddPrefill(val name: String = "", val price: String = "", val link: String = "")
 
+/** The field that has the cursor when the sheet opens. */
+enum class QuickAddField { NAME, PRICE }
+
 /** An item was added: "Added. You can decide in 30 days." for a want, "Added as a need." for a need. */
 data class QuickAddSaved(val kind: ItemKind, val coolingOffDays: Int)
 
@@ -41,6 +44,8 @@ data class QuickAddSaved(val kind: ItemKind, val coolingOffDays: Int)
  * @property priceError why the typed price can't be read, once something was typed into it; null if it reads.
  * @property currency the app's currency, null until it's loaded.
  * @property today the earliest target date the picker offers.
+ * @property startField where the cursor goes on open: the price when a share filled in the name but not the price
+ *   (it can't be read offline, #15), else the name.
  */
 data class QuickAddUiState(
     val visible: Boolean = false,
@@ -50,7 +55,8 @@ data class QuickAddUiState(
     val priceError: MoneyParseResult? = null,
     val canSave: Boolean = false,
     val currency: String? = null,
-    val today: LocalDate? = null
+    val today: LocalDate? = null,
+    val startField: QuickAddField = QuickAddField.NAME
 )
 
 /** What the user can do in the quick-add sheet. */
@@ -76,6 +82,7 @@ class QuickAddViewModel @Inject constructor(
     private val editor = MutableStateFlow(Editor())
     private val policy: StateFlow<Policy?> = policies.policy.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val savedEvents = Channel<QuickAddSaved>(Channel.BUFFERED)
+    private var opened = false
 
     val uiState: StateFlow<QuickAddUiState> =
         combine(editor, policy) { editor, policy -> editor.toUiState(policy) }
@@ -86,7 +93,9 @@ class QuickAddViewModel @Inject constructor(
 
     /** Opens the sheet with a fresh form, filled with [prefill]. */
     fun open(prefill: QuickAddPrefill = QuickAddPrefill()) {
+        opened = true
         val form = CaptureForm(name = prefill.name, price = prefill.price, link = prefill.link)
+        val startField = if (form.name.isNotBlank() && form.price.isEmpty()) QuickAddField.PRICE else QuickAddField.NAME
         editor.update {
             Editor(
                 visible = true,
@@ -94,13 +103,26 @@ class QuickAddViewModel @Inject constructor(
                 nameTouched = form.name.isNotEmpty(),
                 priceTouched = form.price.isNotEmpty(),
                 today = clock.today(),
-                locale = it.locale
+                locale = it.locale,
+                startField = startField
             )
         }
     }
 
-    /** Closes the sheet without saving. */
-    fun dismiss() = editor.update { it.copy(visible = false) }
+    /**
+     * Opens the sheet with [prefill] the first time it's called on this view model; later calls (the screen was
+     * recreated, e.g. rotated) keep what's there. True while the sheet is open, false once it was saved or closed.
+     */
+    fun openOnce(prefill: QuickAddPrefill): Boolean {
+        if (!opened) open(prefill)
+        return editor.value.visible
+    }
+
+    /**
+     * Closes the sheet without saving. Ignored while saving: the save closes it when it's stored, and closing first
+     * would let the share activity finish and cancel the save with it.
+     */
+    fun dismiss() = editor.update { if (it.saving) it else it.copy(visible = false) }
 
     /** The UI's locale, which decides how a typed price reads (`1.234,56` vs `1,234.56`, ADR-0027). */
     fun setLocale(locale: Locale) = editor.update { it.copy(locale = locale) }
@@ -167,7 +189,8 @@ class QuickAddViewModel @Inject constructor(
         val priceTouched: Boolean = false,
         val saving: Boolean = false,
         val today: LocalDate? = null,
-        val locale: Locale? = null
+        val locale: Locale? = null,
+        val startField: QuickAddField = QuickAddField.NAME
     ) {
         fun toUiState(policy: Policy?): QuickAddUiState {
             val check = if (policy != null && locale != null) checkCapture(form, policy.currency, locale) else null
@@ -179,7 +202,8 @@ class QuickAddViewModel @Inject constructor(
                 priceError = check?.price?.takeIf { priceTouched && it !is MoneyParseResult.Success },
                 canSave = check?.isValid == true && !saving,
                 currency = policy?.currency,
-                today = today
+                today = today,
+                startField = startField
             )
         }
     }

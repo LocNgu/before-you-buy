@@ -4,4 +4,11 @@
     <style name="Theme.BeforeYouBuy" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
     </style>
+
+    <!-- Share capture: only the quick-add sheet, over the app the share came from. Light and dark come from the parent. -->
+    <style name="Theme.BeforeYouBuy.Translucent">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

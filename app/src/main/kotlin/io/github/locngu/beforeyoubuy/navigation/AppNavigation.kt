@@ -42,7 +42,7 @@ fun AppNavigation() {
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
-        // Each entry gets its own view models, cleared when it leaves the back stack (ADR-0036).
+        // Each entry gets its own view models, cleared when it leaves the back stack (ADR-0037).
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator()
