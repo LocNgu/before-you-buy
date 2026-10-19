@@ -78,7 +78,9 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
 
     private fun capture(state: WishlistUiState) {
         composeRule.setContent {
-            BeforeYouBuyTheme { WishlistContent(state, onAdd = {}, snackbarHostState = SnackbarHostState()) }
+            BeforeYouBuyTheme {
+                WishlistContent(state, onAdd = {}, onOpenItem = {}, snackbarHostState = SnackbarHostState())
+            }
         }
         composeRule.captureContent()
     }

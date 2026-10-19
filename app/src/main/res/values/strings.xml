@@ -59,4 +59,51 @@
     <!-- Dialog buttons. -->
     <string name="dialog_ok">OK</string>
     <string name="dialog_cancel">Cancel</string>
+
+    <!-- Item detail (brief §6.3, ADR-0013): reasons first; the shop link stays in the menu while cooling off. -->
+    <string name="item_edit">Edit</string>
+    <string name="item_more_options">More options</string>
+    <string name="item_copy_link">Copy link</string>
+    <string name="item_open_link">Open link</string>
+    <string name="item_link_copied">Link copied</string>
+    <string name="item_link_not_opened">No app can open this link</string>
+    <string name="item_added_today">Added today</string>
+    <string name="item_need">A need, so no waiting period</string>
+    <string name="item_reasons_title">Your reasons</string>
+    <string name="item_reason_why">Why you want it</string>
+    <string name="item_reason_usage">How often you’ll use it</string>
+    <string name="item_reasons_against">Reasons against</string>
+    <string name="item_reason_problem_solved">What problem it solves</string>
+    <string name="item_reason_current_alternative">What you use now instead</string>
+    <string name="item_reason_replaces">What it replaces</string>
+    <string name="item_reason_why_now">Why now</string>
+    <string name="item_reason_upgrade_or_new">Upgrade or new</string>
+    <string name="item_reflect_prompt_title">Why do you want this?</string>
+    <string name="item_reflect_prompt_title_started">A few answers are still missing</string>
+    <string name="item_reflect_prompt_body">Take a minute to note your reasons, for and against. You’ll see them again when you decide.</string>
+    <string name="item_details_title">Details</string>
+    <string name="item_category">Category</string>
+    <string name="item_notes">Notes</string>
+    <string name="item_target_date">Target date</string>
+    <string name="item_mark_as_need">Mark as need</string>
+    <string name="item_mark_as_need_title">Mark as a need?</string>
+    <string name="item_mark_as_need_body">Needs skip the waiting period and reflection. History will show it as a need.</string>
+    <string name="item_changed_meanwhile">This item changed in the meantime. Please try again.</string>
+    <string name="item_gone">This item is no longer on your wishlist</string>
+
+    <!-- Answers to "How often will you use it?" and "Upgrade or genuinely new?" (brief §4.3). -->
+    <string name="usage_daily">Daily</string>
+    <string name="usage_weekly">Weekly</string>
+    <string name="usage_monthly">Monthly</string>
+    <string name="usage_rarely">Rarely</string>
+    <string name="usage_once">Once</string>
+    <string name="upgrade_or_new_upgrade">An upgrade</string>
+    <string name="upgrade_or_new_new">Genuinely new</string>
+
+    <!-- Editing an item. A price change only ever extends the waiting period (ADR-0005). -->
+    <!-- %1$s: the new end date -->
+    <string name="item_edit_wait_extended">Waiting period extended to %1$s</string>
+    <!-- %1$s: the end date, when a need becomes a want -->
+    <string name="item_edit_wait_starts">Waiting period until %1$s</string>
+    <string name="item_edit_conflict">This item changed in the meantime, so nothing was saved. Check your changes and save again.</string>
 </resources>

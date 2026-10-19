@@ -50,3 +50,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0034](0034-whole-units-in-display.md) | product | Amounts shown in whole units, rounded (`20 €` for 19,99 €); storage, input and sums stay exact |
 | [0035](0035-quick-add-form-behaviour.md) | product | Quick add: errors once a field held text, keyboard Done saves, closing discards the draft |
 | [0036](0036-share-capture-over-the-sharing-app.md) | product | Share capture: quick add over the sharing app, toast on save, cursor in the price, shop-named fallback, tracking removed |
+| [0037](0037-viewmodels-per-nav-entry.md) | technical | ViewModels are scoped to their Navigation 3 entry; per-item screens use assisted injection |

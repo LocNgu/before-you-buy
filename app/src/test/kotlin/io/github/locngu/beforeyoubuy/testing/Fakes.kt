@@ -50,7 +50,24 @@ class FakeItemRepository : ItemRepository {
 
     override fun observeById(id: ItemId): Flow<Item?> = items.map { all -> all.find { it.id == id } }
 
-    override suspend fun update(current: Item, edited: Item): Boolean = TODO("Not needed yet")
+    /** Updates seen, as (current, edited). */
+    val updates = mutableListOf<Pair<Item, Item>>()
+
+    /** Makes the next [update] find the item changed, as if it was edited elsewhere between reading and writing. */
+    var conflictOnNextUpdate = false
+
+    /** Compare-and-set, like the real one: writes only if the stored item still equals [current]. */
+    override suspend fun update(current: Item, edited: Item): Boolean {
+        require(edited.id == current.id && edited.status == current.status) { "update can't change id or status" }
+        updates += current to edited
+        if (conflictOnNextUpdate) {
+            conflictOnNextUpdate = false
+            return false
+        }
+        if (items.value.none { it == current }) return false
+        replace(edited)
+        return true
+    }
 
     override fun observeHistory(status: ItemStatus): Flow<List<HistoryEntry>> = TODO("Not needed yet")
 
