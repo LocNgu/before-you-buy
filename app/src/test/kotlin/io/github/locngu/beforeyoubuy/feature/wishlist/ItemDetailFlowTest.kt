@@ -3,6 +3,7 @@ package io.github.locngu.beforeyoubuy.feature.wishlist
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -77,5 +78,19 @@ class ItemDetailFlowTest {
         composeRule.waitUntilExactlyOneExists(hasText("A need, so no waiting period"))
         composeRule.onNodeWithText("Ready to decide").assertIsDisplayed()
         composeRule.onNodeWithText("Why do you want this?").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a need's reasons are optional, behind a quiet link`() {
+        composeRule.onNodeWithText("Mark as need").performClick()
+        composeRule.onNode(hasText("Mark as need") and hasAnyAncestor(isDialog())).performClick()
+        composeRule.waitUntilExactlyOneExists(hasText("A need, so no waiting period"))
+
+        composeRule.onNodeWithText("Add your reasons").performClick()
+
+        // The questions load from the database; generous, as `verify` runs lint alongside the tests.
+        composeRule.waitUntilExactlyOneExists(hasText("Question 1 of 8"), timeoutMillis = 5_000)
+        composeRule.onNodeWithText("Optional").assertIsDisplayed()
+        composeRule.onNodeWithText("Skip").assertIsEnabled()
     }
 }

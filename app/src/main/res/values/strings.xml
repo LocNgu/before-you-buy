@@ -81,6 +81,10 @@
     <string name="item_reflect_prompt_title">Why do you want this?</string>
     <string name="item_reflect_prompt_title_started">A few answers are still missing</string>
     <string name="item_reflect_prompt_body">Take a minute to note your reasons, for and against. You’ll see them again when you decide.</string>
+    <string name="item_reflect_start">Start</string>
+    <string name="item_reflect_continue">Continue</string>
+    <string name="item_reasons_edit">Edit answers</string>
+    <string name="item_reasons_add">Add your reasons</string>
     <string name="item_details_title">Details</string>
     <string name="item_category">Category</string>
     <string name="item_notes">Notes</string>
@@ -99,6 +103,39 @@
     <string name="usage_once">Once</string>
     <string name="upgrade_or_new_upgrade">An upgrade</string>
     <string name="upgrade_or_new_new">Genuinely new</string>
+
+    <!-- Reflection flow (brief §4.3, §6.4, ADR-0009): one question per screen, gentle hints, no judgement. -->
+    <string name="reflection_close">Close</string>
+    <!-- %1$d: the question's number, %2$d: how many there are -->
+    <string name="reflection_progress">Question %1$d of %2$d</string>
+    <string name="reflection_required">Required</string>
+    <string name="reflection_optional">Optional</string>
+    <string name="reflection_answer">Your answer</string>
+    <string name="reflection_why_title">Why do you want this?</string>
+    <string name="reflection_why_help">A few words are enough. You’ll see them again when you decide.</string>
+    <string name="reflection_usage_title">How often will you use it?</string>
+    <string name="reflection_usage_help">Your best guess is fine.</string>
+    <string name="reflection_reasons_against_title">What speaks against buying it?</string>
+    <string name="reflection_reasons_against_help">For example: price, space, I already have something similar. Add as many as you like.</string>
+    <!-- %1$d: the reason's number -->
+    <string name="reflection_reason">Reason %1$d</string>
+    <!-- %1$d: the reason's number -->
+    <string name="reflection_remove_reason">Remove reason %1$d</string>
+    <string name="reflection_add_reason">Add another reason</string>
+    <string name="reflection_problem_solved_title">What problem does it solve?</string>
+    <string name="reflection_problem_solved_help">If there is one.</string>
+    <string name="reflection_current_alternative_title">What do you use now instead?</string>
+    <string name="reflection_current_alternative_help">Something you have, borrow or do differently, if anything.</string>
+    <string name="reflection_replaces_title">What will it replace?</string>
+    <string name="reflection_replaces_help">Something it would take the place of, if anything.</string>
+    <string name="reflection_why_now_title">Why now?</string>
+    <string name="reflection_why_now_help">Is there something that makes it now rather than later?</string>
+    <string name="reflection_upgrade_or_new_title">Upgrade or genuinely new?</string>
+    <string name="reflection_upgrade_or_new_help">Does it improve on something you have, or is it new to you?</string>
+    <string name="reflection_back">Back</string>
+    <string name="reflection_next">Next</string>
+    <string name="reflection_skip">Skip</string>
+    <string name="reflection_done">Done</string>
 
     <!-- Editing an item. A price change only ever extends the waiting period (ADR-0005). -->
     <!-- %1$s: the new end date -->

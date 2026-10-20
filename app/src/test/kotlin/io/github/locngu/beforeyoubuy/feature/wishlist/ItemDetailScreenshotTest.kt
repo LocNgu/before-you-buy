@@ -111,6 +111,7 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
                 ItemDetailContent(
                     state = state,
                     onEdit = {},
+                    onReflect = {},
                     onMarkAsNeed = {},
                     onCopyLink = {},
                     onOpenLink = {},

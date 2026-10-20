@@ -81,6 +81,10 @@
     <string name="item_reflect_prompt_title">Warum willst du das?</string>
     <string name="item_reflect_prompt_title_started">Ein paar Antworten fehlen noch</string>
     <string name="item_reflect_prompt_body">Nimm dir eine Minute für deine Gründe, dafür und dagegen. Du siehst sie wieder, wenn du entscheidest.</string>
+    <string name="item_reflect_start">Beginnen</string>
+    <string name="item_reflect_continue">Fortsetzen</string>
+    <string name="item_reasons_edit">Antworten bearbeiten</string>
+    <string name="item_reasons_add">Deine Gründe hinzufügen</string>
     <string name="item_details_title">Details</string>
     <string name="item_category">Kategorie</string>
     <string name="item_notes">Notizen</string>
@@ -99,6 +103,39 @@
     <string name="usage_once">Einmal</string>
     <string name="upgrade_or_new_upgrade">Ein Upgrade</string>
     <string name="upgrade_or_new_new">Wirklich neu</string>
+
+    <!-- Reflexion (Brief §4.3, §6.4, ADR-0009): eine Frage pro Bildschirm, sanfte Hinweise, kein Urteil. -->
+    <string name="reflection_close">Schließen</string>
+    <!-- %1$d: Nummer der Frage, %2$d: wie viele es sind -->
+    <string name="reflection_progress">Frage %1$d von %2$d</string>
+    <string name="reflection_required">Erforderlich</string>
+    <string name="reflection_optional">Optional</string>
+    <string name="reflection_answer">Deine Antwort</string>
+    <string name="reflection_why_title">Warum willst du das?</string>
+    <string name="reflection_why_help">Ein paar Worte genügen. Du siehst sie wieder, wenn du entscheidest.</string>
+    <string name="reflection_usage_title">Wie oft wirst du es nutzen?</string>
+    <string name="reflection_usage_help">Deine beste Schätzung genügt.</string>
+    <string name="reflection_reasons_against_title">Was spricht dagegen, es zu kaufen?</string>
+    <string name="reflection_reasons_against_help">Zum Beispiel: Preis, Platz, ich habe schon etwas Ähnliches. Füge so viele hinzu, wie du magst.</string>
+    <!-- %1$d: Nummer des Grunds -->
+    <string name="reflection_reason">Grund %1$d</string>
+    <!-- %1$d: Nummer des Grunds -->
+    <string name="reflection_remove_reason">Grund %1$d entfernen</string>
+    <string name="reflection_add_reason">Weiteren Grund hinzufügen</string>
+    <string name="reflection_problem_solved_title">Welches Problem löst es?</string>
+    <string name="reflection_problem_solved_help">Falls es eins gibt.</string>
+    <string name="reflection_current_alternative_title">Was nutzt du jetzt stattdessen?</string>
+    <string name="reflection_current_alternative_help">Etwas, das du hast, ausleihst oder anders machst, falls überhaupt.</string>
+    <string name="reflection_replaces_title">Was wird es ersetzen?</string>
+    <string name="reflection_replaces_help">Etwas, an dessen Stelle es treten würde, falls überhaupt.</string>
+    <string name="reflection_why_now_title">Warum jetzt?</string>
+    <string name="reflection_why_now_help">Gibt es etwas, weshalb jetzt und nicht später?</string>
+    <string name="reflection_upgrade_or_new_title">Upgrade oder wirklich neu?</string>
+    <string name="reflection_upgrade_or_new_help">Verbessert es etwas, das du hast, oder ist es neu für dich?</string>
+    <string name="reflection_back">Zurück</string>
+    <string name="reflection_next">Weiter</string>
+    <string name="reflection_skip">Überspringen</string>
+    <string name="reflection_done">Fertig</string>
 
     <!-- Artikel bearbeiten. Eine Preisänderung verlängert die Wartezeit höchstens (ADR-0005). -->
     <!-- %1$s: das neue Enddatum -->
