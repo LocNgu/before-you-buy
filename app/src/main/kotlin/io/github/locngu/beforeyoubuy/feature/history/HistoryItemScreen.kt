@@ -145,12 +145,6 @@ fun HistoryItemContent(
     }
 }
 
-private val HistoryDetail.item: Item
-    get() = when (this) {
-        is HistoryDetail.Bought -> entry.item
-        is HistoryDetail.DecidedAgainst -> entry.item
-    }
-
 @Composable
 private fun BoughtHeader(detail: HistoryDetail.Bought) {
     val entry = detail.entry

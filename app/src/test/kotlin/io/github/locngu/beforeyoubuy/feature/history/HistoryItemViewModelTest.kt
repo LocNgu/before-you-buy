@@ -145,7 +145,10 @@ class HistoryItemViewModelTest {
             }
             assertEquals(old, items.stored.single { it.id == old.id })
             assertTrue(viewModel.uiState.value.detail is HistoryDetail.DecidedAgainst)
-            assertFalse(viewModel.uiState.value.busy)
+            // Stays busy: the screen closes, and a second tap must not add it twice.
+            assertTrue(viewModel.uiState.value.busy)
+            viewModel.wantAgain()
+            assertEquals(2, items.stored.size)
         }
 
     @Test

@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 
 /** The two lists of history (brief §6.6). */
 enum class HistoryTab { BOUGHT, DECIDED_AGAINST }
@@ -51,7 +50,8 @@ class HistoryViewModel @Inject constructor(
     policies: PolicyRepository,
     private val clock: Clock
 ) : ViewModel() {
-    private val selection = MutableStateFlow(HistoryTab.BOUGHT to HistoryPeriod.ALL)
+    private val tab = MutableStateFlow(HistoryTab.BOUGHT)
+    private val period = MutableStateFlow(HistoryPeriod.ALL)
 
     val uiState: StateFlow<HistoryUiState> =
         combine(
@@ -62,27 +62,32 @@ class HistoryViewModel @Inject constructor(
             // History and policy are read apart: during a currency change one may be read before the other has
             // been relabelled. Wait for the read that matches instead of totalling two currencies (ADR-0033).
             .filter { (bought, rejected, currency) -> allInCurrency(bought + rejected, currency) }
-            .combine(selection, ::Pair)
+            .combine(period, ::Pair)
             .flatMapLatest { (history, selected) ->
                 val (bought, rejected, currency) = history
-                val (tab, period) = selected
                 flow {
                     while (true) {
                         val now = clock.instant()
                         emit(
                             HistoryUiState(
-                                tab = tab,
-                                period = period,
-                                bought = boughtOf(bought, currency, period, now, clock.zone),
-                                decidedAgainst = decidedAgainstOf(rejected, currency, period, now, clock.zone)
+                                period = selected,
+                                bought = boughtOf(bought, currency, selected, now, clock.zone),
+                                decidedAgainst = decidedAgainstOf(rejected, currency, selected, now, clock.zone)
                             )
                         )
                         delay(untilHistoryChanges(now, clock.zone).toMillis().coerceAtLeast(1))
                     }
                 }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+            }
+            // Switching tabs only changes what's shown; both lists are already computed.
+            .combine(tab) { state, selected -> state.copy(tab = selected) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
-    fun selectTab(tab: HistoryTab) = selection.update { it.copy(first = tab) }
+    fun selectTab(tab: HistoryTab) {
+        this.tab.value = tab
+    }
 
-    fun selectPeriod(period: HistoryPeriod) = selection.update { it.copy(second = period) }
+    fun selectPeriod(period: HistoryPeriod) {
+        this.period.value = period
+    }
 }

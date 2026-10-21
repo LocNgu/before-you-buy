@@ -117,11 +117,16 @@ fun decidedAgainstOf(
 
 /** One history entry with its reflection answers, for the read-only detail (issue #19). */
 sealed interface HistoryDetail {
+    val item: Item
     val reflection: Reflection?
 
-    data class Bought(val entry: BoughtEntry, override val reflection: Reflection?) : HistoryDetail
+    data class Bought(val entry: BoughtEntry, override val reflection: Reflection?) : HistoryDetail {
+        override val item: Item get() = entry.item
+    }
 
-    data class DecidedAgainst(val entry: DecidedAgainstEntry, override val reflection: Reflection?) : HistoryDetail
+    data class DecidedAgainst(val entry: DecidedAgainstEntry, override val reflection: Reflection?) : HistoryDetail {
+        override val item: Item get() = entry.item
+    }
 }
 
 /**
@@ -142,7 +147,7 @@ fun historyDetailOf(item: Item, decisions: List<Decision>, reflection: Reflectio
 
 private fun boughtEntryOf(item: Item, decision: Decision, zone: ZoneId): BoughtEntry? {
     val paid = decision.actualPrice
-    if (item.status != ItemStatus.PURCHASED || paid == null) return null
+    if (item.status != ItemStatus.PURCHASED || !decision.type.isPurchase || paid == null) return null
     val boughtOn = decision.decidedAt.atZone(zone).toLocalDate()
     return BoughtEntry(
         item = item,

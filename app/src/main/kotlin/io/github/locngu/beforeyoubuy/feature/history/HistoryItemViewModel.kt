@@ -98,17 +98,20 @@ class HistoryItemViewModel @AssistedInject constructor(
         val detail = uiState.value.detail as? HistoryDetail.DecidedAgainst ?: return
         if (!busy.compareAndSet(expect = false, update = true)) return
         viewModelScope.launch {
+            var added = false
             try {
                 val policy = policies.policy.first()
-                val item = detail.entry.item
+                val item = detail.item
                 // Only while a currency change is being written could they differ.
                 if (item.price.currency != policy.currency) {
                     return@launch messages.send(HistoryItemMessage.CHANGED_MEANWHILE)
                 }
                 val newId = items.add(wantedAgain(item, policy, clock.instant(), clock.zone))
+                added = true
                 outcomes.send(HistoryItemOutcome.WantedAgain(newId))
             } finally {
-                busy.value = false
+                // Once added, the screen closes; staying busy keeps a second tap from adding it twice.
+                if (!added) busy.value = false
             }
         }
     }
@@ -117,10 +120,7 @@ class HistoryItemViewModel @AssistedInject constructor(
     fun delete() {
         val detail = uiState.value.detail ?: return
         if (!busy.compareAndSet(expect = false, update = true)) return
-        val item = when (detail) {
-            is HistoryDetail.Bought -> detail.entry.item
-            is HistoryDetail.DecidedAgainst -> detail.entry.item
-        }
+        val item = detail.item
         viewModelScope.launch {
             try {
                 deleting.value = true
