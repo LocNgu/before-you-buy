@@ -257,4 +257,22 @@
     <!-- %1$s: the item's name. -->
     <string name="history_delete_body">“%1$s” and your answers about it are deleted for good. This can’t be undone.</string>
     <string name="history_delete_confirm">Delete</string>
+
+    <!-- Notifications (brief §8, ADR-0014, ADR-0042): at most one a day, never money, deals or suggestions. One
+         channel per kind; the user can switch each off in the system settings. -->
+    <string name="notification_channel_waiting_periods">Waiting periods</string>
+    <string name="notification_channel_waiting_periods_description">When something you want has finished its waiting period</string>
+    <string name="notification_channel_reflection">Reflection reminders</string>
+    <string name="notification_channel_reflection_description">One reminder per item to note why you want it</string>
+    <!-- Actions on “your waiting period is over”. “Let it go” records “Decided against” without opening the app. -->
+    <string name="notification_still_want_it">Still want it</string>
+    <string name="notification_let_it_go">Let it go</string>
+    <!-- Reflection nudge for one item. %1$s: the item's name. -->
+    <string name="notification_nudge_text">Take a minute to note why you want %1$s.</string>
+    <!-- Reflection nudge for several items. %1$s: their names, comma-separated. -->
+    <string name="notification_nudge_digest_text">Note why you want %1$s.</string>
+    <!-- Asked once, after the first item is added (Android 13+). The app works fully without notifications. -->
+    <string name="notification_permission_text">Get one calm notification when a waiting period ends, at most once a day.</string>
+    <string name="notification_permission_allow">Allow notifications</string>
+    <string name="notification_permission_not_now">Not now</string>
 </resources>

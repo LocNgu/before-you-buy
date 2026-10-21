@@ -53,8 +53,8 @@ paths:
 
 - JVM tests for `:core:domain`; Robolectric + Compose UI tests in `:app` under `src/test`. No instrumented tests.
 - Robolectric runs with `TestApplication` (`src/test/resources/robolectric.properties`). Its `onAppStart()` is a no-op, so start-up work never races tests. All app-start work goes into `BeforeYouBuyApplication.onAppStart()`.
-- WorkManager's start-up initializer is removed in the manifest; it initializes on first use from `BeforeYouBuyApplication.workManagerConfiguration` (where Hilt's worker factory goes later). Don't re-add the initializer.
-- Inject `java.time.Clock`; production gets `SystemZoneClock`, which reads the device zone on every call. Tests pass `Clock.fixed(...)` or a fake.
+- WorkManager's start-up initializer is removed in the manifest; it initializes on first use from `BeforeYouBuyApplication.workManagerConfiguration`. Don't re-add the initializer. Workers use the default factory and get dependencies through a Hilt `@EntryPoint`; test them with `androidx.work:work-testing` (`WorkManagerTestInitHelper`, `TestListenableWorkerBuilder`).
+- Inject `java.time.Clock`; production gets `SystemZoneClock`, which reads the device zone on every call (debug builds: moved by `DebugClockOffset`, zero unless set; `src/debug` and `src/release` each bind `ClockOffset`). Tests pass `Clock.fixed(...)` or a fake.
 - Compose tests use the `androidx.compose.ui.test.junit4.v2` rules (`createComposeRule`, `createAndroidComposeRule`).
 - Screenshots: Roborazzi; goldens are committed in `app/src/test/screenshots/` (the plugin's `outputDir`). Use `createAndroidComposeRule<ComponentActivity>()` and capture with `composeRule.captureContent()` (`testing/Screenshots.kt`), never `onRoot().captureRoboImage()`: Roborazzi's window PixelCopy races Robolectric's render thread and intermittently captured a blank frame (seen on CI). Names follow `<package>.<Class>.<test>.png` (add `RoborazziRule()` when tests live in a base class). Record with `./gradlew :app:recordRoborazziDebug`, then look at the PNGs before committing. `verify` compares; diffs land in `app/build/outputs/roborazzi/`.
 

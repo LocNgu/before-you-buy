@@ -42,14 +42,18 @@ class DataStorePreferencesRepositoryTest {
     }
 
     @Test
-    fun `stores notification prefs and the onboarding flag`() = runTest {
+    fun `stores notification prefs, the onboarding flag and whether the permission was asked`() = runTest {
         val repository = repository()
         val prefs = NotificationPrefs(waitingPeriods = false, reflectionReminders = true)
 
         repository.setNotificationPrefs(prefs)
         repository.setOnboardingComplete(true)
+        repository.setNotificationPermissionAsked(true)
 
-        assertEquals(AppPreferences(prefs, onboardingComplete = true), repository.preferences.first())
+        assertEquals(
+            AppPreferences(prefs, onboardingComplete = true, notificationPermissionAsked = true),
+            repository.preferences.first()
+        )
     }
 
     @Test

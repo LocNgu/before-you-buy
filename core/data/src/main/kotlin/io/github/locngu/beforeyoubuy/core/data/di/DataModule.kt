@@ -11,10 +11,12 @@ import dagger.hilt.components.SingletonComponent
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
 import io.github.locngu.beforeyoubuy.core.data.image.FileItemImageStore
 import io.github.locngu.beforeyoubuy.core.data.item.RoomItemRepository
+import io.github.locngu.beforeyoubuy.core.data.notifications.RoomNotificationLogRepository
 import io.github.locngu.beforeyoubuy.core.data.settings.DataStorePreferencesRepository
 import io.github.locngu.beforeyoubuy.core.data.settings.RoomPolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
+import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationLogRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.PreferencesRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.defaultCurrency
@@ -45,6 +47,11 @@ internal object DataModule {
     @Singleton
     fun provideItemImageStore(@ApplicationContext context: Context): ItemImageStore =
         FileItemImageStore(context.contentResolver, File(context.filesDir, IMAGES_DIRECTORY))
+
+    @Provides
+    @Singleton
+    fun provideNotificationLogRepository(database: BeforeYouBuyDatabase): NotificationLogRepository =
+        RoomNotificationLogRepository(database)
 
     @Provides
     @Singleton

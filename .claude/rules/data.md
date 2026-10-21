@@ -10,12 +10,12 @@ paths:
 
 ## Layout
 
-- `db/`: entities, DAOs, `BeforeYouBuyDatabase` (+ `withPolicyRow`). `item/`: mappers + `RoomItemRepository`. `image/`: `FileItemImageStore` (photos in `filesDir/images`, ADR-0038). `settings/`: `RoomPolicyRepository`, `DataStorePreferencesRepository`, `CoolingOffRulesJson`. `di/DataModule`: Hilt bindings (singletons: one database, one DataStore per file and process).
-- Repository **interfaces live in `:core:domain`** (`item/ItemRepository`, `item/ItemImageStore`, `settings/PolicyRepository`, `settings/PreferencesRepository`); everything here is `internal`, including `DataModule` (Hilt handles internal modules across modules).
+- `db/`: entities, DAOs, `BeforeYouBuyDatabase` (+ `withPolicyRow`). `item/`: mappers + `RoomItemRepository`. `notifications/`: `RoomNotificationLogRepository`. `image/`: `FileItemImageStore` (photos in `filesDir/images`, ADR-0038). `settings/`: `RoomPolicyRepository`, `DataStorePreferencesRepository`, `CoolingOffRulesJson`. `di/DataModule`: Hilt bindings (singletons: one database, one DataStore per file and process).
+- Repository **interfaces live in `:core:domain`** (`item/ItemRepository`, `item/ItemImageStore`, `notifications/NotificationLogRepository`, `settings/PolicyRepository`, `settings/PreferencesRepository`); everything here is `internal`, including `DataModule` (Hilt handles internal modules across modules).
 
-## Schema (version 2)
+## Schema (version 3)
 
-- Tables: `policy` (one row, id 1: currency + tiers JSON or null for defaults, ADR-0033), `items`, `reflections` (1:1, PK `item_id`), `decisions` (append-only; `note` added in version 2). Both children reference `items(id)` with `ON DELETE CASCADE`. M2 adds `allocations` and `pool_entries` the same way.
+- Tables: `policy` (one row, id 1: currency + tiers JSON or null for defaults, ADR-0033), `items`, `reflections` (1:1, PK `item_id`), `decisions` (append-only; `note` added in version 2), `item_notifications` (1:1, PK `item_id`, added in version 3: when each notification kind was sent, `.claude/rules/notifications.md`). The children reference `items(id)` with `ON DELETE CASCADE`. M2 adds `allocations` and `pool_entries` the same way.
 - The policy row is created on every open with `INSERT OR IGNORE` (`withPolicyRow`): the currency is fixed on first start from the region and never follows it afterwards. Build every database (tests too) with `withPolicyRow`.
 - **Never a stage column** (ADR-0007); `DaoTest` checks every table.
 - Money: `*_minor` Long + currency text. Instants: epoch millis (sub-millisecond precision is dropped). Dates: ISO-8601 text. Enums: their name, read with a fallback in the mappers (ADR-0019, ADR-0032). `reasons_against`: a JSON array of strings.

@@ -102,6 +102,22 @@ internal interface DecisionDao {
     suspend fun setActualPrice(id: Long, minor: Long, currency: String)
 }
 
+/** What was notified about each item (`NotificationLogRepository`). Rows go with their item (ON DELETE CASCADE). */
+@Dao
+internal interface NotificationDao {
+    @Query("SELECT * FROM item_notifications")
+    suspend fun getAll(): List<ItemNotificationsEntity>
+
+    /** Replaces the item's row; writes nothing if the item doesn't exist (any more). */
+    @Query(
+        """
+        INSERT OR REPLACE INTO item_notifications (item_id, waiting_period_over_at, reflection_nudged_at)
+        SELECT :itemId, :waitingPeriodOverAt, :reflectionNudgedAt WHERE EXISTS (SELECT 1 FROM items WHERE id = :itemId)
+        """
+    )
+    suspend fun setIfItemExists(itemId: Long, waitingPeriodOverAt: Long?, reflectionNudgedAt: Long?)
+}
+
 /** The single policy row (id [PolicyEntity.ID]). [BeforeYouBuyDatabase] creates it on first open. */
 @Dao
 internal interface PolicyDao {

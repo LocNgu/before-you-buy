@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18) and history (#19) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19) and notifications (#20) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -54,12 +54,12 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 
 ## Persistence (`:core:data`, ADR-0019, ADR-0032)
 
-- Room, schema version 2 (migrations in `BeforeYouBuyDatabase.kt`, tested by `MigrationTest`): `policy` (one row: the app's currency and cooling-off tiers, ADR-0033), `items` (every stored `Item` fact), `reflections` (1:1 with the item; `reasons_against` is a JSON array of strings, not a child table), `decisions` (append-only history; `note` since version 2). Children reference `items(id)` with `ON DELETE CASCADE`. No stage column. M2 adds `allocations` and `pool_entries`.
+- Room, schema version 3 (migrations in `BeforeYouBuyDatabase.kt`, tested by `MigrationTest`): `policy` (one row: the app's currency and cooling-off tiers, ADR-0033), `items` (every stored `Item` fact), `reflections` (1:1 with the item; `reasons_against` is a JSON array of strings, not a child table), `decisions` (append-only history; `note` since version 2), `item_notifications` (1:1, what was notified about the item, since version 3, ADR-0042). Children reference `items(id)` with `ON DELETE CASCADE`. No stage column. M2 adds `allocations` and `pool_entries`.
 - Schema JSON goes to `core/data/schemas/` and is committed (ADR-0019).
-- `ItemRepository`, `PolicyRepository` and `PreferencesRepository` (interfaces in `:core:domain`) are bound by `:core:data`'s own Hilt module `DataModule`; everything in `:core:data` stays `internal`. `:app` just injects the interfaces.
+- `ItemRepository`, `PolicyRepository`, `PreferencesRepository` and `NotificationLogRepository` (interfaces in `:core:domain`) are bound by `:core:data`'s own Hilt module `DataModule`; everything in `:core:data` stays `internal`. `:app` just injects the interfaces.
 - Item writes are compare-and-set: `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored row still equals what the caller read, and return false otherwise. `recordDecision` writes the decision and the item's new state in one transaction; `update` never changes the status. `delete(current)` removes an ended item with its reflection and decisions, compare-and-set too.
 - The currency is fixed on first start (device region, else EUR). A tier change rewrites waiting items' ends in the same transaction (ADR-0031); a currency change relabels every amount, keeping the numbers (ADR-0033). Every stored amount is in the app's currency.
-- Preferences (notifications, onboarding) are in DataStore; defaults are computed on read.
+- Preferences (notifications, onboarding, whether the notification permission was asked) are in DataStore; defaults are computed on read.
 - Conventions and tests: `.claude/rules/data.md`.
 
 ## Pitfalls (common Android traps — apply from day one)
@@ -69,7 +69,8 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 - **Enums in Room are strings, read defensively** (`runCatching { valueOf(it) }.getOrDefault(fallback)`); keep retired enum constants so old rows/backups still load (ADR-0019).
 - **Migrations are explicit** and tested; never `fallbackToDestructiveMigration()` (ADR-0019).
 - **Robolectric gets a test Application** whose app-start work is a no-op, so start-up coroutines don't race test fixtures. Put app-start work in one overridable method and test it directly.
-- **BroadcastReceivers** (notification actions) delegate to an `internal suspend fun` outside `goAsync()` so the logic is unit-testable.
+- **BroadcastReceivers** (notification actions) delegate to an `internal suspend fun` outside `goAsync()` so the logic is unit-testable. Receivers and workers get their dependencies through a Hilt `@EntryPoint` (`NotificationsEntryPoint`), not field injection.
+- **Notifications** (`.claude/rules/notifications.md`): the daily check is WorkManager periodic work, never exact alarms; a notification tap reaches `MainActivity` as an intent and replaces the back stack once (not again after a configuration change). Debug builds can move the app's clock forward (`ClockOffset`, bound per build type in `src/debug` / `src/release`).
 - **Images:** don't delete a photo file eagerly when an item changes; the sweep at app start (`ImageCleanup`) removes files no row references, after an hour's grace. Photo Picker URIs are re-encoded into app storage (`ItemImageStore`, no persistable permission needed afterwards, ADR-0038).
 - **UI tests assert what the user perceives** (text, content descriptions, state descriptions, actions), never tree structure (child counts, testTag topology).
 - Collect UI state with `collectAsStateWithLifecycle()`; `StateFlow` for state, a channel/`SharedFlow` for one-shot events.

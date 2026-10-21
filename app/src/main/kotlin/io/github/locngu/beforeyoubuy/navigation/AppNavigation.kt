@@ -2,7 +2,9 @@ package io.github.locngu.beforeyoubuy.navigation
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalResources
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -25,6 +27,10 @@ import io.github.locngu.beforeyoubuy.feature.reflection.ReflectionScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemEditScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.WishlistScreen
+import io.github.locngu.beforeyoubuy.notifications.NotificationPermissionPrompt
+import io.github.locngu.beforeyoubuy.notifications.NotificationPermissionViewModel
+import io.github.locngu.beforeyoubuy.notifications.NotificationTap
+import io.github.locngu.beforeyoubuy.notifications.NotificationTarget
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -57,9 +63,23 @@ data object History : NavKey
 @Serializable
 data class HistoryItem(val itemId: Long) : NavKey
 
+/**
+ * The app's screens. [notificationTap], if set, replaces the back stack with the screens it leads to
+ * ([backStackFor]); [onNotificationTapShown] then clears it, so it's shown once.
+ */
 @Composable
-fun AppNavigation() {
+fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapShown: () -> Unit = {}) {
     val backStack = rememberNavBackStack(Home)
+    LaunchedEffect(notificationTap) {
+        if (notificationTap == null) return@LaunchedEffect
+        val keys = backStackFor(notificationTap)
+        // One change, so no frame shows an empty back stack.
+        Snapshot.withMutableSnapshot {
+            backStack.clear()
+            backStack.addAll(keys)
+        }
+        onNotificationTapShown()
+    }
     // One quick add for the whole app, composed once and scoped to the activity, outside every entry: its `saved`
     // events reach a single collector, and two entries can be on screen together during a transition.
     val quickAdd: QuickAddViewModel = hiltViewModel()
@@ -153,6 +173,26 @@ fun AppNavigation() {
             }
     )
     QuickAddHost(viewModel = quickAdd, snackbarHostState = snackbarHostState)
+    // App-wide like quick add: asks once, after the first item is added (Android 13+).
+    val notificationPermission: NotificationPermissionViewModel = hiltViewModel()
+    NotificationPermissionPrompt(notificationPermission)
+}
+
+/**
+ * The back stack a notification tap opens: its screen on top of the screens that lead there, so back goes through
+ * item detail and the wishlist to Home.
+ */
+fun backStackFor(tap: NotificationTap): List<NavKey> {
+    val itemId = tap.itemId?.value
+    val toWishlist = listOf(Home, Wishlist)
+    if (itemId == null) return toWishlist
+    val toItem = toWishlist + ItemDetail(itemId)
+    return when (tap.target) {
+        NotificationTarget.WISHLIST -> toWishlist
+        NotificationTarget.ITEM -> toItem
+        NotificationTarget.DECISION -> toItem + ItemDecision(itemId)
+        NotificationTarget.REFLECTION -> toItem + ItemReflection(itemId)
+    }
 }
 
 /** Adds [key] unless it's already on top, so a double tap doesn't open a screen twice. */

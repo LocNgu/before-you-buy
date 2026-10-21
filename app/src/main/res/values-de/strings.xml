@@ -241,4 +241,17 @@
     <string name="history_delete_title">Aus dem Verlauf löschen?</string>
     <string name="history_delete_body">„%1$s“ und deine Antworten dazu werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.</string>
     <string name="history_delete_confirm">Löschen</string>
+
+    <!-- Benachrichtigungen (Brief §8, ADR-0014, ADR-0042): höchstens eine am Tag, nie Geld, Angebote oder Vorschläge. -->
+    <string name="notification_channel_waiting_periods">Wartezeiten</string>
+    <string name="notification_channel_waiting_periods_description">Wenn die Wartezeit für etwas, das du willst, vorbei ist</string>
+    <string name="notification_channel_reflection">Erinnerungen zum Nachdenken</string>
+    <string name="notification_channel_reflection_description">Eine Erinnerung pro Artikel, zu notieren, warum du ihn willst</string>
+    <string name="notification_still_want_it">Will ich noch</string>
+    <string name="notification_let_it_go">Loslassen</string>
+    <string name="notification_nudge_text">Nimm dir eine Minute und notiere, warum du %1$s willst.</string>
+    <string name="notification_nudge_digest_text">Notiere, warum du %1$s willst.</string>
+    <string name="notification_permission_text">Erhalte eine ruhige Benachrichtigung, wenn eine Wartezeit endet – höchstens einmal am Tag.</string>
+    <string name="notification_permission_allow">Benachrichtigungen erlauben</string>
+    <string name="notification_permission_not_now">Jetzt nicht</string>
 </resources>

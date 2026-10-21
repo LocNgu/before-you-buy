@@ -65,4 +65,23 @@
         <item quantity="one">Considered for %d day</item>
         <item quantity="other">Considered for %d days</item>
     </plurals>
+
+    <!-- Notification when one item's waiting period is over. %1$s: the item's name, %2$d: calendar days since it was
+         added. Actions: notification_still_want_it, notification_let_it_go. -->
+    <plurals name="notification_waiting_over_text">
+        <item quantity="one">You’ve wanted %1$s for %2$d day. Your waiting period is over.</item>
+        <item quantity="other">You’ve wanted %1$s for %2$d days. Your waiting period is over.</item>
+    </plurals>
+
+    <!-- Title of the one notification when several items finished waiting on the same day; their names follow. -->
+    <plurals name="notification_waiting_over_digest_title">
+        <item quantity="one">%d item finished its waiting period</item>
+        <item quantity="other">%d items finished their waiting period</item>
+    </plurals>
+
+    <!-- Title of the one reflection nudge for several items; notification_nudge_digest_text follows. -->
+    <plurals name="notification_nudge_digest_title">
+        <item quantity="one">Take a minute for %d item</item>
+        <item quantity="other">Take a minute for %d items</item>
+    </plurals>
 </resources>

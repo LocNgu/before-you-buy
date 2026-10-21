@@ -97,3 +97,24 @@ internal data class DecisionEntity(
     /** The optional "Why not?" of a reject; added in version 2 ([MIGRATION_1_2]). */
     val note: String?
 )
+
+/**
+ * What was notified about an item (`ItemNotifications`, brief §8), 1:1 with the item; added in version 3
+ * ([MIGRATION_2_3]). Instants are epoch millis; null means never.
+ */
+@Entity(
+    tableName = "item_notifications",
+    foreignKeys = [
+        ForeignKey(
+            entity = ItemEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["item_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+internal data class ItemNotificationsEntity(
+    @PrimaryKey @ColumnInfo(name = "item_id") val itemId: Long,
+    @ColumnInfo(name = "waiting_period_over_at") val waitingPeriodOverAt: Long?,
+    @ColumnInfo(name = "reflection_nudged_at") val reflectionNudgedAt: Long?
+)

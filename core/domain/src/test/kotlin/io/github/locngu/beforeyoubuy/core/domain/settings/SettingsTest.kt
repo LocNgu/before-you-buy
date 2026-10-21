@@ -32,11 +32,12 @@ class SettingsTest {
     }
 
     @Test
-    fun `preference defaults are notifications on and onboarding not done`() {
+    fun `preference defaults are notifications on, onboarding not done and the permission not asked yet`() {
         val preferences = AppPreferences()
 
         assertEquals(NotificationPrefs(waitingPeriods = true, reflectionReminders = true), preferences.notifications)
         assertEquals(false, preferences.onboardingComplete)
+        assertEquals(false, preferences.notificationPermissionAsked)
     }
 
     @Test
