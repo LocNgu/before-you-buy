@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: manual testing of notifications (issue #20). See DebugNotificationsReceiver. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Exported for `adb shell am broadcast`; DUMP is held by the shell but no installed app can get it. -->
+        <receiver
+            android:name=".debug.DebugNotificationsReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="io.github.locngu.beforeyoubuy.debug.RUN_NOTIFICATION_CHECK" />
+                <action android:name="io.github.locngu.beforeyoubuy.debug.ADVANCE_CLOCK" />
+                <action android:name="io.github.locngu.beforeyoubuy.debug.RESET_CLOCK" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

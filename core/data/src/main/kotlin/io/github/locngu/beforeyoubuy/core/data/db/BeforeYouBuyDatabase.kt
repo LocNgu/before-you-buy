@@ -13,8 +13,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * migration crashes rather than deleting the user's data (ADR-0019).
  */
 @Database(
-    entities = [PolicyEntity::class, ItemEntity::class, ReflectionEntity::class, DecisionEntity::class],
-    version = 2,
+    entities = [
+        PolicyEntity::class,
+        ItemEntity::class,
+        ReflectionEntity::class,
+        DecisionEntity::class,
+        ItemNotificationsEntity::class
+    ],
+    version = 3,
     exportSchema = true
 )
 internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
@@ -25,6 +31,8 @@ internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
     abstract fun reflectionDao(): ReflectionDao
 
     abstract fun decisionDao(): DecisionDao
+
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
         const val NAME = "before-you-buy.db"
@@ -47,8 +55,22 @@ internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
     }
 }
 
+/**
+ * 2 → 3 (issue #20): `item_notifications`, what was notified about each item. Nothing was notified before, so it
+ * starts empty.
+ */
+internal val MIGRATION_2_3: Migration = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `item_notifications` (`item_id` INTEGER NOT NULL, " +
+                "`waiting_period_over_at` INTEGER, `reflection_nudged_at` INTEGER, PRIMARY KEY(`item_id`), " +
+                "FOREIGN KEY(`item_id`) REFERENCES `items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+    }
+}
+
 /** Every migration, oldest first. A new schema version adds its own here, with a test in `MigrationTest`. */
-internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
+internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
 /**
  * Makes sure the policy row exists whenever the database opens, before anything reads it: the currency is fixed

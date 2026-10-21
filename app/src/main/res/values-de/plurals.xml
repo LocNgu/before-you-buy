@@ -60,4 +60,19 @@
         <item quantity="one">%d Tag überlegt</item>
         <item quantity="other">%d Tage überlegt</item>
     </plurals>
+
+    <plurals name="notification_waiting_over_text">
+        <item quantity="one">Du willst %1$s seit %2$d Tag. Deine Wartezeit ist vorbei.</item>
+        <item quantity="other">Du willst %1$s seit %2$d Tagen. Deine Wartezeit ist vorbei.</item>
+    </plurals>
+
+    <plurals name="notification_waiting_over_digest_title">
+        <item quantity="one">Bei %d Artikel ist die Wartezeit vorbei</item>
+        <item quantity="other">Bei %d Artikeln ist die Wartezeit vorbei</item>
+    </plurals>
+
+    <plurals name="notification_nudge_digest_title">
+        <item quantity="one">Nimm dir eine Minute für %d Artikel</item>
+        <item quantity="other">Nimm dir eine Minute für %d Artikel</item>
+    </plurals>
 </resources>

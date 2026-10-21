@@ -3,6 +3,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Notifications (brief §8): asked for once, after the first item is added (Android 13+). The daily check uses
+         WorkManager, never exact alarms: no SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM (issue #20). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- localeConfig: the per-app language setting exists from API 33; older versions ignore it, as intended. -->
     <application
         android:name=".BeforeYouBuyApplication"
@@ -40,6 +44,12 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!-- "Let it go" on a notification: records the reject without opening the app. Only the app's own pending
+             intents reach it. -->
+        <receiver
+            android:name=".notifications.LetItGoReceiver"
+            android:exported="false" />
 
         <!-- WorkManager starts on demand with the Application's configuration, not at process start. -->
         <provider

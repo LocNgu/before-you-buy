@@ -67,6 +67,40 @@ internal class MigrationTest {
         }
     }
 
+    @Test
+    fun `2 to 3 adds an empty notification log that follows its items`() = runTest {
+        createFromSchema(2) { db ->
+            db.execSQL("INSERT INTO policy (id, currency, cooling_off_rules) VALUES (1, 'EUR', NULL)")
+            db.execSQL(
+                "INSERT INTO items (id, name, price_minor, currency, added_at, cooling_ends_at, kind, status) " +
+                    "VALUES (7, 'Camera', 120000, 'EUR', 1000, 2000, 'WANT', 'ACTIVE')"
+            )
+            db.execSQL(
+                "INSERT INTO decisions (item_id, type, decided_at, source, note) " +
+                    "VALUES (7, 'WAIT', 3000, 'APP', NULL)"
+            )
+        }
+
+        val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
+            .addMigrations(*MIGRATIONS)
+            .withPolicyRow { "USD" }
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val notifications = database.notificationDao()
+            assertEquals(emptyList<ItemNotificationsEntity>(), notifications.getAll())
+            assertEquals("Camera", database.itemDao().getById(7)?.name)
+            assertEquals(DecisionType.WAIT, database.decisionDao().observeForItem(7).first().single().toDomain()?.type)
+
+            notifications.setIfItemExists(7, waitingPeriodOverAt = 4000, reflectionNudgedAt = null)
+            assertEquals(listOf(ItemNotificationsEntity(7, 4000, null)), notifications.getAll())
+            database.itemDao().delete(7)
+            assertEquals(emptyList<ItemNotificationsEntity>(), notifications.getAll())
+        } finally {
+            database.close()
+        }
+    }
+
     /** A database file as [version] of the committed schema created it, with [fill]'s rows. */
     private fun createFromSchema(version: Int, fill: (SQLiteDatabase) -> Unit) {
         val schema = File(SCHEMAS, "$version.json").readText()

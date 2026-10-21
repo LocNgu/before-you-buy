@@ -48,6 +48,10 @@ internal class DataStorePreferencesRepository(private val dataStore: DataStore<P
         dataStore.edit { it[Keys.ONBOARDING_COMPLETE] = complete }
     }
 
+    override suspend fun setNotificationPermissionAsked(asked: Boolean) {
+        dataStore.edit { it[Keys.NOTIFICATION_PERMISSION_ASKED] = asked }
+    }
+
     private fun Preferences.toAppPreferences(): AppPreferences {
         val defaults = AppPreferences()
         return AppPreferences(
@@ -56,7 +60,9 @@ internal class DataStorePreferencesRepository(private val dataStore: DataStore<P
                 reflectionReminders = this[Keys.NOTIFY_REFLECTION_REMINDERS]
                     ?: defaults.notifications.reflectionReminders
             ),
-            onboardingComplete = this[Keys.ONBOARDING_COMPLETE] ?: defaults.onboardingComplete
+            onboardingComplete = this[Keys.ONBOARDING_COMPLETE] ?: defaults.onboardingComplete,
+            notificationPermissionAsked = this[Keys.NOTIFICATION_PERMISSION_ASKED]
+                ?: defaults.notificationPermissionAsked
         )
     }
 
@@ -64,6 +70,7 @@ internal class DataStorePreferencesRepository(private val dataStore: DataStore<P
         val NOTIFY_WAITING_PERIODS = booleanPreferencesKey("notify_waiting_periods")
         val NOTIFY_REFLECTION_REMINDERS = booleanPreferencesKey("notify_reflection_reminders")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
+        val NOTIFICATION_PERMISSION_ASKED = booleanPreferencesKey("notification_permission_asked")
     }
 
     companion object {

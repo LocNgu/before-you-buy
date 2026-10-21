@@ -49,10 +49,18 @@ class HistoryFlowTest {
     private fun tapInDialog(text: String) =
         composeRule.onNode(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog())).performClick()
 
-    /** The ⋮ button. It appears once the entry has loaded, so wait for it first. */
+    /**
+     * The ⋮ button, then its menu. It appears once the entry has loaded, so wait for it first, and for a dialog that
+     * is still closing to be gone: it would take the tap, and the menu would never open.
+     */
     private fun openMenu() {
+        composeRule.waitUntilDoesNotExist(isDialog(), timeoutMillis = 5_000)
         composeRule.waitUntilExactlyOneExists(hasContentDescription("More options"), timeoutMillis = 5_000)
         composeRule.onNode(hasContentDescription("More options")).performClick()
+        composeRule.waitUntilExactlyOneExists(
+            hasText("Delete from history") and hasClickAction(),
+            timeoutMillis = 5_000
+        )
     }
 
     private fun waitFor(text: String, substring: Boolean = false) =

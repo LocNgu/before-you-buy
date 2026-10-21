@@ -9,8 +9,13 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
+import io.github.locngu.beforeyoubuy.core.domain.notifications.ItemNotifications
+import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationLogRepository
+import io.github.locngu.beforeyoubuy.core.domain.settings.AppPreferences
+import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
+import io.github.locngu.beforeyoubuy.core.domain.settings.PreferencesRepository
 import java.io.File
 import java.time.Clock
 import java.time.Duration
@@ -172,6 +177,35 @@ class FakePolicyRepository(initial: Policy = Policy("EUR", CoolingOffRules.defau
     }
 
     override suspend fun changeCurrency(currency: String) = TODO("Not needed yet")
+}
+
+/** [AppPreferences] in memory, the defaults unless set otherwise. */
+class FakePreferencesRepository(initial: AppPreferences = AppPreferences()) : PreferencesRepository {
+    override val preferences = MutableStateFlow(initial)
+
+    override suspend fun setNotificationPrefs(prefs: NotificationPrefs) {
+        preferences.value = preferences.value.copy(notifications = prefs)
+    }
+
+    override suspend fun setOnboardingComplete(complete: Boolean) {
+        preferences.value = preferences.value.copy(onboardingComplete = complete)
+    }
+
+    override suspend fun setNotificationPermissionAsked(asked: Boolean) {
+        preferences.value = preferences.value.copy(notificationPermissionAsked = asked)
+    }
+}
+
+/** What was notified, in memory. Like the real one, it skips records of items [items] doesn't have. */
+class FakeNotificationLogRepository(private val items: FakeItemRepository) : NotificationLogRepository {
+    val records = mutableMapOf<ItemId, ItemNotifications>()
+
+    override suspend fun notified(): Map<ItemId, ItemNotifications> = records.toMap()
+
+    override suspend fun store(records: Map<ItemId, ItemNotifications>) {
+        val ids = items.stored.map { it.id }.toSet()
+        this.records += records.filterKeys { it in ids }
+    }
 }
 
 /** A [Clock] that only moves when a test says so. */

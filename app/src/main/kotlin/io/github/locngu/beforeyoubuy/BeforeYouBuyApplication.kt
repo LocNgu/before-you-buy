@@ -3,6 +3,9 @@ package io.github.locngu.beforeyoubuy
 import android.app.Application
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import io.github.locngu.beforeyoubuy.notifications.NotificationWorker
+import io.github.locngu.beforeyoubuy.notifications.Notifier
+import java.time.Clock
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +18,12 @@ open class BeforeYouBuyApplication :
     Configuration.Provider {
     @Inject
     lateinit var imageCleanup: ImageCleanup
+
+    @Inject
+    lateinit var notifier: Notifier
+
+    @Inject
+    lateinit var clock: Clock
 
     // Work that outlives every screen; it ends with the process.
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -31,10 +40,14 @@ open class BeforeYouBuyApplication :
     protected open fun onAppStart() {
         // Housekeeping only: a failure (e.g. storage unavailable) leaves files for the next start, never crashes.
         appScope.launch { runCatching { imageCleanup.run() } }
+        // Channels exist before anything is posted, named in the current language (brief §8).
+        notifier.createChannels()
+        NotificationWorker.schedule(this, clock.instant(), clock.zone)
     }
 
     // WorkManager initializes on first use with this (its start-up initializer is removed in the
-    // manifest). Hilt's worker factory goes here once there are workers.
+    // manifest). Workers get their dependencies through Hilt entry points (NotificationsEntryPoint), so the default
+    // worker factory is enough.
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().build()
 }
