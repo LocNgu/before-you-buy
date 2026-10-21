@@ -39,7 +39,9 @@ import io.github.locngu.beforeyoubuy.ui.components.CountdownText
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
+import io.github.locngu.beforeyoubuy.ui.format.formattedDate
 import java.io.File
+import java.time.LocalDate
 
 /**
  * The wishlist (brief §6.3). Quick add is hosted by the navigation, so this only asks to open it with [onAdd]
@@ -110,7 +112,11 @@ private fun WishlistList(
     // Leaves room for the floating button, so the last row isn't hidden behind it.
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
         groups.forEach { group ->
-            item(key = "header-${group.stage}") { SectionHeader(stageLabel(group.stage)) }
+            item(key = "header-${group.stage}-${group.waiting}") {
+                SectionHeader(
+                    if (group.waiting) stringResource(R.string.wishlist_waiting) else stageLabel(group.stage)
+                )
+            }
             items(group.entries, key = { it.item.id.value }) { entry ->
                 WishlistRow(entry, photos[entry.item.id], onClick = { onOpenItem(entry.item.id) })
             }
@@ -145,8 +151,8 @@ private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StageChip(entry.stage)
-                StageStatus(entry.stage, entry.daysLeft)
+                StageChip(entry.stage, waiting = entry.recheckOn != null)
+                StageStatus(entry.stage, entry.daysLeft, entry.recheckOn)
             }
         }
         MoneyText(
@@ -157,10 +163,21 @@ private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit,
     }
 }
 
-/** A countdown while cooling off, otherwise what the item is waiting for. Informational, never urgent. */
+/**
+ * A countdown while cooling off, otherwise what the item is waiting for: after "Wait", the date to look again
+ * ([recheckOn]). Informational, never urgent.
+ */
 @Composable
-internal fun StageStatus(stage: Stage, daysLeft: Int) {
+internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = null) {
     val style = MaterialTheme.typography.bodyMedium
+    if (recheckOn != null) {
+        Text(
+            text = stringResource(R.string.wishlist_look_again_on, formattedDate(recheckOn)),
+            style = style,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
     when (stage) {
         Stage.COOLING_OFF -> CountdownText(daysLeft, style = style)
 
@@ -177,11 +194,12 @@ internal fun StageStatus(stage: Stage, daysLeft: Int) {
     }
 }
 
+/** The stage, or "Waiting" for a Ready item after "Wait" until its date ([waiting]). */
 @Composable
-internal fun StageChip(stage: Stage) {
+internal fun StageChip(stage: Stage, waiting: Boolean = false) {
     Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(
-            text = stageLabel(stage),
+            text = if (waiting) stringResource(R.string.stage_waiting) else stageLabel(stage),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer

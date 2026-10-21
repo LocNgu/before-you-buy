@@ -27,8 +27,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Item detail while cooling off (no reasons yet, and with some), when Ready, for a need, with a photo (small while
- * cooling off, larger when Ready) and once gone, in English and German. Record: `./gradlew :app:recordRoborazziDebug`.
+ * Item detail while cooling off (no reasons yet, and with some), when Ready, waiting after "Wait", for a need, with a
+ * photo (small while cooling off, larger when Ready) and once gone, in English and German. Record:
+ * `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -79,6 +80,15 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
     fun ready() = capture(camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600)), reasons)
 
     @Test
+    fun waiting() = capture(
+        camera.copy(
+            coolingEndsAt = now.minusSeconds(5L * 24 * 3600),
+            recheckAt = Instant.parse("2026-10-30T00:00:00Z")
+        ),
+        reasons
+    )
+
+    @Test
     fun need() = capture(
         camera.copy(
             name = t("Washing machine", "Waschmaschine"),
@@ -112,6 +122,7 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
                     state = state,
                     onEdit = {},
                     onReflect = {},
+                    onDecide = {},
                     onMarkAsNeed = {},
                     onCopyLink = {},
                     onOpenLink = {},

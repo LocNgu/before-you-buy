@@ -8,6 +8,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isReflected
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
@@ -20,6 +21,7 @@ import java.time.temporal.ChronoUnit
  * @property linkProminent the shop link may show as a normal button. False while cooling off: browsing during the
  *   delay defeats it, so the link is only in the overflow menu then (ADR-0013).
  * @property imageProminent the photo may show large. While cooling off it's a small thumbnail to tap (ADR-0013).
+ * @property recheckOn as in [WishlistEntry.recheckOn]: the date a "Wait" decision set, while the item waits for it.
  */
 data class ItemDetail(
     val item: Item,
@@ -29,7 +31,8 @@ data class ItemDetail(
     val wantedForDays: Int,
     val reflected: Boolean,
     val linkProminent: Boolean,
-    val imageProminent: Boolean
+    val imageProminent: Boolean,
+    val recheckOn: LocalDate? = null
 )
 
 /**
@@ -47,7 +50,8 @@ fun itemDetailOf(item: Item, reflection: Reflection?, now: Instant, zone: ZoneId
         // A need skips reflection (ADR-0008), so it's never asked for one.
         reflected = isReflected(item, reflection),
         linkProminent = isCooledOff(item, now),
-        imageProminent = isCooledOff(item, now)
+        imageProminent = isCooledOff(item, now),
+        recheckOn = recheckOnOf(item, stage, now, zone)
     )
 }
 

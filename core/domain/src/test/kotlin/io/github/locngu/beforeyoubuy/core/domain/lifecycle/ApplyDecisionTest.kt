@@ -178,5 +178,19 @@ class ApplyDecisionTest {
         assertThrows(IllegalArgumentException::class.java) {
             Decision(DecisionType.REJECT, AFTER_COOLING, waitUntil = AFTER_COOLING.plusSeconds(60))
         }
+        assertThrows(IllegalArgumentException::class.java) {
+            Decision(DecisionType.WAIT, AFTER_COOLING, waitUntil = AFTER_COOLING.plusSeconds(60), note = "Not now")
+        }
+    }
+
+    @Test
+    fun `a reject keeps its note`() {
+        val decision = Decision(DecisionType.REJECT, AFTER_COOLING, note = "My phone is enough")
+
+        assertEquals(
+            ready.copy(status = ItemStatus.REJECTED, prioritySlot = null),
+            applied(applyDecision(ready, COMPLETE_REFLECTION, FUNDED, decision))
+        )
+        assertEquals("My phone is enough", decision.note)
     }
 }

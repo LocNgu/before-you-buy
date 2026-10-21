@@ -12,9 +12,12 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -172,5 +175,59 @@ class WishlistTest {
         val need = wish(1, endsAt = Instant.parse("2026-10-15T12:00:00Z"), kind = ItemKind.NEED)
 
         assertEquals(Duration.ofHours(14), untilWishlistChanges(listOf(need), now, zone))
+    }
+
+    @Test
+    fun `a ready item waiting for its re-check date is in a last, waiting group until then`() {
+        val recheck = Instant.parse("2026-11-09T00:00:00Z")
+        val waited = wish(1, endsAt = Instant.parse("2026-10-10T10:00:00Z")).copy(recheckAt = recheck)
+        val ready = wish(2, endsAt = Instant.parse("2026-10-11T10:00:00Z"))
+        val cooling = wish(3, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
+        val reflections = mapOf(waited.id to COMPLETE_REFLECTION, ready.id to COMPLETE_REFLECTION)
+
+        val groups = wishlistOf(listOf(waited, ready, cooling), reflections, AFTER_COOLING, zone)
+
+        assertEquals(listOf(false, false, true), groups.map { it.waiting })
+        assertEquals(listOf(Stage.READY, Stage.COOLING_OFF, Stage.READY), groups.map { it.stage })
+        assertEquals(listOf(ready.id), groups.first().entries.map { it.item.id })
+        val waiting = groups.last().entries.single()
+        assertEquals(waited.id, waiting.item.id)
+        assertEquals(LocalDate.of(2026, 11, 9), waiting.recheckOn)
+
+        val due = wishlistOf(listOf(waited), reflections, recheck, zone).single()
+        assertFalse(due.waiting)
+        assertNull(due.entries.single().recheckOn)
+    }
+
+    @Test
+    fun `waiting items come soonest re-check first`() {
+        val later = wish(1).copy(recheckAt = Instant.parse("2026-11-20T00:00:00Z"))
+        val sooner = wish(2).copy(recheckAt = Instant.parse("2026-11-10T00:00:00Z"))
+        val reflections = mapOf(later.id to COMPLETE_REFLECTION, sooner.id to COMPLETE_REFLECTION)
+
+        val group = wishlistOf(listOf(later, sooner), reflections, AFTER_COOLING, zone).single()
+
+        assertEquals(listOf(sooner.id, later.id), group.entries.map { it.item.id })
+    }
+
+    @Test
+    fun `a re-check date only matters once the item is ready`() {
+        val waited = wish(1).copy(recheckAt = Instant.parse("2026-11-20T00:00:00Z"))
+
+        val group = wishlistOf(listOf(waited), emptyMap(), AFTER_COOLING, zone).single()
+
+        assertEquals(Stage.NEEDS_REFLECTION, group.stage)
+        assertFalse(group.waiting)
+        assertNull(group.entries.single().recheckOn)
+    }
+
+    @Test
+    fun `changes at the next re-check date when that comes first`() {
+        val now = Instant.parse("2026-11-09T10:00:00Z")
+        val waited = wish(1).copy(recheckAt = Instant.parse("2026-11-09T12:00:00Z"))
+        val passed = wish(2).copy(recheckAt = Instant.parse("2026-11-09T09:00:00Z"))
+
+        assertEquals(Duration.ofHours(2), untilWishlistChanges(listOf(waited, passed), now, zone))
+        assertEquals(Duration.ofHours(14), untilWishlistChanges(listOf(passed), now, zone))
     }
 }

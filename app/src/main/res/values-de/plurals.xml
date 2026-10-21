@@ -35,4 +35,24 @@
         <item quantity="one">Seit %d Tag gewünscht</item>
         <item quantity="other">Seit %d Tagen gewünscht</item>
     </plurals>
+
+    <plurals name="decision_wanted_for_days">
+        <item quantity="one">Du willst das seit %d Tag</item>
+        <item quantity="other">Du willst das seit %d Tagen</item>
+    </plurals>
+
+    <plurals name="decision_others_more">
+        <item quantity="one">und %d weiterer Artikel auf deiner Liste</item>
+        <item quantity="other">und %d weitere Artikel auf deiner Liste</item>
+    </plurals>
+
+    <plurals name="decision_early_days_left">
+        <item quantity="one">Noch %d Tag Wartezeit.</item>
+        <item quantity="other">Noch %d Tage Wartezeit.</item>
+    </plurals>
+
+    <plurals name="decision_wait_days">
+        <item quantity="one">In %d Tag</item>
+        <item quantity="other">In %d Tagen</item>
+    </plurals>
 </resources>

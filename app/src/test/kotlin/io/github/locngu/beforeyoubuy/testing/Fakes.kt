@@ -95,7 +95,12 @@ class FakeItemRepository : ItemRepository {
 
     override suspend fun imageRefs(): Set<String> = items.value.mapNotNullTo(mutableSetOf()) { it.imageRef }
 
-    override fun observeDecisions(id: ItemId): Flow<List<Decision>> = TODO("Not needed yet")
+    private val decisionsById = MutableStateFlow(emptyMap<ItemId, List<Decision>>())
+
+    /** Every recorded decision, in the order recorded. */
+    val decisions = mutableListOf<Decision>()
+
+    override fun observeDecisions(id: ItemId): Flow<List<Decision>> = decisionsById.map { it[id].orEmpty() }
 
     /** Reflections written by [setReflection], in order. */
     val reflectionWrites = mutableListOf<Reflection>()
@@ -112,8 +117,22 @@ class FakeItemRepository : ItemRepository {
         return true
     }
 
-    override suspend fun recordDecision(current: Item, decision: Decision, result: Item): Boolean =
-        TODO("Not needed yet")
+    /** Makes the next [recordDecision] find the item changed, as if decided from a notification meanwhile. */
+    var conflictOnNextDecision = false
+
+    /** Compare-and-set, like the real one: appends the decision and stores [result] only if [current] is unchanged. */
+    override suspend fun recordDecision(current: Item, decision: Decision, result: Item): Boolean {
+        require(current.status == ItemStatus.ACTIVE && result.id == current.id) { "Only active items can be decided" }
+        if (conflictOnNextDecision) {
+            conflictOnNextDecision = false
+            return false
+        }
+        if (items.value.none { it == current }) return false
+        decisions += decision
+        decisionsById.value += current.id to decisionsById.value[current.id].orEmpty() + decision
+        replace(result)
+        return true
+    }
 }
 
 /** A [Policy] in memory, EUR with the default tiers unless set otherwise. */

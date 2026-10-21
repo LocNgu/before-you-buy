@@ -10,6 +10,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
@@ -93,5 +94,18 @@ class ItemDetailTest {
         assertNull(webLink("mailto:shop@example.com"))
         assertNull(webLink(""))
         assertNull(webLink("two words"))
+    }
+
+    @Test
+    fun `a ready item after "Wait" says when to look again, until that date`() {
+        val recheck = Instant.parse("2026-11-09T00:00:00Z")
+        val waited = item().copy(recheckAt = recheck)
+
+        assertEquals(
+            LocalDate.of(2026, 11, 9),
+            itemDetailOf(waited, COMPLETE_REFLECTION, AFTER_COOLING, zone).recheckOn
+        )
+        assertNull(itemDetailOf(waited, COMPLETE_REFLECTION, recheck, zone).recheckOn)
+        assertNull(itemDetailOf(waited, null, AFTER_COOLING, zone).recheckOn)
     }
 }

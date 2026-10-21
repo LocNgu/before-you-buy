@@ -3,6 +3,8 @@ package io.github.locngu.beforeyoubuy.navigation
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalResources
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
@@ -11,13 +13,17 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddHost
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddViewModel
+import io.github.locngu.beforeyoubuy.feature.decision.DecisionOutcome
+import io.github.locngu.beforeyoubuy.feature.decision.DecisionScreen
 import io.github.locngu.beforeyoubuy.feature.home.HomeScreen
 import io.github.locngu.beforeyoubuy.feature.reflection.ReflectionScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemEditScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.WishlistScreen
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -37,6 +43,10 @@ data class ItemEdit(val itemId: Long) : NavKey
 @Serializable
 data class ItemReflection(val itemId: Long) : NavKey
 
+/** Buy, Wait or Reject for one item (brief §6.5). */
+@Serializable
+data class ItemDecision(val itemId: Long) : NavKey
+
 @Composable
 fun AppNavigation() {
     val backStack = rememberNavBackStack(Home)
@@ -44,6 +54,8 @@ fun AppNavigation() {
     // events reach a single collector, and two entries can be on screen together during a transition.
     val quickAdd: QuickAddViewModel = hiltViewModel()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
@@ -72,7 +84,8 @@ fun AppNavigation() {
                     ItemDetailScreen(
                         itemId = key.itemId,
                         onEdit = { backStack.open(ItemEdit(key.itemId)) },
-                        onReflect = { backStack.open(ItemReflection(key.itemId)) }
+                        onReflect = { backStack.open(ItemReflection(key.itemId)) },
+                        onDecide = { backStack.open(ItemDecision(key.itemId)) }
                     )
                 }
                 entry<ItemEdit> { key ->
@@ -80,6 +93,27 @@ fun AppNavigation() {
                         itemId = key.itemId,
                         // Only the edit screen itself closes, even if the save lands after another tap.
                         onDone = { if (backStack.lastOrNull() == key) backStack.removeLastOrNull() }
+                    )
+                }
+                entry<ItemDecision> { key ->
+                    DecisionScreen(
+                        itemId = key.itemId,
+                        onDecided = { outcome ->
+                            // Only the decision screen itself closes, even if the decision lands after another tap.
+                            if (backStack.lastOrNull() != key) return@DecisionScreen
+                            backStack.removeLastOrNull()
+                            if (outcome is DecisionOutcome.Waiting) return@DecisionScreen
+                            // Bought or decided against: the item has ended, so its detail closes too, and the
+                            // screen below says where it went.
+                            if (backStack.lastOrNull() == ItemDetail(key.itemId)) backStack.removeLastOrNull()
+                            val message = if (outcome is DecisionOutcome.Rejected) {
+                                R.string.decision_rejected
+                            } else {
+                                R.string.decision_bought
+                            }
+                            scope.launch { snackbarHostState.showSnackbar(resources.getString(message)) }
+                        },
+                        onReflect = { backStack.open(ItemReflection(key.itemId)) }
                     )
                 }
                 entry<ItemReflection> { key ->

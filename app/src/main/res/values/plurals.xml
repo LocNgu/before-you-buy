@@ -35,4 +35,28 @@
         <item quantity="one">Wanted for %d day</item>
         <item quantity="other">Wanted for %d days</item>
     </plurals>
+
+    <!-- Decision screen header: how long the item has been wanted (0 is decision_added_today). -->
+    <plurals name="decision_wanted_for_days">
+        <item quantity="one">You’ve wanted this for %d day</item>
+        <item quantity="other">You’ve wanted this for %d days</item>
+    </plurals>
+
+    <!-- "What else this money could do": other items that didn't fit the list. -->
+    <plurals name="decision_others_more">
+        <item quantity="one">and %d more on your list</item>
+        <item quantity="other">and %d more on your list</item>
+    </plurals>
+
+    <!-- Early purchase: what's left of the waiting period. -->
+    <plurals name="decision_early_days_left">
+        <item quantity="one">%d day of the waiting period is left.</item>
+        <item quantity="other">%d days of the waiting period are left.</item>
+    </plurals>
+
+    <!-- Wait step: one of the fixed options (7, 14, 30 days). -->
+    <plurals name="decision_wait_days">
+        <item quantity="one">In %d day</item>
+        <item quantity="other">In %d days</item>
+    </plurals>
 </resources>

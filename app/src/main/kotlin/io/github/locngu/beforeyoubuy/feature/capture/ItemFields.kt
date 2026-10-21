@@ -191,7 +191,7 @@ internal fun DetailFields(form: CaptureForm, today: LocalDate?, actions: ItemFor
         }
     }
     if (picking) {
-        TargetDatePicker(
+        DayPicker(
             initial = targetDate,
             earliest = today,
             onPicked = {
@@ -203,20 +203,25 @@ internal fun DetailFields(form: CaptureForm, today: LocalDate?, actions: ItemFor
     }
 }
 
+/** A date picker dialog offering the days from [earliest] to [latest] (either open when null). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TargetDatePicker(
+internal fun DayPicker(
     initial: LocalDate?,
     earliest: LocalDate?,
     onPicked: (LocalDate?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    latest: LocalDate? = null
 ) {
-    val selectable = remember(earliest) {
+    val selectable = remember(earliest, latest) {
         object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long) =
-                earliest == null || utcTimeMillis.toUtcDate() >= earliest
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val date = utcTimeMillis.toUtcDate()
+                return (earliest == null || date >= earliest) && (latest == null || date <= latest)
+            }
 
-            override fun isSelectableYear(year: Int) = earliest == null || year >= earliest.year
+            override fun isSelectableYear(year: Int) =
+                (earliest == null || year >= earliest.year) && (latest == null || year <= latest.year)
         }
     }
     val pickerState =
@@ -238,7 +243,7 @@ private fun TargetDatePicker(
 
 /** What's wrong with the typed price; null for a price that reads. */
 @Composable
-private fun priceErrorMessage(error: MoneyParseResult, currency: String?): String? {
+internal fun priceErrorMessage(error: MoneyParseResult, currency: String?): String? {
     val locale = currentLocale()
     return when (error) {
         is MoneyParseResult.Success -> null

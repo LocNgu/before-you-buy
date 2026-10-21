@@ -1,0 +1,251 @@
+package io.github.locngu.beforeyoubuy.feature.decision
+
+import app.cash.turbine.test
+import io.github.locngu.beforeyoubuy.core.domain.decision.BuyPath
+import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
+import io.github.locngu.beforeyoubuy.core.domain.item.Item
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
+import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
+import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
+import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
+import io.github.locngu.beforeyoubuy.testing.MutableClock
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class DecisionViewModelTest {
+    private val start = Instant.parse("2026-11-02T10:00:00Z")
+    private val today = LocalDate.of(2026, 11, 2)
+    private val clock = MutableClock(start)
+    private val items = FakeItemRepository()
+
+    private val reflection =
+        Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))
+
+    @Before
+    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+
+    @After
+    fun tearDown() = Dispatchers.resetMain()
+
+    /** A 1.200 € item added 30 days ago; its cooling-off ends [endsInHours] from now. */
+    private suspend fun add(
+        endsInHours: Long = -24,
+        kind: ItemKind = ItemKind.WANT,
+        name: String = "Camera",
+        reflected: Boolean = true
+    ): Item {
+        val id = items.add(
+            Item(
+                id = ItemId.NEW,
+                name = name,
+                price = Money(120_000, "EUR"),
+                addedAt = start.minus(Duration.ofDays(30)),
+                coolingEndsAt = start.plus(Duration.ofHours(endsInHours)),
+                kind = kind
+            )
+        )
+        if (reflected) items.reflect(id, reflection)
+        return items.stored.single { it.id == id }
+    }
+
+    private fun TestScope.viewModelFor(item: Item) = DecisionViewModel(item.id.value, items, clock).also {
+        it.uiState.launchIn(backgroundScope)
+        it.setLocale(Locale.GERMANY)
+    }
+
+    private fun stored(item: Item) = items.stored.single { it.id == item.id }
+
+    @Test
+    fun `a ready want offers buy and wait, with the exact price and today prefilled`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val item = add()
+            add(name = "Bike upgrade", reflected = false)
+            val viewModel = viewModelFor(item)
+
+            val state = viewModel.uiState.value
+            assertEquals(Stage.READY, state.overview!!.stage)
+            assertEquals(BuyPath.BUY, state.overview!!.buyPath)
+            assertEquals(listOf("Bike upgrade"), state.overview!!.others.map { it.name })
+            assertEquals("1200", state.form!!.price)
+            assertEquals(today, state.form!!.boughtOn)
+            assertEquals(today.plusDays(7), state.form!!.waitUntil)
+        }
+
+    @Test
+    fun `buy records the price paid and the date, then the screen closes`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add()
+        val viewModel = viewModelFor(item)
+
+        viewModel.outcome.test {
+            viewModel.onBuy()
+            assertEquals(DecisionStep.BUY, viewModel.uiState.value.step)
+            viewModel.onPriceChange("1100")
+            viewModel.confirm()
+
+            assertEquals(DecisionOutcome.Bought, awaitItem())
+        }
+        val decision = items.decisions.single()
+        assertEquals(DecisionType.BUY, decision.type)
+        assertEquals(Money(110_000, "EUR"), decision.actualPrice)
+        assertEquals(start, decision.decidedAt)
+        assertEquals(ItemStatus.PURCHASED, stored(item).status)
+        // While the screen closes it keeps showing the item, not "gone".
+        assertFalse(viewModel.uiState.value.gone)
+    }
+
+    @Test
+    fun `a want that isn't ready offers no plain buy and no wait, only reject and buying early`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val item = add(endsInHours = 24 * 5)
+            val viewModel = viewModelFor(item)
+            assertEquals(BuyPath.EARLY, viewModel.uiState.value.overview!!.buyPath)
+
+            viewModel.onWait()
+            assertEquals(DecisionStep.OVERVIEW, viewModel.uiState.value.step)
+
+            viewModel.onBuy()
+            assertEquals(DecisionStep.BUY, viewModel.uiState.value.step)
+            assertEquals(BuyPath.EARLY, viewModel.uiState.value.buyPath)
+        }
+
+    @Test
+    fun `buying early needs a reason, and is recorded as early with it`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 24 * 5)
+        val viewModel = viewModelFor(item)
+        viewModel.onBuy()
+
+        viewModel.confirm()
+        assertTrue(viewModel.uiState.value.purchase!!.reasonMissing)
+        assertTrue(items.decisions.isEmpty())
+
+        viewModel.outcome.test {
+            viewModel.onEarlyReasonChange("Old one broke")
+            assertTrue(viewModel.uiState.value.purchase!!.isValid)
+            viewModel.confirm()
+            assertEquals(DecisionOutcome.Bought, awaitItem())
+        }
+        val decision = items.decisions.single()
+        assertEquals(DecisionType.BUY_EARLY, decision.type)
+        assertEquals("Old one broke", decision.earlyReason)
+    }
+
+    @Test
+    fun `an early purchase stays early when cooling off ends while typing`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 1)
+        val viewModel = viewModelFor(item)
+        viewModel.onBuy()
+
+        clock.advance(Duration.ofHours(2))
+        advanceTimeBy(Duration.ofHours(2).toMillis())
+        assertEquals(BuyPath.BUY, viewModel.uiState.value.overview!!.buyPath)
+        assertEquals(BuyPath.EARLY, viewModel.uiState.value.buyPath)
+
+        viewModel.onEarlyReasonChange("Gift")
+        viewModel.confirm()
+
+        assertEquals(DecisionType.BUY_EARLY, items.decisions.single().type)
+    }
+
+    @Test
+    fun `a need is bought as a need`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 24 * 5, kind = ItemKind.NEED, reflected = false)
+        val viewModel = viewModelFor(item)
+        assertEquals(BuyPath.BUY_NEED, viewModel.uiState.value.overview!!.buyPath)
+
+        viewModel.onBuy()
+        viewModel.confirm()
+
+        assertEquals(DecisionType.BUY_NEED, items.decisions.single().type)
+        assertEquals(ItemStatus.PURCHASED, stored(item).status)
+    }
+
+    @Test
+    fun `reject records the optional note and says so`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 24 * 5)
+        val viewModel = viewModelFor(item)
+
+        viewModel.outcome.test {
+            viewModel.onReject()
+            viewModel.onNoteChange(" Phone is enough ")
+            viewModel.confirm()
+            assertEquals(DecisionOutcome.Rejected, awaitItem())
+        }
+        val decision = items.decisions.single()
+        assertEquals(DecisionType.REJECT, decision.type)
+        assertEquals("Phone is enough", decision.note)
+        assertEquals(ItemStatus.REJECTED, stored(item).status)
+    }
+
+    @Test
+    fun `wait sets the re-check date and hides the item from ready until then`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add()
+        val viewModel = viewModelFor(item)
+
+        viewModel.outcome.test {
+            viewModel.onWait()
+            viewModel.onWaitUntilChange(today.plusDays(14))
+            viewModel.confirm()
+            assertEquals(DecisionOutcome.Waiting(today.plusDays(14)), awaitItem())
+        }
+        val waited = stored(item)
+        assertEquals(ItemStatus.ACTIVE, waited.status)
+        assertEquals(Instant.parse("2026-11-16T00:00:00Z"), waited.recheckAt)
+        val reflections = items.observeReflections().first()
+        val groups = wishlistOf(listOf(waited), reflections, clock.instant(), ZoneOffset.UTC)
+        assertTrue(groups.single().waiting)
+        val due = wishlistOf(listOf(waited), reflections, waited.recheckAt!!, ZoneOffset.UTC)
+        assertFalse(due.single().waiting)
+    }
+
+    @Test
+    fun `a decision that raced with another change writes nothing and says so`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add()
+        val viewModel = viewModelFor(item)
+        viewModel.onReject()
+
+        viewModel.message.test {
+            items.conflictOnNextDecision = true
+            viewModel.confirm()
+            assertEquals(DecisionMessage.CHANGED_MEANWHILE, awaitItem())
+        }
+        assertTrue(items.decisions.isEmpty())
+        assertEquals(DecisionStep.OVERVIEW, viewModel.uiState.value.step)
+    }
+
+    @Test
+    fun `an item ended elsewhere shows as gone`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add()
+        val viewModel = viewModelFor(item)
+
+        items.replace(item.copy(status = ItemStatus.REJECTED))
+
+        assertTrue(viewModel.uiState.value.gone)
+        assertNull(viewModel.uiState.value.overview)
+    }
+}

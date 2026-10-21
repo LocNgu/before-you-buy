@@ -153,4 +153,54 @@
     <string name="item_edit_photo_change">Foto ändern</string>
     <string name="item_edit_photo_remove">Foto entfernen</string>
     <string name="item_edit_photo_failed">Dieses Foto konnte nicht hinzugefügt werden. Versuch ein anderes.</string>
+
+    <!-- Wunschliste und Artikeldetail: ein bereiter Artikel nach „Warten“, bis zum gewählten Datum (Issue #18). -->
+    <string name="wishlist_waiting">Später noch mal ansehen</string>
+    <string name="stage_waiting">Wartet</string>
+    <string name="wishlist_look_again_on">Wieder ansehen am %1$s</string>
+
+    <string name="item_decide">Entscheiden</string>
+    <string name="item_decide_now">Jetzt entscheiden</string>
+
+    <!-- Entscheidung (Brief §6.5, Issue #18). -->
+    <string name="decision_title">Entscheiden</string>
+    <string name="decision_back">Zurück</string>
+    <string name="decision_added_today">Heute hinzugefügt</string>
+    <string name="decision_cooling_done">Wartezeit abgeschlossen</string>
+    <string name="decision_recheck_on">Du wolltest es am %1$s wieder ansehen</string>
+    <string name="decision_no_reasons">Noch keine Gründe notiert.</string>
+    <string name="decision_answer_questions">Fragen beantworten</string>
+    <string name="decision_others_title">Was du sonst mit dem Geld machen könntest</string>
+    <string name="decision_question">Willst du dieses Geld immer noch dafür ausgeben?</string>
+    <string name="decision_buy">Kaufen</string>
+    <string name="decision_reject">Nicht kaufen – %1$s behalten</string>
+    <string name="decision_wait">Warten</string>
+    <string name="decision_early">Vorzeitig entscheiden …</string>
+
+    <string name="decision_buy_title">Kauf festhalten</string>
+    <string name="decision_price_paid">Bezahlter Preis</string>
+    <string name="decision_bought_on">Gekauft am %1$s</string>
+    <string name="decision_buy_confirm">Kaufen</string>
+
+    <string name="decision_early_title">Kaufen, bevor es bereit ist?</string>
+    <string name="decision_early_wait_over">Die Wartezeit ist vorbei, aber deine Gründe sind noch nicht vollständig.</string>
+    <string name="decision_early_reasons_against">Deine Gründe dagegen</string>
+    <string name="decision_early_no_reasons_against">Du hast noch keine Gründe dagegen notiert.</string>
+    <string name="decision_early_reason">Warum jetzt kaufen?</string>
+    <string name="decision_early_reason_help">Nötig für einen vorzeitigen Kauf. Er wird mit dem Kauf gespeichert.</string>
+    <string name="decision_early_confirm">Trotzdem kaufen</string>
+
+    <string name="decision_wait_title">Wann willst du es dir wieder ansehen?</string>
+    <string name="decision_wait_explained">Bis dahin wird es nicht als bereit angezeigt.</string>
+    <string name="decision_wait_pick">Datum wählen</string>
+    <string name="decision_wait_on">Am %1$s</string>
+    <string name="decision_wait_confirm">Warten bis %1$s</string>
+
+    <string name="decision_reject_title">Nicht kaufen</string>
+    <string name="decision_reject_explained">Es kommt zu „Dagegen entschieden“.</string>
+    <string name="decision_reject_note">Warum nicht? (optional)</string>
+    <string name="decision_reject_confirm">Nicht kaufen</string>
+
+    <string name="decision_rejected">Alles klar. Es ist jetzt unter „Dagegen entschieden“.</string>
+    <string name="decision_bought">Alles klar. Es ist jetzt unter „Gekauft“.</string>
 </resources>

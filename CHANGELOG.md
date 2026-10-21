@@ -7,6 +7,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 ### Added
 
 - Reflection: tap "Start" on an item's "Why do you want this?" card to answer a few questions, one at a time: why you want it, how often you'll use it and what speaks against it (add as many reasons as you like), then five optional ones you can skip. Answers are kept as you type, so you can leave at any point and continue later. Once the first three are answered, the item can become Ready when its waiting period ends. Change them anytime with "Edit answers"; that never changes the waiting period. Needs don't need reasons, but you can add some with "Add your reasons".
+- Decide: tap "Decide" on an item that's ready (or a need) to see your reasons, how long you've wanted it and what else the money could go to, then choose Buy, "Don't buy — keep 1,200 €" or Wait. Buy asks for the price you paid and the date. Wait lets you look again in 7, 14 or 30 days or on a date you pick; until then the item is under "Looking again later" on the wishlist. Not buying asks an optional "Why not?" and moves the item to "Decided against".
+- Decide early: before an item is ready, "Decide now" offers not buying, or "Decide early…", which shows the days left and your reasons against again and asks why you want to buy it now before you can confirm. Early purchases are recorded as such.
 
 ## [0.3.0] - 2026-10-19
 
