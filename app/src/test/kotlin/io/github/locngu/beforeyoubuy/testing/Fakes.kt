@@ -20,12 +20,14 @@ import java.time.ZoneOffset
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /** Keeps added items in memory. Only what view model tests use so far; the rest throws. */
 class FakeItemRepository : ItemRepository {
     private val items = MutableStateFlow(emptyList<Item>())
     private val reflections = MutableStateFlow(emptyMap<ItemId, Reflection>())
+    private val decisionsById = MutableStateFlow(emptyMap<ItemId, List<Decision>>())
 
     /** Every stored item, in the order added. */
     val stored: List<Item> get() = items.value
@@ -71,7 +73,15 @@ class FakeItemRepository : ItemRepository {
         return true
     }
 
-    override fun observeHistory(status: ItemStatus): Flow<List<HistoryEntry>> = TODO("Not needed yet")
+    /** Like the real one: ended items with the decision appended last, most recently decided first. */
+    override fun observeHistory(status: ItemStatus): Flow<List<HistoryEntry>> {
+        require(status != ItemStatus.ACTIVE) { "History holds purchased and rejected items only" }
+        return combine(items, decisionsById) { all, decisions ->
+            all.filter { it.status == status }
+                .mapNotNull { item -> decisions[item.id]?.lastOrNull()?.let { HistoryEntry(item, it) } }
+                .sortedByDescending { it.decision.decidedAt }
+        }
+    }
 
     override fun observeReflection(id: ItemId): Flow<Reflection?> = reflections.map { it[id] }
 
@@ -87,15 +97,33 @@ class FakeItemRepository : ItemRepository {
         items.value = items.value.map { if (it.id == item.id) item else it }
     }
 
-    /** Deletes an item with its answers, as the user may (brief §5). */
+    /** Deletes an item with its answers and decisions, as the user may (brief §5). */
     fun delete(id: ItemId) {
         items.value = items.value.filterNot { it.id == id }
         reflections.value -= id
+        decisionsById.value -= id
+    }
+
+    /** Items deleted with [delete] (the repository's), in order. */
+    val deleted = mutableListOf<Item>()
+
+    /** Makes the next [delete] find the item changed, as if it was changed elsewhere between reading and deleting. */
+    var conflictOnNextDelete = false
+
+    /** Compare-and-set, like the real one: deletes an ended item only if it's stored as [current]. */
+    override suspend fun delete(current: Item): Boolean {
+        require(current.status != ItemStatus.ACTIVE) { "Only ended items can be deleted" }
+        if (conflictOnNextDelete) {
+            conflictOnNextDelete = false
+            return false
+        }
+        if (items.value.none { it == current }) return false
+        deleted += current
+        delete(current.id)
+        return true
     }
 
     override suspend fun imageRefs(): Set<String> = items.value.mapNotNullTo(mutableSetOf()) { it.imageRef }
-
-    private val decisionsById = MutableStateFlow(emptyMap<ItemId, List<Decision>>())
 
     /** Every recorded decision, in the order recorded. */
     val decisions = mutableListOf<Decision>()

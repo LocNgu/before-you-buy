@@ -18,6 +18,8 @@ import io.github.locngu.beforeyoubuy.feature.capture.QuickAddHost
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddViewModel
 import io.github.locngu.beforeyoubuy.feature.decision.DecisionOutcome
 import io.github.locngu.beforeyoubuy.feature.decision.DecisionScreen
+import io.github.locngu.beforeyoubuy.feature.history.HistoryItemScreen
+import io.github.locngu.beforeyoubuy.feature.history.HistoryScreen
 import io.github.locngu.beforeyoubuy.feature.home.HomeScreen
 import io.github.locngu.beforeyoubuy.feature.reflection.ReflectionScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailScreen
@@ -47,6 +49,14 @@ data class ItemReflection(val itemId: Long) : NavKey
 @Serializable
 data class ItemDecision(val itemId: Long) : NavKey
 
+/** "Bought" and "Decided against" (brief §6.6). */
+@Serializable
+data object History : NavKey
+
+/** One purchased or decided-against item, read-only (brief §6.6). */
+@Serializable
+data class HistoryItem(val itemId: Long) : NavKey
+
 @Composable
 fun AppNavigation() {
     val backStack = rememberNavBackStack(Home)
@@ -70,6 +80,7 @@ fun AppNavigation() {
                     HomeScreen(
                         onAdd = { quickAdd.open() },
                         onOpenWishlist = { backStack.open(Wishlist) },
+                        onOpenHistory = { backStack.open(History) },
                         snackbarHostState = snackbarHostState
                     )
                 }
@@ -114,6 +125,22 @@ fun AppNavigation() {
                             scope.launch { snackbarHostState.showSnackbar(resources.getString(message)) }
                         },
                         onReflect = { backStack.open(ItemReflection(key.itemId)) }
+                    )
+                }
+                entry<History> {
+                    HistoryScreen(onOpenItem = { backStack.open(HistoryItem(it.value)) })
+                }
+                entry<HistoryItem> { key ->
+                    HistoryItemScreen(
+                        itemId = key.itemId,
+                        // As for edit: only the entry itself closes, even if the write lands after another tap.
+                        onDeleted = { if (backStack.lastOrNull() == key) backStack.removeLastOrNull() },
+                        onWantedAgain = { id ->
+                            if (backStack.lastOrNull() != key) return@HistoryItemScreen
+                            // The entry stays in history; the new item opens in its place, so back leads to history.
+                            backStack.removeLastOrNull()
+                            backStack.open(ItemDetail(id.value))
+                        }
                     )
                 }
                 entry<ItemReflection> { key ->

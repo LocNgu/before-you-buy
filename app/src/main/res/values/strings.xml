@@ -215,4 +215,46 @@
     <!-- Snackbar once decided. Neutral: no "you saved", no celebration (ADR-0012). -->
     <string name="decision_rejected">Got it. It’s in “Decided against”.</string>
     <string name="decision_bought">Got it. It’s in “Bought”.</string>
+
+    <!-- History (brief §6.6, issue #19). Neutral, factual: no "saved", no streaks or praise (ADR-0012). -->
+    <string name="history_open">History</string>
+    <string name="history_title">History</string>
+    <string name="history_tab_bought">Bought</string>
+    <string name="history_tab_decided_against">Decided against</string>
+    <string name="history_period_all">All</string>
+    <string name="history_period_this_month">This month</string>
+    <string name="history_period_this_year">This year</string>
+    <string name="history_bought_empty">Nothing bought yet</string>
+    <string name="history_bought_empty_month">Nothing bought this month</string>
+    <string name="history_bought_empty_year">Nothing bought this year</string>
+    <string name="history_bought_empty_body">What you buy from your wishlist is listed here.</string>
+    <string name="history_decided_against_empty">Nothing decided against yet</string>
+    <string name="history_decided_against_empty_month">Nothing decided against this month</string>
+    <string name="history_decided_against_empty_year">Nothing decided against this year</string>
+    <string name="history_decided_against_empty_body">What you decide not to buy is listed here.</string>
+    <!-- %1$s: the sum of the prices, e.g. 3,420 €. A plain statement, never "saved" (ADR-0012). -->
+    <string name="history_decided_against_total">You decided against %1$s of purchases</string>
+    <string name="history_decided_against_total_month">This month you decided against %1$s of purchases</string>
+    <string name="history_decided_against_total_year">This year you decided against %1$s of purchases</string>
+    <!-- %1$s: a date. -->
+    <string name="history_bought_on">Bought on %1$s</string>
+    <string name="history_decided_on">Decided on %1$s</string>
+    <!-- %1$s: the price the item had on the wishlist, shown only when it differs from what was paid. -->
+    <string name="history_wishlist_price">Wishlist price: %1$s</string>
+    <string name="history_considered_same_day">Bought on the day it was added</string>
+    <string name="history_flag_early">Bought early</string>
+    <string name="history_flag_need">Need</string>
+    <string name="history_item_gone">This entry is no longer in your history</string>
+    <string name="history_early_reason">Why it was bought early</string>
+    <string name="history_note">Why not</string>
+    <string name="history_reasons_title">Your reasons at the time</string>
+    <string name="history_want_again">Want it again?</string>
+    <string name="history_want_again_title">Put it back on your wishlist?</string>
+    <string name="history_want_again_body">It’s added as a new item and waits again from today. This entry stays in your history.</string>
+    <string name="history_want_again_confirm">Add to wishlist</string>
+    <string name="history_delete">Delete from history</string>
+    <string name="history_delete_title">Delete from history?</string>
+    <!-- %1$s: the item's name. -->
+    <string name="history_delete_body">“%1$s” and your answers about it are deleted for good. This can’t be undone.</string>
+    <string name="history_delete_confirm">Delete</string>
 </resources>

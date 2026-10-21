@@ -9,6 +9,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -22,19 +23,21 @@ import io.github.locngu.beforeyoubuy.ui.components.SecondaryButton
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 
 /**
- * Home. The dashboard itself is still a placeholder (#21); for now it links to the wishlist. Quick add is hosted by
+ * Home. The dashboard itself is still a placeholder (#21); for now it links to the wishlist and history. Quick add is hosted by
  * the navigation, so this only asks to open it with [onAdd].
  */
 @Composable
 fun HomeScreen(
     onAdd: () -> Unit,
     onOpenWishlist: () -> Unit,
+    onOpenHistory: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
     HomeContent(
         onAdd = onAdd,
         onOpenWishlist = onOpenWishlist,
+        onOpenHistory = onOpenHistory,
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
@@ -45,6 +48,7 @@ fun HomeScreen(
 fun HomeContent(
     onAdd: () -> Unit,
     onOpenWishlist: () -> Unit,
+    onOpenHistory: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -65,7 +69,12 @@ fun HomeContent(
             EmptyState(
                 title = stringResource(R.string.home_empty_title),
                 body = stringResource(R.string.home_empty_body),
-                action = { SecondaryButton(text = stringResource(R.string.wishlist_open), onClick = onOpenWishlist) }
+                action = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        SecondaryButton(text = stringResource(R.string.wishlist_open), onClick = onOpenWishlist)
+                        TextButton(onClick = onOpenHistory) { Text(stringResource(R.string.history_open)) }
+                    }
+                }
             )
         }
     }
@@ -75,6 +84,11 @@ fun HomeContent(
 @Composable
 private fun HomeContentPreview() {
     BeforeYouBuyTheme {
-        HomeContent(onAdd = {}, onOpenWishlist = {}, snackbarHostState = remember { SnackbarHostState() })
+        HomeContent(
+            onAdd = {},
+            onOpenWishlist = {},
+            onOpenHistory = {},
+            snackbarHostState = remember { SnackbarHostState() }
+        )
     }
 }

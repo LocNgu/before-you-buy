@@ -18,6 +18,10 @@ internal interface ItemDao {
     @Update
     suspend fun update(item: ItemEntity): Int
 
+    /** Deletes the item; its reflection and decisions go with it (ON DELETE CASCADE). */
+    @Query("DELETE FROM items WHERE id = :id")
+    suspend fun delete(id: Long): Int
+
     @Query("SELECT * FROM items WHERE id = :id")
     suspend fun getById(id: Long): ItemEntity?
 
@@ -55,7 +59,8 @@ internal interface ItemDao {
             d.decided_at AS decision_decided_at, d.source AS decision_source,
             d.actual_price_minor AS decision_actual_price_minor,
             d.actual_price_currency AS decision_actual_price_currency,
-            d.early_reason AS decision_early_reason, d.wait_until AS decision_wait_until
+            d.early_reason AS decision_early_reason, d.wait_until AS decision_wait_until,
+            d.note AS decision_note
         FROM items
         JOIN decisions d ON d.id = (SELECT MAX(id) FROM decisions WHERE item_id = items.id)
         WHERE items.status = :status

@@ -393,7 +393,7 @@ private fun ReflectPrompt(started: Boolean, onReflect: () -> Unit) {
 
 /** Each answer that was given, labelled, in the order the questions are asked (brief §4.3). */
 @Composable
-private fun answersOf(reflection: Reflection): List<Pair<String, String>> = buildList {
+internal fun answersOf(reflection: Reflection): List<Pair<String, String>> = buildList {
     fun add(label: String, value: String?) {
         if (!value.isNullOrBlank()) add(label to value.trim())
     }
@@ -424,7 +424,7 @@ private fun Details(detail: ItemDetail) {
 }
 
 @Composable
-private fun Answer(label: String, value: String) {
+internal fun Answer(label: String, value: String) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         SecondaryText(label, style = MaterialTheme.typography.labelLarge)
         Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)

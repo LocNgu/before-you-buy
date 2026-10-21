@@ -203,4 +203,42 @@
 
     <string name="decision_rejected">Alles klar. Es ist jetzt unter „Dagegen entschieden“.</string>
     <string name="decision_bought">Alles klar. Es ist jetzt unter „Gekauft“.</string>
+
+    <!-- Verlauf (brief §6.6, issue #19). Neutral, sachlich: kein „gespart“, keine Serien oder Lob (ADR-0012). -->
+    <string name="history_open">Verlauf</string>
+    <string name="history_title">Verlauf</string>
+    <string name="history_tab_bought">Gekauft</string>
+    <string name="history_tab_decided_against">Dagegen entschieden</string>
+    <string name="history_period_all">Alle</string>
+    <string name="history_period_this_month">Dieser Monat</string>
+    <string name="history_period_this_year">Dieses Jahr</string>
+    <string name="history_bought_empty">Noch nichts gekauft</string>
+    <string name="history_bought_empty_month">Diesen Monat nichts gekauft</string>
+    <string name="history_bought_empty_year">Dieses Jahr nichts gekauft</string>
+    <string name="history_bought_empty_body">Was du von deiner Wunschliste kaufst, steht hier.</string>
+    <string name="history_decided_against_empty">Noch nichts dagegen entschieden</string>
+    <string name="history_decided_against_empty_month">Diesen Monat nichts dagegen entschieden</string>
+    <string name="history_decided_against_empty_year">Dieses Jahr nichts dagegen entschieden</string>
+    <string name="history_decided_against_empty_body">Wogegen du dich entscheidest, steht hier.</string>
+    <string name="history_decided_against_total">Du hast dich gegen Käufe über %1$s entschieden</string>
+    <string name="history_decided_against_total_month">Diesen Monat hast du dich gegen Käufe über %1$s entschieden</string>
+    <string name="history_decided_against_total_year">Dieses Jahr hast du dich gegen Käufe über %1$s entschieden</string>
+    <string name="history_bought_on">Gekauft am %1$s</string>
+    <string name="history_decided_on">Entschieden am %1$s</string>
+    <string name="history_wishlist_price">Preis auf der Wunschliste: %1$s</string>
+    <string name="history_considered_same_day">Am selben Tag gekauft, an dem es dazukam</string>
+    <string name="history_flag_early">Vorzeitig gekauft</string>
+    <string name="history_flag_need">Notwendig</string>
+    <string name="history_item_gone">Dieser Eintrag ist nicht mehr in deinem Verlauf</string>
+    <string name="history_early_reason">Warum vorzeitig gekauft</string>
+    <string name="history_note">Warum nicht</string>
+    <string name="history_reasons_title">Deine Gründe damals</string>
+    <string name="history_want_again">Wieder haben wollen?</string>
+    <string name="history_want_again_title">Wieder auf die Wunschliste?</string>
+    <string name="history_want_again_body">Es kommt als neuer Eintrag dazu und wartet ab heute wieder. Dieser Eintrag bleibt in deinem Verlauf.</string>
+    <string name="history_want_again_confirm">Zur Wunschliste</string>
+    <string name="history_delete">Aus dem Verlauf löschen</string>
+    <string name="history_delete_title">Aus dem Verlauf löschen?</string>
+    <string name="history_delete_body">„%1$s“ und deine Antworten dazu werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.</string>
+    <string name="history_delete_confirm">Löschen</string>
 </resources>

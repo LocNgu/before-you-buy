@@ -55,4 +55,9 @@
         <item quantity="one">In %d Tag</item>
         <item quantity="other">In %d Tagen</item>
     </plurals>
+
+    <plurals name="history_considered_for_days">
+        <item quantity="one">%d Tag überlegt</item>
+        <item quantity="other">%d Tage überlegt</item>
+    </plurals>
 </resources>
