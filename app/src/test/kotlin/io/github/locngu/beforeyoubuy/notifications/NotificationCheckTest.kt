@@ -72,34 +72,35 @@ class NotificationCheckTest {
     private val Notification.text get() = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
 
     @Test
-    fun `one item that finished waiting shows its name, how long it was wanted, Still want it and Let it go`() = runTest {
-        val camera = add("Camera")
+    fun `one item that finished waiting shows its name, how long it was wanted, Still want it and Let it go`() =
+        runTest {
+            val camera = add("Camera")
 
-        check.run()
+            check.run()
 
-        val notification = posted().single()
-        assertEquals("Camera", notification.title)
-        assertEquals("You’ve wanted Camera for 32 days. Your waiting period is over.", notification.text)
-        assertEquals(Notifier.CHANNEL_WAITING_PERIODS, notification.channelId)
-        assertEquals(listOf("Still want it", "Let it go"), notification.actions.map { it.title.toString() })
-        // "Let it go" never opens the app; "Still want it" and a tap do.
-        assertTrue(shadowOf(notification.actions[1].actionIntent).isBroadcastIntent)
-        assertTrue(shadowOf(notification.actions[0].actionIntent).isActivityIntent)
-        assertTrue(shadowOf(notification.contentIntent).isActivityIntent)
-        assertEquals(
-            NotificationTap(NotificationTarget.DECISION, camera, notification.id()),
-            NotificationIntents.tapOf(shadowOf(notification.actions[0].actionIntent).savedIntent)
-        )
-        assertEquals(
-            NotificationTap(NotificationTarget.ITEM, camera, notification.id()),
-            NotificationIntents.tapOf(shadowOf(notification.contentIntent).savedIntent)
-        )
-        assertEquals(
-            LetItGoRequest(camera, notification.id()),
-            NotificationIntents.letItGoOf(shadowOf(notification.actions[1].actionIntent).savedIntent)
-        )
-        assertEquals(mapOf(camera to ItemNotifications(waitingPeriodOverAt = clock.instant())), log.records)
-    }
+            val notification = posted().single()
+            assertEquals("Camera", notification.title)
+            assertEquals("You’ve wanted Camera for 32 days. Your waiting period is over.", notification.text)
+            assertEquals(Notifier.CHANNEL_WAITING_PERIODS, notification.channelId)
+            assertEquals(listOf("Still want it", "Let it go"), notification.actions.map { it.title.toString() })
+            // "Let it go" never opens the app; "Still want it" and a tap do.
+            assertTrue(shadowOf(notification.actions[1].actionIntent).isBroadcastIntent)
+            assertTrue(shadowOf(notification.actions[0].actionIntent).isActivityIntent)
+            assertTrue(shadowOf(notification.contentIntent).isActivityIntent)
+            assertEquals(
+                NotificationTap(NotificationTarget.DECISION, camera, notification.id()),
+                NotificationIntents.tapOf(shadowOf(notification.actions[0].actionIntent).savedIntent)
+            )
+            assertEquals(
+                NotificationTap(NotificationTarget.ITEM, camera, notification.id()),
+                NotificationIntents.tapOf(shadowOf(notification.contentIntent).savedIntent)
+            )
+            assertEquals(
+                LetItGoRequest(camera, notification.id()),
+                NotificationIntents.letItGoOf(shadowOf(notification.actions[1].actionIntent).savedIntent)
+            )
+            assertEquals(mapOf(camera to ItemNotifications(waitingPeriodOverAt = clock.instant())), log.records)
+        }
 
     @Test
     @Config(qualifiers = "de")

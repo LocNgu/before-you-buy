@@ -41,7 +41,9 @@ internal object NotificationIntents {
             .putExtra(EXTRA_TARGET, target.name)
             .putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             .apply { if (itemId != null) putExtra(EXTRA_ITEM_ID, itemId.value) }
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
 
     /** Goes to [LetItGoReceiver]; nothing opens. */
     fun letItGo(context: Context, itemId: ItemId, notificationId: Int): Intent =

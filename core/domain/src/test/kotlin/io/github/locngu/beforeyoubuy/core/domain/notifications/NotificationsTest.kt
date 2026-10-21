@@ -89,12 +89,16 @@ class NotificationsTest {
     @Test
     fun `a cooling-off end extended after the notification makes the item due again once the new end passes`() {
         // Notified on 1 Nov; then a price edit moved the end to 10 Nov.
-        val notified = mapOf(ItemId(1) to ItemNotifications(waitingPeriodOverAt = Instant.parse("2026-11-01T10:00:00Z")))
+        val notified =
+            mapOf(ItemId(1) to ItemNotifications(waitingPeriodOverAt = Instant.parse("2026-11-01T10:00:00Z")))
         val extended = wish(1, endsAt = Instant.parse("2026-11-10T10:00:00Z"))
         val reflected = mapOf(ItemId(1) to COMPLETE_REFLECTION)
 
         assertNull(plan(listOf(extended), Instant.parse("2026-11-09T10:00:00Z"), reflected, notified))
-        assertEquals(listOf(1L), plan(listOf(extended), Instant.parse("2026-11-10T11:00:00Z"), reflected, notified).ids())
+        assertEquals(
+            listOf(1L),
+            plan(listOf(extended), Instant.parse("2026-11-10T11:00:00Z"), reflected, notified).ids()
+        )
     }
 
     @Test
@@ -230,10 +234,14 @@ class NotificationsTest {
 
     @Test
     fun `at most one notification a calendar day, whatever item it was about`() {
-        val sentToday = mapOf(ItemId(9) to ItemNotifications(reflectionNudgedAt = Instant.parse("2026-11-02T00:01:00Z")))
+        val sentToday =
+            mapOf(ItemId(9) to ItemNotifications(reflectionNudgedAt = Instant.parse("2026-11-02T00:01:00Z")))
 
         assertNull(plan(listOf(wish(1)), Instant.parse("2026-11-02T23:59:00Z"), notified = sentToday))
-        assertEquals(listOf(1L), plan(listOf(wish(1)), Instant.parse("2026-11-03T00:00:00Z"), notified = sentToday).ids())
+        assertEquals(
+            listOf(1L),
+            plan(listOf(wish(1)), Instant.parse("2026-11-03T00:00:00Z"), notified = sentToday).ids()
+        )
     }
 
     @Test

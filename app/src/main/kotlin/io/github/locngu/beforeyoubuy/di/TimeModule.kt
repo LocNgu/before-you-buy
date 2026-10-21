@@ -15,7 +15,10 @@ import java.time.ZoneId
 object TimeModule {
     /** [offset] is [ClockOffset.None] in release builds; debug builds can move the app's time forward (#20). */
     @Provides
-    fun provideClock(offset: ClockOffset): Clock = if (offset == ClockOffset.None) SystemZoneClock else OffsetClock(offset)
+    fun provideClock(offset: ClockOffset): Clock = when (offset) {
+        ClockOffset.None -> SystemZoneClock
+        else -> OffsetClock(offset)
+    }
 }
 
 /**

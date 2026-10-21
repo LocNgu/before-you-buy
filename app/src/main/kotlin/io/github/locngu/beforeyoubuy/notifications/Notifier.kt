@@ -110,7 +110,9 @@ class Notifier @Inject constructor(@param:ApplicationContext private val context
                     )
                     setContentText(names)
                     setStyle(
-                        NotificationCompat.InboxStyle().also { style -> plan.items.forEach { style.addLine(it.item.name) } }
+                        NotificationCompat.InboxStyle().also { style ->
+                            plan.items.forEach { style.addLine(it.item.name) }
+                        }
                     )
                     setContentIntent(open(NotificationTarget.WISHLIST, null, id, ACTION_CONTENT))
                 }
@@ -126,7 +128,11 @@ class Notifier @Inject constructor(@param:ApplicationContext private val context
                 else -> {
                     val text = context.getString(R.string.notification_nudge_digest_text, names)
                     setContentTitle(
-                        resources.getQuantityString(R.plurals.notification_nudge_digest_title, plan.items.size, plan.items.size)
+                        resources.getQuantityString(
+                            R.plurals.notification_nudge_digest_title,
+                            plan.items.size,
+                            plan.items.size
+                        )
                     )
                     setContentText(text)
                     setStyle(NotificationCompat.BigTextStyle().bigText(text))

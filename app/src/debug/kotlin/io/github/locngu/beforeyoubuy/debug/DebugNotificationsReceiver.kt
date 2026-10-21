@@ -26,9 +26,14 @@ class DebugNotificationsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val offset = DebugClockOffset(context)
         when (intent.action) {
-            ACTION_ADVANCE_CLOCK -> offset.set(offset.get().plus(Duration.ofDays(intent.getIntExtra(EXTRA_DAYS, 1).toLong())))
+            ACTION_ADVANCE_CLOCK -> offset.set(
+                offset.get().plus(Duration.ofDays(intent.getIntExtra(EXTRA_DAYS, 1).toLong()))
+            )
+
             ACTION_RESET_CLOCK -> offset.set(Duration.ZERO)
+
             ACTION_RUN_CHECK -> Unit
+
             else -> return
         }
         Log.i(TAG, "The app's time is ${offset.get().toDays()} days ahead")

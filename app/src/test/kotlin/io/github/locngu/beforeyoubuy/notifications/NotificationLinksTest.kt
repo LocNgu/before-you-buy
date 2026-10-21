@@ -34,7 +34,8 @@ class NotificationLinksTest {
 
     @Test
     fun `every target opens on top of the screens that lead there`() {
-        fun stack(target: NotificationTarget, id: Long? = 3) = backStackFor(NotificationTap(target, id?.let(::ItemId), 1))
+        fun stack(target: NotificationTarget, id: Long? = 3) =
+            backStackFor(NotificationTap(target, id?.let(::ItemId), 1))
 
         assertEquals(listOf(Home, Wishlist), stack(NotificationTarget.WISHLIST, id = null))
         assertEquals(listOf(Home, Wishlist, ItemDetail(3)), stack(NotificationTarget.ITEM))
@@ -55,7 +56,9 @@ class NotificationLinksTest {
         assertNull(NotificationIntents.tapOf(null))
         // An item target needs its item.
         assertNull(NotificationIntents.tapOf(NotificationIntents.open(context, NotificationTarget.ITEM, null, 42)))
-        assertNull(NotificationIntents.letItGoOf(NotificationIntents.open(context, NotificationTarget.ITEM, ItemId(3), 42)))
+        assertNull(
+            NotificationIntents.letItGoOf(NotificationIntents.open(context, NotificationTarget.ITEM, ItemId(3), 42))
+        )
     }
 
     @Test

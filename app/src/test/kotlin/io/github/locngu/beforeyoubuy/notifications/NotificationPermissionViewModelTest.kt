@@ -11,6 +11,8 @@ import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.plus
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -42,10 +44,15 @@ class NotificationPermissionViewModelTest {
         )
     )
 
+    /** Keeps the state collected, as the screen does; unconfined, so it's current after every write. */
+    private fun TestScope.subscribe(viewModel: NotificationPermissionViewModel) {
+        viewModel.shouldAsk.launchIn(backgroundScope + UnconfinedTestDispatcher(testScheduler))
+    }
+
     @Test
     fun `asks once the first item is there, not before`() = runTest {
         val viewModel = NotificationPermissionViewModel(items, preferences)
-        viewModel.shouldAsk.launchIn(backgroundScope)
+        subscribe(viewModel)
 
         assertFalse(viewModel.shouldAsk.value)
         add()
@@ -56,7 +63,7 @@ class NotificationPermissionViewModelTest {
     fun `an answer, either way, stops it for good`() = runTest {
         add()
         val viewModel = NotificationPermissionViewModel(items, preferences)
-        viewModel.shouldAsk.launchIn(backgroundScope)
+        subscribe(viewModel)
 
         viewModel.answered()
 
@@ -71,7 +78,7 @@ class NotificationPermissionViewModelTest {
         preferences.preferences.value = AppPreferences(notificationPermissionAsked = true)
         add()
         val viewModel = NotificationPermissionViewModel(items, preferences)
-        viewModel.shouldAsk.launchIn(backgroundScope)
+        subscribe(viewModel)
 
         assertFalse(viewModel.shouldAsk.value)
     }
@@ -81,7 +88,7 @@ class NotificationPermissionViewModelTest {
         val id = add()
         items.replace(items.stored.single { it.id == id }.copy(status = ItemStatus.REJECTED))
         val viewModel = NotificationPermissionViewModel(items, preferences)
-        viewModel.shouldAsk.launchIn(backgroundScope)
+        subscribe(viewModel)
 
         assertFalse(viewModel.shouldAsk.value)
     }

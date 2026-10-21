@@ -15,11 +15,11 @@ import io.github.locngu.beforeyoubuy.MainActivity
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 

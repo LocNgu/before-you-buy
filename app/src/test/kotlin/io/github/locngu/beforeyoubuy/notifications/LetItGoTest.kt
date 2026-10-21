@@ -108,7 +108,10 @@ class LetItGoTest {
         Notifier(context).createChannels()
         manager.notify(
             7,
-            NotificationCompat.Builder(context, Notifier.CHANNEL_WAITING_PERIODS).setSmallIcon(R.drawable.ic_notification).build()
+            NotificationCompat.Builder(
+                context,
+                Notifier.CHANNEL_WAITING_PERIODS
+            ).setSmallIcon(R.drawable.ic_notification).build()
         )
 
         LetItGoReceiver().handle(context, LetItGoRequest(ItemId(99), notificationId = 7), letItGo)
