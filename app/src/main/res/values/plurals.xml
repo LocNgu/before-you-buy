@@ -59,4 +59,10 @@
         <item quantity="one">In %d day</item>
         <item quantity="other">In %d days</item>
     </plurals>
+
+    <!-- History: calendar days from adding an item to buying it (0 is history_considered_same_day). -->
+    <plurals name="history_considered_for_days">
+        <item quantity="one">Considered for %d day</item>
+        <item quantity="other">Considered for %d days</item>
+    </plurals>
 </resources>

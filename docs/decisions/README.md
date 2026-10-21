@@ -54,3 +54,4 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0038](0038-item-photos-in-app-storage.md) | technical | Item photos: Photo Picker, re-encoded JPEG copies (≤ 1600 px, no metadata) in app storage, unreferenced files swept at app start |
 | [0039](0039-reflection-flow-behaviour.md) | product | Reflection flow: answers stored as typed, required questions can't be skipped, back leaves, opens at the first missing required question |
 | [0040](0040-decision-screen-behaviour.md) | product | Decision screen: Buy/Reject pair + Wait when Ready or a need, else Reject + "Decide early…"; waited items in their own group; purchases dated back via `decidedAt`; reject note in `decisions.note` |
+| [0041](0041-history-behaviour.md) | product | History: one period filter for both tabs; "Want it again?" adds a fresh want (same facts, no answers, never a need); delete only on purpose, with a confirm |

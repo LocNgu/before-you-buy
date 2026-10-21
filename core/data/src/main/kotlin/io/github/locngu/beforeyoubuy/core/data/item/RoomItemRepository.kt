@@ -72,6 +72,12 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
         }
     }
 
+    override suspend fun delete(current: Item): Boolean {
+        require(current.status != ItemStatus.ACTIVE) { "Only purchased or rejected items can be deleted" }
+        // Its reflection and decisions go with it (ON DELETE CASCADE).
+        return writeIfUnchanged(current) { items.delete(current.id.value) }
+    }
+
     /** Every stored amount is in the app's currency (ADR-0033); anything else is a programming error. */
     private suspend fun requireAppCurrency(item: Item) {
         val currency = policies.get()?.currency ?: return

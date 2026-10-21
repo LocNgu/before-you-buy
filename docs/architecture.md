@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17) and the decision screen (#18) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18) and history (#19) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -57,7 +57,7 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 - Room, schema version 2 (migrations in `BeforeYouBuyDatabase.kt`, tested by `MigrationTest`): `policy` (one row: the app's currency and cooling-off tiers, ADR-0033), `items` (every stored `Item` fact), `reflections` (1:1 with the item; `reasons_against` is a JSON array of strings, not a child table), `decisions` (append-only history; `note` since version 2). Children reference `items(id)` with `ON DELETE CASCADE`. No stage column. M2 adds `allocations` and `pool_entries`.
 - Schema JSON goes to `core/data/schemas/` and is committed (ADR-0019).
 - `ItemRepository`, `PolicyRepository` and `PreferencesRepository` (interfaces in `:core:domain`) are bound by `:core:data`'s own Hilt module `DataModule`; everything in `:core:data` stays `internal`. `:app` just injects the interfaces.
-- Item writes are compare-and-set: `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored row still equals what the caller read, and return false otherwise. `recordDecision` writes the decision and the item's new state in one transaction; `update` never changes the status.
+- Item writes are compare-and-set: `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored row still equals what the caller read, and return false otherwise. `recordDecision` writes the decision and the item's new state in one transaction; `update` never changes the status. `delete(current)` removes an ended item with its reflection and decisions, compare-and-set too.
 - The currency is fixed on first start (device region, else EUR). A tier change rewrites waiting items' ends in the same transaction (ADR-0031); a currency change relabels every amount, keeping the numbers (ADR-0033). Every stored amount is in the app's currency.
 - Preferences (notifications, onboarding) are in DataStore; defaults are computed on read.
 - Conventions and tests: `.claude/rules/data.md`.

@@ -300,4 +300,58 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
         assertEquals(emptyList<HistoryEntry>(), repository.observeHistory(ItemStatus.REJECTED).first())
         assertEquals(emptyList<Decision>(), repository.observeDecisions(item.id).first())
     }
+
+    @Test
+    fun `history keeps the note of a reject`() = runTest {
+        val item = addAndRead()
+        val rejected = Decision(DecisionType.REJECT, DECIDED, note = "Too heavy for trips")
+        decide(item, rejected)
+
+        assertEquals(
+            listOf(HistoryEntry(item.copy(status = ItemStatus.REJECTED), rejected)),
+            repository.observeHistory(ItemStatus.REJECTED).first()
+        )
+    }
+
+    @Test
+    fun `delete removes an ended item with its answers and decisions, and nothing else`() = runTest {
+        val item = addAndRead()
+        val other = addAndRead(newItem("Bike"))
+        repository.setReflection(item.id, FULL_REFLECTION)
+        repository.setReflection(other.id, FULL_REFLECTION)
+        decide(item, reject())
+        val ended = stored(item.id)
+
+        assertTrue(repository.delete(ended))
+
+        assertNull(repository.observeById(item.id).first())
+        assertNull(repository.observeReflection(item.id).first())
+        assertEquals(emptyList<Decision>(), repository.observeDecisions(item.id).first())
+        assertEquals(emptyList<HistoryEntry>(), repository.observeHistory(ItemStatus.REJECTED).first())
+        assertEquals(other, stored(other.id))
+        assertEquals(FULL_REFLECTION, repository.observeReflection(other.id).first())
+    }
+
+    @Test
+    fun `delete writes nothing if the item changed or is gone`() = runTest {
+        val item = addAndRead()
+        decide(item, reject())
+        val ended = stored(item.id)
+        execSql("UPDATE items SET name = 'Renamed' WHERE id = ${item.id.value}")
+
+        assertFalse(repository.delete(ended))
+        assertEquals("Renamed", stored(item.id).name)
+
+        val renamed = stored(item.id)
+        assertTrue(repository.delete(renamed))
+        assertFalse(repository.delete(renamed))
+    }
+
+    @Test
+    fun `delete refuses an active item`() = runTest {
+        val item = addAndRead()
+
+        assertThrowsIllegalArgument { repository.delete(item) }
+        assertEquals(item, stored(item.id))
+    }
 }

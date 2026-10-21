@@ -66,6 +66,16 @@ interface ItemRepository {
      * app at the same moment), edited, or gone. A [current] that isn't active, or a [result] with another id, throws.
      */
     suspend fun recordDecision(current: Item, decision: Decision, result: Item): Boolean
+
+    /**
+     * Deletes [current], a purchased or rejected item as the caller read it, with its reflection answers and
+     * decisions: history entries are only deleted on the user's explicit request (brief §5, issue #19). Its photo
+     * stays on disk until the sweep at app start finds no item referencing it (ADR-0038).
+     *
+     * Writes only if the stored item still equals [current]; returns false and deletes nothing if it changed or is
+     * gone. An active [current] throws: active items leave the wishlist through a decision.
+     */
+    suspend fun delete(current: Item): Boolean
 }
 
 /** A purchased or rejected [item] with the [decision] that ended it (brief §6.6 History). */
