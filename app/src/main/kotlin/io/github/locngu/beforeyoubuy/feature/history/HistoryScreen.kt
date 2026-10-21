@@ -92,7 +92,10 @@ fun HistoryContent(
             PeriodFilter(state.period, onSelectPeriod)
             when (state.tab) {
                 HistoryTab.BOUGHT -> state.bought?.let { BoughtList(it, state.period, onOpenItem) }
-                HistoryTab.DECIDED_AGAINST -> state.decidedAgainst?.let { DecidedAgainstList(it, state.period, onOpenItem) }
+
+                HistoryTab.DECIDED_AGAINST -> state.decidedAgainst?.let {
+                    DecidedAgainstList(it, state.period, onOpenItem)
+                }
             }
         }
     }

@@ -134,11 +134,14 @@ class HistoryItemViewModelTest {
                 assertEquals(ItemKind.WANT, again.kind)
                 assertEquals(now, again.addedAt)
                 assertTrue(again.coolingEndsAt > now)
-                assertEquals(old.copy(id = added, status = ItemStatus.ACTIVE), again.copy(
-                    kind = old.kind,
-                    addedAt = old.addedAt,
-                    coolingEndsAt = old.coolingEndsAt
-                ))
+                assertEquals(
+                    old.copy(id = added, status = ItemStatus.ACTIVE),
+                    again.copy(
+                        kind = old.kind,
+                        addedAt = old.addedAt,
+                        coolingEndsAt = old.coolingEndsAt
+                    )
+                )
             }
             assertEquals(old, items.stored.single { it.id == old.id })
             assertTrue(viewModel.uiState.value.detail is HistoryDetail.DecidedAgainst)

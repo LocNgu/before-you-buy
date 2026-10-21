@@ -132,7 +132,13 @@ class HistoryTest {
         val dollars = Money(12_000, "USD")
 
         assertThrows(IllegalArgumentException::class.java) {
-            decidedAgainstOf(listOf(rejected(1, at), rejected(2, at, price = dollars)), "EUR", HistoryPeriod.ALL, now, zone)
+            decidedAgainstOf(
+                listOf(rejected(1, at), rejected(2, at, price = dollars)),
+                "EUR",
+                HistoryPeriod.ALL,
+                now,
+                zone
+            )
         }
         assertThrows(IllegalArgumentException::class.java) {
             boughtOf(listOf(bought(1, at, paid = dollars, price = dollars)), "EUR", HistoryPeriod.ALL, now, zone)
@@ -234,7 +240,10 @@ class HistoryTest {
         val rejectedDetail = historyDetailOf(rejectedItem, listOf(reject), null, zone)
 
         assertEquals(
-            HistoryDetail.Bought(boughtOf(listOf(bought(1, at)), "EUR", HistoryPeriod.ALL, now, zone).single(), COMPLETE_REFLECTION),
+            HistoryDetail.Bought(
+                boughtOf(listOf(bought(1, at)), "EUR", HistoryPeriod.ALL, now, zone).single(),
+                COMPLETE_REFLECTION
+            ),
             boughtDetail
         )
         assertEquals("Too big", (rejectedDetail as HistoryDetail.DecidedAgainst).entry.note)

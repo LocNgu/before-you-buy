@@ -211,7 +211,9 @@ private fun Details(item: Item) {
 @Composable
 private fun WantAgain(enabled: Boolean, onWantAgain: () -> Unit) {
     var confirming by rememberSaveable { mutableStateOf(false) }
-    OutlinedButton(onClick = { confirming = true }, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp)) {
+    OutlinedButton(onClick = {
+        confirming = true
+    }, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.history_want_again))
     }
     if (confirming) {

@@ -132,7 +132,9 @@ fun historyDetailOf(item: Item, decisions: List<Decision>, reflection: Reflectio
     val ending = decisions.lastOrNull() ?: return null
     return when (item.status) {
         ItemStatus.ACTIVE -> null
+
         ItemStatus.PURCHASED -> boughtEntryOf(item, ending, zone)?.let { HistoryDetail.Bought(it, reflection) }
+
         ItemStatus.REJECTED ->
             decidedAgainstEntryOf(item, ending, zone)?.let { HistoryDetail.DecidedAgainst(it, reflection) }
     }
