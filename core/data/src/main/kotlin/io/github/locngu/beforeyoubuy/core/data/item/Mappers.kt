@@ -94,7 +94,8 @@ internal fun Decision.toEntity(itemId: ItemId): DecisionEntity = DecisionEntity(
     actualPriceMinor = actualPrice?.minorUnits,
     actualPriceCurrency = actualPrice?.currency,
     earlyReason = earlyReason,
-    waitUntil = waitUntil?.toEpochMilli()
+    waitUntil = waitUntil?.toEpochMilli(),
+    note = note
 )
 
 /**
@@ -113,7 +114,8 @@ internal fun DecisionEntity.toDomain(): Decision? {
             null
         },
         earlyReason = earlyReason,
-        waitUntil = waitUntil?.let(Instant::ofEpochMilli)
+        waitUntil = waitUntil?.let(Instant::ofEpochMilli),
+        note = note
     )
 }
 

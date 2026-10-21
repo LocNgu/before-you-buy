@@ -62,6 +62,7 @@ import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.MAX_IMAGE_SIZE_PX
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.ItemDetail
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.webLink
@@ -69,6 +70,7 @@ import io.github.locngu.beforeyoubuy.feature.reflection.upgradeOrNewLabel
 import io.github.locngu.beforeyoubuy.feature.reflection.usageLabel
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
+import io.github.locngu.beforeyoubuy.ui.components.PrimaryButton
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 import io.github.locngu.beforeyoubuy.ui.format.formattedDate
 import java.io.File
@@ -76,13 +78,15 @@ import kotlinx.coroutines.launch
 
 /**
  * One item (brief §6.3): the user's reasons and the countdown first, the shop link out of the way while cooling off
- * (ADR-0013). [onEdit] opens the edit screen, [onReflect] the reflection questions (brief §6.4).
+ * (ADR-0013). [onEdit] opens the edit screen, [onReflect] the reflection questions (brief §6.4), [onDecide] the
+ * decision screen (brief §6.5).
  */
 @Composable
 fun ItemDetailScreen(
     itemId: Long,
     onEdit: () -> Unit,
     onReflect: () -> Unit,
+    onDecide: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ItemDetailViewModel =
         hiltViewModel<ItemDetailViewModel, ItemDetailViewModel.Factory> { it.create(itemId) }
@@ -106,6 +110,7 @@ fun ItemDetailScreen(
         state = state,
         onEdit = onEdit,
         onReflect = onReflect,
+        onDecide = onDecide,
         onMarkAsNeed = viewModel::markAsNeed,
         onCopyLink = { link ->
             scope.launch {
@@ -137,6 +142,7 @@ fun ItemDetailContent(
     state: ItemDetailUiState,
     onEdit: () -> Unit,
     onReflect: () -> Unit,
+    onDecide: () -> Unit,
     onMarkAsNeed: () -> Unit,
     onCopyLink: (String) -> Unit,
     onOpenLink: (String) -> Unit,
@@ -166,7 +172,15 @@ fun ItemDetailContent(
                 }
 
             detail != null ->
-                Detail(detail, state.photo, onReflect, onMarkAsNeed, onOpenLink, Modifier.padding(innerPadding))
+                Detail(
+                    detail,
+                    state.photo,
+                    onReflect,
+                    onDecide,
+                    onMarkAsNeed,
+                    onOpenLink,
+                    Modifier.padding(innerPadding)
+                )
         }
     }
 }
@@ -208,6 +222,7 @@ private fun Detail(
     detail: ItemDetail,
     photo: File?,
     onReflect: () -> Unit,
+    onDecide: () -> Unit,
     onMarkAsNeed: () -> Unit,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -221,6 +236,7 @@ private fun Detail(
         Reasons(detail, onReflect)
         if (photo != null) Photo(detail, photo)
         Details(detail)
+        Decide(detail, onDecide)
         Actions(detail, onMarkAsNeed, onOpenLink)
     }
 }
@@ -232,8 +248,8 @@ private fun Header(detail: ItemDetail) {
         Text(item.name, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
         MoneyText(item.price, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StageChip(detail.stage)
-            StageStatus(detail.stage, detail.daysLeft)
+            StageChip(detail.stage, waiting = detail.recheckOn != null)
+            StageStatus(detail.stage, detail.daysLeft, detail.recheckOn)
         }
         val wanted = if (detail.wantedForDays == 0) {
             stringResource(R.string.item_added_today)
@@ -412,6 +428,22 @@ private fun Answer(label: String, value: String) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         SecondaryText(label, style = MaterialTheme.typography.labelLarge)
         Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+/**
+ * Opens the decision screen (brief §6.5). Once the item is Ready, or for a need, it's a button like the decision
+ * buttons; before that a quieter one: deciding now means letting it go or buying early (ADR-0006).
+ */
+@Composable
+private fun Decide(detail: ItemDetail, onDecide: () -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        // A Ready item waiting after "Wait" isn't shown as Ready until its date.
+        if (detail.stage == Stage.READY && detail.recheckOn == null) {
+            PrimaryButton(stringResource(R.string.item_decide), onDecide, Modifier.fillMaxWidth())
+        } else {
+            OutlinedButton(onClick = onDecide) { Text(stringResource(R.string.item_decide_now)) }
+        }
     }
 }
 

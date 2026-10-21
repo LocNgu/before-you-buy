@@ -25,7 +25,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The wishlist with an item in each stage, with photo thumbnails, empty, and while loading, in English and German.
+ * The wishlist with an item in each stage, with photo thumbnails, with a Ready item waiting after "Wait", empty, and
+ * while loading, in English and German.
  * Record: `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
@@ -85,6 +86,22 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
             )
         )
     )
+
+    @Test
+    fun waiting() {
+        val waited = item(5, t("Espresso machine", "Siebträgermaschine"), 680, endsInDays = -12)
+            .copy(recheckAt = Instant.parse("2026-10-30T00:00:00Z"))
+        capture(
+            WishlistUiState(
+                wishlistOf(
+                    listOf(waited, coolingSoon, ready),
+                    mapOf(ready.id to reflection, waited.id to reflection),
+                    now,
+                    ZoneOffset.UTC
+                )
+            )
+        )
+    }
 
     @Test
     fun empty() = capture(WishlistUiState(emptyList()))

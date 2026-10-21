@@ -153,4 +153,66 @@
     <string name="item_edit_photo_change">Change photo</string>
     <string name="item_edit_photo_remove">Remove photo</string>
     <string name="item_edit_photo_failed">This photo couldn’t be added. Try another one.</string>
+
+    <!-- Wishlist and item detail: a Ready item after "Wait", until its re-check date (issue #18). -->
+    <string name="wishlist_waiting">Looking again later</string>
+    <string name="stage_waiting">Waiting</string>
+    <!-- %1$s: a date, e.g. "9 Nov 2026". -->
+    <string name="wishlist_look_again_on">Look again on %1$s</string>
+
+    <!-- Item detail: opens the decision screen. "Decide now" while the item isn't Ready. -->
+    <string name="item_decide">Decide</string>
+    <string name="item_decide_now">Decide now</string>
+
+    <!-- Decision screen (brief §6.5, issue #18). Never celebrate or shame; Buy and Don't buy are equals (ADR-0012). -->
+    <string name="decision_title">Decide</string>
+    <string name="decision_back">Back</string>
+    <string name="decision_added_today">You added this today</string>
+    <string name="decision_cooling_done">Cooling-off completed</string>
+    <!-- %1$s: a date. -->
+    <string name="decision_recheck_on">You wanted to look again on %1$s</string>
+    <string name="decision_no_reasons">No reasons noted yet.</string>
+    <string name="decision_answer_questions">Answer the questions</string>
+    <string name="decision_others_title">What else this money could do</string>
+    <string name="decision_question">Do you still want to spend this money on this?</string>
+    <string name="decision_buy">Buy</string>
+    <!-- %1$s: the item's price, e.g. "1,200 €". Names the alternative concretely (research §1). -->
+    <string name="decision_reject">Don’t buy — keep %1$s</string>
+    <string name="decision_wait">Wait</string>
+    <string name="decision_early">Decide early…</string>
+
+    <!-- Buy step. -->
+    <string name="decision_buy_title">Record the purchase</string>
+    <string name="decision_price_paid">Price paid</string>
+    <!-- %1$s: a date. -->
+    <string name="decision_bought_on">Bought on %1$s</string>
+    <string name="decision_buy_confirm">Buy</string>
+
+    <!-- Early purchase (ADR-0006): the friction is a typed reason, the days left and the reasons against again. -->
+    <string name="decision_early_title">Buy before it’s ready?</string>
+    <string name="decision_early_wait_over">The waiting period is over, but your reasons aren’t complete yet.</string>
+    <string name="decision_early_reasons_against">Your reasons against</string>
+    <string name="decision_early_no_reasons_against">You haven’t noted any reasons against yet.</string>
+    <string name="decision_early_reason">Why buy it now?</string>
+    <string name="decision_early_reason_help">Needed to buy early. It’s kept with the purchase.</string>
+    <string name="decision_early_confirm">Buy anyway</string>
+
+    <!-- Wait step. -->
+    <string name="decision_wait_title">When do you want to look again?</string>
+    <string name="decision_wait_explained">Until then, it isn’t shown as ready.</string>
+    <string name="decision_wait_pick">Pick a date</string>
+    <!-- %1$s: a date the user picked. -->
+    <string name="decision_wait_on">On %1$s</string>
+    <!-- %1$s: a date. -->
+    <string name="decision_wait_confirm">Wait until %1$s</string>
+
+    <!-- Reject step: one confirm, the note is optional. -->
+    <string name="decision_reject_title">Don’t buy it</string>
+    <string name="decision_reject_explained">It moves to “Decided against”.</string>
+    <string name="decision_reject_note">Why not? (optional)</string>
+    <string name="decision_reject_confirm">Don’t buy</string>
+
+    <!-- Snackbar once decided. Neutral: no "you saved", no celebration (ADR-0012). -->
+    <string name="decision_rejected">Got it. It’s in “Decided against”.</string>
+    <string name="decision_bought">Got it. It’s in “Bought”.</string>
 </resources>

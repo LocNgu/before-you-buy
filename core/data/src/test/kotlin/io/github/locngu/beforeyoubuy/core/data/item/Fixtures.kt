@@ -73,5 +73,5 @@ internal val EVERY_DECISION = listOf(
     Decision(DecisionType.BUY_EARLY, DECIDED, actualPrice = Money(12_000, "EUR"), earlyReason = "Sale ends today"),
     Decision(DecisionType.BUY_NEED, DECIDED, actualPrice = Money(0, "EUR")),
     waitAWeek(),
-    reject()
+    reject().copy(note = "My phone is enough")
 )

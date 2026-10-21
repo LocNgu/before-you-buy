@@ -93,5 +93,7 @@ internal data class DecisionEntity(
     @ColumnInfo(name = "actual_price_minor") val actualPriceMinor: Long?,
     @ColumnInfo(name = "actual_price_currency") val actualPriceCurrency: String?,
     @ColumnInfo(name = "early_reason") val earlyReason: String?,
-    @ColumnInfo(name = "wait_until") val waitUntil: Long?
+    @ColumnInfo(name = "wait_until") val waitUntil: Long?,
+    /** The optional "Why not?" of a reject; added in version 2 ([MIGRATION_1_2]). */
+    val note: String?
 )

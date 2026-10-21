@@ -38,6 +38,7 @@ enum class DecisionSource { APP, NOTIFICATION }
  * @property actualPrice what was really paid; required for purchases, absent otherwise.
  * @property earlyReason why the user buys before the item is Ready; [DecisionType.BUY_EARLY] only.
  * @property waitUntil when to look again; [DecisionType.WAIT] only.
+ * @property note the user's optional "Why not?"; [DecisionType.REJECT] only.
  */
 data class Decision(
     val type: DecisionType,
@@ -45,12 +46,14 @@ data class Decision(
     val source: DecisionSource = DecisionSource.APP,
     val actualPrice: Money? = null,
     val earlyReason: String? = null,
-    val waitUntil: Instant? = null
+    val waitUntil: Instant? = null,
+    val note: String? = null
 ) {
     init {
         require((actualPrice != null) == type.isPurchase) { "Purchases, and only purchases, have an actual price" }
         require(actualPrice == null || actualPrice.minorUnits >= 0) { "Actual price can't be negative" }
         require(earlyReason == null || type == DecisionType.BUY_EARLY) { "Only BUY_EARLY has an early reason" }
         require(waitUntil == null || type == DecisionType.WAIT) { "Only WAIT has a wait date" }
+        require(note == null || type == DecisionType.REJECT) { "Only REJECT has a note" }
     }
 }

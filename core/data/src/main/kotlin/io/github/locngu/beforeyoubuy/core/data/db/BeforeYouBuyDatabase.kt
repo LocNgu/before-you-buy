@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
@@ -13,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  */
 @Database(
     entities = [PolicyEntity::class, ItemEntity::class, ReflectionEntity::class, DecisionEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
@@ -31,10 +32,23 @@ internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
         /** [defaultCurrency] is asked once, when the database is first created, to fix the app's currency. */
         fun create(context: Context, defaultCurrency: () -> String): BeforeYouBuyDatabase =
             Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, NAME)
+                .addMigrations(*MIGRATIONS)
                 .withPolicyRow(defaultCurrency)
                 .build()
     }
 }
+
+/**
+ * 1 → 2 (issue #18): `decisions.note`, the optional "Why not?" of a reject. Existing decisions have none.
+ */
+internal val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE decisions ADD COLUMN note TEXT")
+    }
+}
+
+/** Every migration, oldest first. A new schema version adds its own here, with a test in `MigrationTest`. */
+internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
 
 /**
  * Makes sure the policy row exists whenever the database opens, before anything reads it: the currency is fixed
