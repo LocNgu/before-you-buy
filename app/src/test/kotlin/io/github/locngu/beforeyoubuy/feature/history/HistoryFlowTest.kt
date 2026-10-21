@@ -49,6 +49,12 @@ class HistoryFlowTest {
     private fun tapInDialog(text: String) =
         composeRule.onNode(hasText(text) and hasClickAction() and hasAnyAncestor(isDialog())).performClick()
 
+    /** The ⋮ button. It appears once the entry has loaded, so wait for it first. */
+    private fun openMenu() {
+        composeRule.waitUntilExactlyOneExists(hasContentDescription("More options"), timeoutMillis = 5_000)
+        composeRule.onNode(hasContentDescription("More options")).performClick()
+    }
+
     private fun waitFor(text: String, substring: Boolean = false) =
         composeRule.waitUntilExactlyOneExists(hasText(text, substring = substring), timeoutMillis = 5_000)
 
@@ -76,7 +82,7 @@ class HistoryFlowTest {
 
     @Test
     fun `decided against lists the item, its note and a plain total`() {
-        waitFor("You decided against 50 € of purchases")
+        waitFor("You decided against €50 of purchases")
         waitFor("Mine still work")
         button("Headphones").assertExists()
     }
@@ -93,21 +99,21 @@ class HistoryFlowTest {
         waitFor("7 days left")
         Espresso.pressBack()
 
-        waitFor("You decided against 50 € of purchases")
+        waitFor("You decided against €50 of purchases")
         button("Headphones").assertExists()
     }
 
     @Test
     fun `deleting asks first, then removes the entry and its total`() {
         tap("Headphones")
-        composeRule.onNode(hasContentDescription("More options")).performClick()
+        openMenu()
         tap("Delete from history")
         waitFor("Delete from history?")
         // Cancelling keeps it.
         tapInDialog("Cancel")
         waitFor("Mine still work")
 
-        composeRule.onNode(hasContentDescription("More options")).performClick()
+        openMenu()
         tap("Delete from history")
         tapInDialog("Delete")
 
