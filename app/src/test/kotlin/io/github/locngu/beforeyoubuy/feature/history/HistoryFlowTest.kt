@@ -69,7 +69,9 @@ class HistoryFlowTest {
     /** Adds a 50 € want, decides against it with a note, and opens "Decided against" from Home. */
     @Before
     fun decideAgainstAnItem() {
-        tap("Wishlist")
+        // Home loads its sections from the database off the main thread.
+        composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
+        tap("Open wishlist")
         tap("Add")
         composeRule.onNode(hasSetTextAction() and hasText("Name")).performTextInput("Headphones")
         composeRule.onNode(hasSetTextAction() and hasText("Price")).performTextInput("50")

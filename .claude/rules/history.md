@@ -24,7 +24,7 @@ paths:
 - Rows: name, then date, "Considered for N days", "Wishlist price: …" and the "Bought early" / "Need" chips (bought) or date and note, two lines at most (decided against); the amount on the right. Tapping opens `HistoryItem(itemId)`.
 - `HistoryItemViewModel` (assisted id, ADR-0037) combines item, decisions and reflection. `wantAgain()` (decided against only) adds `wantedAgain(...)` and emits `WantedAgain(id)`; navigation replaces the history entry with the new item's detail. `delete()` uses the compare-and-set `ItemRepository.delete`; on `false` it says the item changed meanwhile. While deleting, the state keeps the last detail, so the screen never flashes "gone" before it closes. `busy` disables both actions while one is written.
 - Detail: header (name, amount, the same lines as the row), the early reason or "Why not", **"Your reasons at the time"** (`answersOf` from item detail), details, then "Want it again?" (outlined, confirm dialog). "Delete from history" only in the overflow menu, always with a confirm.
-- Opened from Home's "History" button until the dashboard (#21) places it.
+- Opened from the "History" button in Home's top bar (ADR-0043).
 
 ## Tests
 

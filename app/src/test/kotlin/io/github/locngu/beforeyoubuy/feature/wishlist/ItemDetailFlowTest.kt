@@ -37,7 +37,9 @@ class ItemDetailFlowTest {
     /** Adds a 50 € want (7 days) from the wishlist and opens it. */
     @Before
     fun openNewItem() {
-        composeRule.onNodeWithText("Wishlist").performClick()
+        // Home loads its sections from the database off the main thread.
+        composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
+        composeRule.onNodeWithText("Open wishlist").performClick()
         composeRule.onNodeWithText("Add").performClick()
         field("Name").performTextInput("Headphones")
         field("Price").performTextInput("50")

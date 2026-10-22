@@ -4,16 +4,25 @@
     <!-- Working name (issue #31). -->
     <string name="app_name">Before You Buy</string>
 
-    <!-- Placeholder Home until the real dashboard exists. -->
-    <string name="home_empty_title">Nothing here yet</string>
-    <string name="home_empty_body">Things you’d like to buy wait here until you’ve decided.</string>
+    <!-- Home (brief §6.1): four questions. Never a decided-against total here, and never "money available" or
+         "you can afford" (ADR-0012, ADR-0014). -->
+    <string name="home_decide_title">To decide</string>
+    <string name="home_considering_title">Considering</string>
+    <string name="home_considering_empty">Nothing yet. Add something you’d like to buy. It waits on your wishlist while you think it over.</string>
+    <!-- Above the item whose waiting period ends first, with its countdown. -->
+    <string name="home_next_cooling_end">Next waiting period to end</string>
+    <!-- Placeholders until M2. -->
+    <string name="home_saving_title">Saving for</string>
+    <string name="home_saving_soon">Coming soon: savings per item.</string>
+    <string name="home_money_title">Monthly allowance</string>
+    <string name="home_money_soon">Coming soon: a monthly amount for the things you want.</string>
 
     <!-- Countdown on items that are cooling off. -->
     <string name="countdown_over">Cooling-off over</string>
 
     <!-- Wishlist (brief §6.3). Stage names are shown as group headings and as chips on each row. -->
     <string name="wishlist_title">Wishlist</string>
-    <string name="wishlist_open">Wishlist</string>
+    <string name="wishlist_open">Open wishlist</string>
     <string name="wishlist_empty_title">Your wishlist is empty</string>
     <string name="wishlist_empty_body">Add something you want. It waits here while you think it over.</string>
     <string name="wishlist_ready_to_decide">Ready to decide</string>

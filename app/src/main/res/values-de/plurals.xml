@@ -75,4 +75,10 @@
         <item quantity="one">Nimm dir eine Minute für %d Artikel</item>
         <item quantity="other">Nimm dir eine Minute für %d Artikel</item>
     </plurals>
+
+    <!-- Startseite, „In Überlegung“: wie viele Artikel aktiv sind (auch nach „Warten“). 0 ist home_considering_empty. -->
+    <plurals name="home_considering_count">
+        <item quantity="one">%d Artikel auf deiner Wunschliste</item>
+        <item quantity="other">%d Artikel auf deiner Wunschliste</item>
+    </plurals>
 </resources>

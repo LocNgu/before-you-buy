@@ -87,7 +87,9 @@ class ShareCaptureTest {
 
         // Stored like any other item: it's on the wishlist.
         ActivityScenario.launch(MainActivity::class.java).use {
-            composeRule.onNodeWithText("Wishlist").performClick()
+            // Home loads its sections from the database off the main thread.
+            composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
+            composeRule.onNodeWithText("Open wishlist").performClick()
             composeRule.waitUntilExactlyOneExists(hasText("Philips Airfryer XXL HD9650/90"))
         }
     }
@@ -103,7 +105,9 @@ class ShareCaptureTest {
         }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            composeRule.onNodeWithText("Wishlist").performClick()
+            // Home loads its sections from the database off the main thread.
+            composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
+            composeRule.onNodeWithText("Open wishlist").performClick()
             composeRule.waitUntilExactlyOneExists(hasText("Your wishlist is empty"))
         }
     }

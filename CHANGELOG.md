@@ -4,6 +4,10 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### Added
+
+- Home answers what you can decide on and what you're considering. "To decide" lists items that are ready and items whose waiting period is over but still need your reasons; tap one to decide. "Considering" shows how many items are on your wishlist and which waiting period ends next ("Road bike · 12 days left"), with a link to the wishlist. "Saving for" and "Monthly allowance" are placeholders for now. History opens from the top bar; back always returns to Home.
+
 ## [0.4.0] - 2026-10-21
 
 ### Added
