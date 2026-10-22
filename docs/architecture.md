@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19) and notifications (#20) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19), notifications (#20) and the Home dashboard (#21) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -33,7 +33,7 @@ Dependencies: Apache-2.0/MIT/BSD only in what ships (test and build tools exempt
 
 ```
 :app            Activities, Compose screens (package-by-feature), ViewModels, Hilt wiring, workers, notifications
-:core:domain    Pure Kotlin/JVM: models, lifecycle stage, cooling-off, money math, allowance, opportunity cost, share-text parsing
+:core:domain    Pure Kotlin/JVM: models, lifecycle stage, cooling-off, money math, Home/wishlist/history views, allowance, opportunity cost, share-text parsing
 :core:data      Room, DAOs, DataStore, repositories (+ their Hilt module), export/import
 ```
 

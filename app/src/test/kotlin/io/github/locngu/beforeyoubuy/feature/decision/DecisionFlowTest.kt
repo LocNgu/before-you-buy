@@ -58,7 +58,9 @@ class DecisionFlowTest {
     /** Adds a 50 € want from the wishlist and opens its detail. */
     @Before
     fun openNewItem() {
-        tap("Wishlist")
+        // Home loads its sections from the database off the main thread.
+        composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
+        tap("Open wishlist")
         tap("Add")
         composeRule.onNode(hasSetTextAction() and hasText("Name")).performTextInput("Headphones")
         composeRule.onNode(hasSetTextAction() and hasText("Price")).performTextInput("50")

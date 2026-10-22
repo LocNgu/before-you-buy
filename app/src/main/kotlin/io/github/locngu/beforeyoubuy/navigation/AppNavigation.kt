@@ -99,6 +99,8 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                 entry<Home> {
                     HomeScreen(
                         onAdd = { quickAdd.open() },
+                        // Straight to the decision, which offers the questions if answers are missing. Back returns to Home.
+                        onOpenDecision = { backStack.open(ItemDecision(it.value)) },
                         onOpenWishlist = { backStack.open(Wishlist) },
                         onOpenHistory = { backStack.open(History) },
                         snackbarHostState = snackbarHostState

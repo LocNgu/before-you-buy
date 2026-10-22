@@ -27,7 +27,9 @@ class WishlistFlowTest {
 
     @Test
     fun `an item added from the wishlist shows up under cooling off, with its snackbar`() {
-        composeRule.onNodeWithText("Wishlist").performClick()
+        // Home loads its sections from the database off the main thread.
+        composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
+        composeRule.onNodeWithText("Open wishlist").performClick()
         // The list loads from the database off the main thread, so wait for it.
         composeRule.waitUntilExactlyOneExists(hasText("Your wishlist is empty"))
 

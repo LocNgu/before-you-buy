@@ -84,4 +84,10 @@
         <item quantity="one">Take a minute for %d item</item>
         <item quantity="other">Take a minute for %d items</item>
     </plurals>
+
+    <!-- Home, "Considering": how many items are active (waiting after "Wait" included). 0 is home_considering_empty. -->
+    <plurals name="home_considering_count">
+        <item quantity="one">%d item on your wishlist</item>
+        <item quantity="other">%d items on your wishlist</item>
+    </plurals>
 </resources>

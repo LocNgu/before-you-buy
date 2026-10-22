@@ -40,7 +40,9 @@ class ReflectionFlowTest {
     /** Adds a 50 € want from the wishlist, opens it and taps the card asking for the reasons. */
     @Before
     fun openQuestions() {
-        tap("Wishlist")
+        // Home loads its sections from the database off the main thread.
+        composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
+        tap("Open wishlist")
         tap("Add")
         field("Name").performTextInput("Headphones")
         field("Price").performTextInput("50")

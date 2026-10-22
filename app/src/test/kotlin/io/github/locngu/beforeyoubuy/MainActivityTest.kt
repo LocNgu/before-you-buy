@@ -1,6 +1,8 @@
 package io.github.locngu.beforeyoubuy
 
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -9,6 +11,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
+@OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class MainActivityTest {
     @get:Rule
@@ -24,12 +27,16 @@ class MainActivityTest {
     @Test
     @Config(qualifiers = "en")
     fun `Home is in English`() {
-        composeRule.onNodeWithText("Nothing here yet").assertIsDisplayed()
+        // The sections load from the database off the main thread.
+        composeRule.waitUntilExactlyOneExists(hasText("Considering"), timeoutMillis = 5_000)
+        composeRule.onNodeWithText("Considering").assertIsDisplayed()
     }
 
     @Test
     @Config(qualifiers = "de")
     fun `Home is in German`() {
-        composeRule.onNodeWithText("Noch nichts hier").assertIsDisplayed()
+        // The sections load from the database off the main thread.
+        composeRule.waitUntilExactlyOneExists(hasText("In Überlegung"), timeoutMillis = 5_000)
+        composeRule.onNodeWithText("In Überlegung").assertIsDisplayed()
     }
 }
