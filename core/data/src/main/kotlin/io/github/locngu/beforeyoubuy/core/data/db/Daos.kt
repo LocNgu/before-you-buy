@@ -132,7 +132,10 @@ internal interface PolicyDao {
     suspend fun update(policy: PolicyEntity): Int
 }
 
-/** The allowance row and the pool's ledger (`PoolRepository`). Ledger rows are only ever inserted. */
+/**
+ * The allowance row and the pool's ledger (`PoolRepository`). Ledger rows are only ever inserted, except the starting
+ * amount, which is a setting and replaced when edited.
+ */
 @Dao
 internal interface PoolDao {
     @Query("SELECT * FROM allowance WHERE id = ${AllowanceEntity.ID}")
@@ -161,6 +164,14 @@ internal interface PoolDao {
     /** Returns the new id, or -1 and writes nothing for a month that is already credited. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertEntry(entry: PoolEntryEntity): Long
+
+    /** When the starting amount was first entered (epoch millis), or null if there is none. */
+    @Query("SELECT MIN(at) FROM pool_entries WHERE type = 'STARTING_BALANCE'")
+    suspend fun firstStartingBalanceAt(): Long?
+
+    /** The starting amount is a setting (ADR-0045): replacing it is the one delete in the ledger. */
+    @Query("DELETE FROM pool_entries WHERE type = 'STARTING_BALANCE'")
+    suspend fun deleteStartingBalances()
 
     /** Changes only the amount, for a currency relabel (ADR-0033); what happened never changes. */
     @Query("UPDATE pool_entries SET amount_minor = :minor, currency = :currency WHERE id = :id")

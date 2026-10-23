@@ -172,7 +172,7 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
             pool.entries.first().map { it.change }
         )
         // Accruals keep working in the new currency.
-        pool.change(Money(500, "JPY"), 1, setUpAt, zone)
+        pool.change(Money(500, "JPY"), 1, Money(51, "JPY"), setUpAt, zone)
     }
 
     @Test

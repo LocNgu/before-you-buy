@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.PoolEntry
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -105,11 +106,11 @@ class FunMoneyViewModelTest {
     }
 
     @Test
-    fun `once set up the form holds the stored values, without a starting balance`() = runTest {
+    fun `once set up the form holds the stored values, the starting amount included`() = runTest {
         setUpPool()
         val state = viewModel().uiState.value
 
-        assertEquals(FunMoneyForm(monthly = "300", accrualDay = 1), state.form)
+        assertEquals(FunMoneyForm(monthly = "300", accrualDay = 1, startingBalance = "100"), state.form)
         assertNull(state.firstAccrual)
         val money = state.money as FunMoney.SetUp
         assertEquals(eur(10_000), money.balance.pool)
@@ -126,6 +127,23 @@ class FunMoneyViewModelTest {
             awaitItem()
         }
         assertEquals(AllowanceSettings(eur(45_000), 1, LocalDate.parse("2026-10-23")), pool.allowance.value)
+        // The starting amount wasn't touched, so it stays.
+        assertEquals(listOf(PoolEntry.StartingBalance(eur(10_000), now)), pool.entries.value)
+    }
+
+    @Test
+    fun `the starting amount stays editable after setup`() = runTest {
+        setUpPool()
+        clock.advance(Duration.ofDays(3))
+        val viewModel = viewModel()
+        viewModel.saved.test {
+            viewModel.onStartingBalanceChange("80")
+            viewModel.save()
+            awaitItem()
+        }
+        // Replaced, not added to: still dated when it was first entered.
+        assertEquals(listOf(PoolEntry.StartingBalance(eur(8_000), now)), pool.entries.value)
+        assertEquals(eur(8_000), (viewModel.uiState.value.money as FunMoney.SetUp).balance.pool)
     }
 
     @Test

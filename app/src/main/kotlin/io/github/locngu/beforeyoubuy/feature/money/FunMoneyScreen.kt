@@ -122,16 +122,15 @@ fun FunMoneyContent(state: FunMoneyUiState, actions: FunMoneyActions, modifier: 
                         stringResource(R.string.fun_money_first_accrual, formattedDate(it))
                     }
                 )
-                if (setUp == null) {
-                    AmountField(
-                        value = form.startingBalance,
-                        onValueChange = actions::onStartingBalanceChange,
-                        label = stringResource(R.string.fun_money_starting_balance),
-                        error = state.startingBalanceError,
-                        currency = state.currency,
-                        note = stringResource(R.string.fun_money_starting_balance_explained)
-                    )
-                } else {
+                AmountField(
+                    value = form.startingBalance,
+                    onValueChange = actions::onStartingBalanceChange,
+                    label = stringResource(R.string.fun_money_starting_balance),
+                    error = state.startingBalanceError,
+                    currency = state.currency,
+                    note = stringResource(R.string.fun_money_starting_balance_explained)
+                )
+                if (setUp != null) {
                     Text(
                         text = stringResource(R.string.fun_money_changes_apply),
                         style = MaterialTheme.typography.bodyMedium,

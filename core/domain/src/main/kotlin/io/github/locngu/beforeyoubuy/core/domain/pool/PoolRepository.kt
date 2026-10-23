@@ -31,11 +31,12 @@ interface PoolRepository {
     ): Boolean
 
     /**
-     * Changes the amount and accrual day. In one transaction it first credits every month due under the old
-     * settings, so the new amount applies from the next accrual on (issue #22). The first credited month stays
-     * ([AllowanceSettings.changed]). Throws if the allowance isn't set up.
+     * Changes the amount, accrual day and starting amount. In one transaction it first credits every month due under
+     * the old settings, so the new amount applies from the next accrual on (issue #22). The first credited month stays
+     * ([AllowanceSettings.changed]). The starting amount replaces the stored one (none if zero): it's a setting, not
+     * an event (ADR-0045). Throws if the allowance isn't set up.
      */
-    suspend fun change(monthlyAmount: Money, accrualDay: Int, now: Instant, zone: ZoneId)
+    suspend fun change(monthlyAmount: Money, accrualDay: Int, startingBalance: Money, now: Instant, zone: ZoneId)
 
     /** Appends an [PoolEntry.Adjustment]. Whether to confirm first is the caller's ([needsConfirmation]). */
     suspend fun adjust(change: Money, note: String?, at: Instant)

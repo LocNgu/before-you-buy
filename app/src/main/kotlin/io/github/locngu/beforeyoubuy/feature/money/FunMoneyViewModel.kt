@@ -36,8 +36,8 @@ import kotlinx.coroutines.launch
 /**
  * What the fun money screen shows (brief §4.5, §6.7).
  *
- * @property money null until loaded. [FunMoney.NotSetUp] shows the setup form with a starting balance;
- *   [FunMoney.SetUp] the balance, the form without it, and "Adjust balance".
+ * @property money null until loaded. [FunMoney.NotSetUp] shows the setup form; [FunMoney.SetUp] the balance, the
+ *   same form (the starting amount stays editable, ADR-0045) and "Adjust the amount".
  * @property form null until the stored values and the UI's locale are loaded.
  * @property firstAccrual when setting up: the day the first monthly amount would be added.
  * @property confirmTakeOut a take-out that would leave less than nothing not set aside, waiting for a confirmation.
@@ -55,7 +55,7 @@ data class FunMoneyUiState(
     val confirmTakeOut: TakeOut? = null
 )
 
-/** The fields as typed. [startingBalance] is only used when setting up; empty is zero. */
+/** The fields as typed. An empty [startingBalance] is zero. */
 data class FunMoneyForm(
     val monthly: String = "",
     val accrualDay: Int = AllowanceSettings.DEFAULT_ACCRUAL_DAY,
@@ -130,7 +130,11 @@ class FunMoneyViewModel @Inject constructor(
 
                     is FunMoney.SetUp -> FunMoneyForm(
                         monthly = loaded.allowance.monthlyAmount.formatForInput(locale),
-                        accrualDay = loaded.allowance.accrualDay
+                        accrualDay = loaded.allowance.accrualDay,
+                        // No starting amount stays an empty, optional field.
+                        startingBalance = loaded.startingBalance.takeIf { s -> s.minorUnits > 0 }
+                            ?.formatForInput(locale)
+                            .orEmpty()
                     )
                 }
                 it.copy(form = form)
@@ -169,7 +173,7 @@ class FunMoneyViewModel @Inject constructor(
             try {
                 // Set up twice at once (two screens): the second writes nothing, which is fine to close on.
                 if (setUp) {
-                    pool.change(monthly, form.accrualDay, clock.instant(), clock.zone)
+                    pool.change(monthly, form.accrualDay, starting, clock.instant(), clock.zone)
                 } else {
                     pool.setUp(monthly, form.accrualDay, starting, clock.instant(), clock.zone)
                 }
@@ -246,7 +250,7 @@ class FunMoneyViewModel @Inject constructor(
         if (money == null || currency == null || locale == null || form == null) return FunMoneyUiState(money = money)
         val monthly = parseMoney(form.monthly, currency, locale)
         val setUp = money as? FunMoney.SetUp
-        val starting = if (setUp != null || form.startingBalance.isBlank()) {
+        val starting = if (form.startingBalance.isBlank()) {
             null
         } else {
             parseMoney(form.startingBalance, currency, locale).takeIf { it !is MoneyParseResult.Success }

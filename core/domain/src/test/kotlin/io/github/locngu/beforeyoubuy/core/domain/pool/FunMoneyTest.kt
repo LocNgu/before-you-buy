@@ -27,7 +27,8 @@ class FunMoneyTest {
             FunMoney.SetUp(
                 allowance = allowance,
                 balance = PoolBalance(Money(40_000, "EUR"), Money(0, "EUR")),
-                nextAccrual = LocalDate.parse("2026-12-01")
+                nextAccrual = LocalDate.parse("2026-12-01"),
+                startingBalance = Money(10_000, "EUR")
             ),
             funMoneyOf(allowance, entries)
         )

@@ -207,10 +207,21 @@ class FakePoolRepository : PoolRepository {
         return true
     }
 
-    override suspend fun change(monthlyAmount: Money, accrualDay: Int, now: Instant, zone: ZoneId) {
+    override suspend fun change(
+        monthlyAmount: Money,
+        accrualDay: Int,
+        startingBalance: Money,
+        now: Instant,
+        zone: ZoneId
+    ) {
         accrue(now, zone)
         allowance.value = checkNotNull(allowance.value).changed(monthlyAmount, accrualDay)
         accrue(now, zone)
+        val since = entries.value.filterIsInstance<PoolEntry.StartingBalance>().minOfOrNull { it.at }
+        entries.value = entries.value.filterNot { it is PoolEntry.StartingBalance }
+        if (startingBalance.minorUnits > 0) {
+            entries.value = listOf(PoolEntry.StartingBalance(startingBalance, since ?: now)) + entries.value
+        }
     }
 
     override suspend fun adjust(change: Money, note: String?, at: Instant) {

@@ -6,9 +6,10 @@ import java.time.Instant
 import java.time.YearMonth
 
 /**
- * One line of the pool's append-only ledger (brief §4.5): `pool = startingBalance + accruals + adjustments −
- * purchases` is the sum of every entry's [change]. Entries are never edited or removed; a correction is an
- * [Adjustment]. Needs never appear here (ADR-0044).
+ * One line of the pool's ledger (brief §4.5): `pool = startingBalance + accruals + adjustments − purchases` is the
+ * sum of every entry's [change]. Accruals, adjustments and purchases are never edited or removed; a correction is an
+ * [Adjustment]. The [StartingBalance] is a setting and is replaced when edited (ADR-0045). Needs never appear here
+ * (ADR-0044).
  */
 sealed interface PoolEntry {
     /** What this entry adds to the pool; negative for what it takes out. */
@@ -16,7 +17,7 @@ sealed interface PoolEntry {
 
     val at: Instant
 
-    /** The balance the user started with, entered once at setup; ≥ 0. */
+    /** The balance the user started with, entered at setup and editable afterwards; ≥ 0. At most one. */
     data class StartingBalance(override val change: Money, override val at: Instant) : PoolEntry {
         init {
             require(change.minorUnits >= 0) { "A starting balance can't be negative, was $change" }

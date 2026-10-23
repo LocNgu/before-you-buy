@@ -65,7 +65,8 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
     private val funMoney = FunMoney.SetUp(
         allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.parse("2026-09-20")),
         balance = PoolBalance(pool = Money(64_550, "EUR"), committed = Money(0, "EUR")),
-        nextAccrual = LocalDate.parse("2026-11-01")
+        nextAccrual = LocalDate.parse("2026-11-01"),
+        startingBalance = Money(12_000, "EUR")
     )
 
     private fun state(items: List<Item>, money: FunMoney? = FunMoney.NotSetUp) =

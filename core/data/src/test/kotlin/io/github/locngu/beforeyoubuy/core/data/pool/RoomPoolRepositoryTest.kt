@@ -141,7 +141,7 @@ internal class RoomPoolRepositoryTest : DatabaseTest() {
         pool.accrue(on("2026-11-01"), zone)
 
         // Not opened December to February; changed on 15 Feb.
-        pool.change(eur(50_000), 1, on("2027-02-15"), zone)
+        pool.change(eur(50_000), 1, eur(0), on("2027-02-15"), zone)
         pool.accrue(on("2027-03-01"), zone)
 
         assertEquals(
@@ -157,17 +157,39 @@ internal class RoomPoolRepositoryTest : DatabaseTest() {
         pool.accrue(on("2026-10-20"), zone)
 
         // 15 Nov: the 20th hasn't come; moving to the 1st makes November due now.
-        pool.change(monthly, 1, on("2026-11-15"), zone)
+        pool.change(monthly, 1, eur(0), on("2026-11-15"), zone)
         assertEquals(listOf("2026-10", "2026-11"), accruals().map { it.month.toString() })
 
         // Moving back to the 20th doesn't credit November again.
-        pool.change(monthly, 20, on("2026-11-25"), zone)
+        pool.change(monthly, 20, eur(0), on("2026-11-25"), zone)
         assertEquals(2, accruals().size)
     }
 
     @Test
+    fun `the starting amount is replaced, keeps its date, and zero removes it`() = runTest {
+        pool.setUp(monthly, 1, eur(10_000), on("2026-10-23"), zone)
+        pool.accrue(on("2026-11-01"), zone)
+
+        pool.change(monthly, 1, eur(25_000), on("2026-11-05"), zone)
+        assertEquals(
+            listOf(
+                PoolEntry.StartingBalance(eur(25_000), on("2026-10-23")),
+                PoolEntry.Accrual(YearMonth.of(2026, 11), monthly, on("2026-11-01"))
+            ),
+            pool.entries.first()
+        )
+
+        pool.change(monthly, 1, eur(0), on("2026-11-06"), zone)
+        assertEquals(listOf(YearMonth.of(2026, 11)), pool.entries.first().map { (it as PoolEntry.Accrual).month })
+
+        // Added again later, it's dated then.
+        pool.change(monthly, 1, eur(5_000), on("2026-11-07"), zone)
+        assertEquals(PoolEntry.StartingBalance(eur(5_000), on("2026-11-07")), pool.entries.first().last())
+    }
+
+    @Test
     fun `changing needs an allowance`() = runTest {
-        val thrown = runCatching { pool.change(monthly, 1, on("2026-10-23"), zone) }.exceptionOrNull()
+        val thrown = runCatching { pool.change(monthly, 1, eur(0), on("2026-10-23"), zone) }.exceptionOrNull()
         assertTrue("Expected IllegalStateException, was $thrown", thrown is IllegalStateException)
     }
 
@@ -195,7 +217,7 @@ internal class RoomPoolRepositoryTest : DatabaseTest() {
         assertNull(pool.allowance.first())
         pool.setUp(monthly, 1, eur(0), on("2026-10-23"), zone)
         assertThrowsIllegalArgument { pool.adjust(Money(1, "USD"), null, on("2026-10-23")) }
-        assertThrowsIllegalArgument { pool.change(Money(1, "USD"), 1, on("2026-10-23"), zone) }
+        assertThrowsIllegalArgument { pool.change(Money(1, "USD"), 1, eur(0), on("2026-10-23"), zone) }
     }
 
     @Test
@@ -242,7 +264,7 @@ internal class RoomPoolRepositoryTest : DatabaseTest() {
     @Test
     fun `changing the day before the first credit neither skips nor adds a month`() = runTest {
         pool.setUp(monthly, 10, eur(0), on("2026-10-12"), zone)
-        pool.change(monthly, 20, on("2026-10-15"), zone)
+        pool.change(monthly, 20, eur(0), on("2026-10-15"), zone)
 
         assertEquals(0, pool.accrue(on("2026-10-20"), zone))
         assertEquals(1, pool.accrue(on("2026-11-20"), zone))

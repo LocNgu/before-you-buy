@@ -51,18 +51,29 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
         true
     }
 
-    override suspend fun change(monthlyAmount: Money, accrualDay: Int, now: Instant, zone: ZoneId) =
-        database.withTransaction {
-            requireAppCurrency(monthlyAmount)
-            val old = checkNotNull(pool.getAllowance()?.toDomain()) { "The allowance isn't set up" }
-            // Months already due get the old amount; the new one applies from the next accrual on.
-            accrueWith(old, now, zone)
-            val new = old.changed(monthlyAmount, accrualDay)
-            pool.updateAllowance(new.toEntity())
-            // An earlier accrual day may make this month due right away.
-            accrueWith(new, now, zone)
-            Unit
+    override suspend fun change(
+        monthlyAmount: Money,
+        accrualDay: Int,
+        startingBalance: Money,
+        now: Instant,
+        zone: ZoneId
+    ) = database.withTransaction {
+        requireAppCurrency(monthlyAmount, startingBalance)
+        val old = checkNotNull(pool.getAllowance()?.toDomain()) { "The allowance isn't set up" }
+        // Months already due get the old amount; the new one applies from the next accrual on.
+        accrueWith(old, now, zone)
+        val new = old.changed(monthlyAmount, accrualDay)
+        pool.updateAllowance(new.toEntity())
+        // An earlier accrual day may make this month due right away.
+        accrueWith(new, now, zone)
+        // The starting amount is a setting, not something that happened: it's replaced, keeping its place in time.
+        val since = pool.firstStartingBalanceAt()
+        pool.deleteStartingBalances()
+        if (startingBalance.minorUnits > 0) {
+            val at = since?.let(Instant::ofEpochMilli) ?: now
+            pool.insertEntry(PoolEntry.StartingBalance(startingBalance, at).toEntity())
         }
+    }
 
     override suspend fun adjust(change: Money, note: String?, at: Instant) {
         database.withTransaction {

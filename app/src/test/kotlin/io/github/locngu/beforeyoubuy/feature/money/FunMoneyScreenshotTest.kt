@@ -39,7 +39,8 @@ abstract class FunMoneyScreenshotTest(private val german: Boolean) {
     private val setUp = FunMoney.SetUp(
         allowance = AllowanceSettings(eur(30_000), 1, LocalDate.parse("2026-09-20")),
         balance = PoolBalance(pool = eur(64_550), committed = eur(0)),
-        nextAccrual = LocalDate.parse("2026-11-01")
+        nextAccrual = LocalDate.parse("2026-11-01"),
+        startingBalance = Money(12_000, "EUR")
     )
 
     @Test
@@ -58,7 +59,13 @@ abstract class FunMoneyScreenshotTest(private val german: Boolean) {
         FunMoneyUiState(
             money = setUp,
             currency = "EUR",
-            form = FunMoneyForm(monthly = "300", accrualDay = 1, adjustment = "20", note = t("Birthday", "Geburtstag")),
+            form = FunMoneyForm(
+                monthly = "300",
+                accrualDay = 1,
+                startingBalance = "120",
+                adjustment = "20",
+                note = t("Birthday", "Geburtstag")
+            ),
             canSave = true,
             canAdjust = true
         )

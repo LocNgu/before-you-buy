@@ -10,9 +10,13 @@ sealed interface FunMoney {
     /** No monthly amount yet: Home offers to set it up. */
     data object NotSetUp : FunMoney
 
-    /** [nextAccrual] is when the next monthly amount is added. */
-    data class SetUp(val allowance: AllowanceSettings, val balance: PoolBalance, val nextAccrual: LocalDate) :
-        FunMoney
+    /** [nextAccrual] is when the next monthly amount is added; [startingBalance] the editable starting amount. */
+    data class SetUp(
+        val allowance: AllowanceSettings,
+        val balance: PoolBalance,
+        val nextAccrual: LocalDate,
+        val startingBalance: Money
+    ) : FunMoney
 }
 
 /**
@@ -31,6 +35,9 @@ fun funMoneyOf(allowance: AllowanceSettings?, entries: List<PoolEntry>): FunMone
             pool = entries.map { it.change.relabeled(currency) }.total(currency),
             committed = Money(0, currency)
         ),
-        nextAccrual = nextAccrualDate(allowance, entries.lastAccruedMonth())
+        nextAccrual = nextAccrualDate(allowance, entries.lastAccruedMonth()),
+        startingBalance = entries.filterIsInstance<PoolEntry.StartingBalance>()
+            .map { it.change.relabeled(currency) }
+            .total(currency)
     )
 }
