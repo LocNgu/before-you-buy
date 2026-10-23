@@ -11,6 +11,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -217,9 +218,9 @@ class DecisionViewModelTest {
         assertEquals(ItemStatus.ACTIVE, waited.status)
         assertEquals(Instant.parse("2026-11-16T00:00:00Z"), waited.recheckAt)
         val reflections = items.observeReflections().first()
-        val groups = wishlistOf(listOf(waited), reflections, clock.instant(), ZoneOffset.UTC)
+        val groups = wishlistOf(listOf(waited), reflections, Savings.NONE, clock.instant(), ZoneOffset.UTC)
         assertTrue(groups.single().waiting)
-        val due = wishlistOf(listOf(waited), reflections, waited.recheckAt!!, ZoneOffset.UTC)
+        val due = wishlistOf(listOf(waited), reflections, Savings.NONE, waited.recheckAt!!, ZoneOffset.UTC)
         assertFalse(due.single().waiting)
     }
 

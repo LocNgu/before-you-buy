@@ -22,6 +22,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
@@ -65,7 +66,12 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
     private suspend fun stored(item: Item): Item = items.observeById(item.id).first()!!
 
     private suspend fun decide(item: Item, decision: Decision) {
-        val applied = applyDecision(item, FULL_REFLECTION, item.price, decision) as DecisionResult.Applied
+        val applied = applyDecision(
+            item,
+            FULL_REFLECTION,
+            Funding(item.price, required = true),
+            decision
+        ) as DecisionResult.Applied
         items.recordDecision(item, decision, applied.item)
     }
 

@@ -13,8 +13,8 @@ data class PoolBalance(val pool: Money, val committed: Money) {
 }
 
 /**
- * The balance of the ledger [entries] with [committed] set aside for active wants: the one place it is computed.
- * Until savings exist (#23), callers pass zero. An entry in another currency than [committed] is relabeled to it, as
+ * The balance of the ledger [entries] with [committed] set aside for active wants ([Savings.committed]): the one
+ * place it is computed. An entry in another currency than [committed] is relabeled to it, as
  * a currency change does (ADR-0033): that happens for a moment while a currency change is read, and a stray row must
  * never hide the fun money (ADR-0032).
  */
@@ -25,7 +25,7 @@ fun poolBalanceOf(entries: Iterable<PoolEntry>, committed: Money): PoolBalance =
 
 /**
  * Whether adjusting by [change] takes money out and leaves less than nothing not set aside, so the user confirms
- * first (issue #22). Adding money never needs a confirmation, even while the balance is below zero.
+ * first (issue #22; a purchase: [purchaseNeedsConfirmation]). Adding money never needs a confirmation, even while the balance is below zero.
  */
 fun needsConfirmation(balance: PoolBalance, change: Money): Boolean =
     change.minorUnits < 0 && (balance.unallocated + change).minorUnits < 0

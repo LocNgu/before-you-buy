@@ -16,6 +16,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
@@ -122,7 +123,7 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
         step: DecisionStep = DecisionStep.OVERVIEW,
         earlyReason: String = ""
     ) {
-        val overview = decisionOverviewOf(item, reflection, listOf(item) + others, now, zone)
+        val overview = decisionOverviewOf(item, reflection, listOf(item) + others, Savings.NONE, now, zone)
         val form = decisionFormOf(item, today, locale).copy(earlyReason = earlyReason)
         capture(
             DecisionUiState(

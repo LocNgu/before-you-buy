@@ -65,7 +65,7 @@ class StageTest {
     fun `funded when the allocation covers the price`() {
         assertFalse(isFunded(item(), UNFUNDED))
         assertTrue(isFunded(item(), FUNDED))
-        assertTrue(isFunded(item(), Money(50_000, "EUR")))
+        assertTrue(isFunded(item(), Funding(Money(50_000, "EUR"), required = true)))
     }
 
     @Test
@@ -74,7 +74,7 @@ class StageTest {
         assertTrue(isCooledOff(need, ADDED))
         assertTrue(isReflected(need, null))
         // Needs never use fun money (ADR-0044): nothing set aside still counts as funded.
-        assertTrue(isFunded(need, Money(0, "EUR")))
+        assertTrue(isFunded(need, Funding(Money(0, "EUR"), required = true)))
         assertEquals(Stage.READY, stageOf(need, null, FUNDED, ADDED))
         assertEquals(Stage.READY, stageOf(need, null, UNFUNDED, ADDED))
     }
@@ -115,8 +115,12 @@ class StageTest {
     @Test
     fun `savings in another currency throw in every stage`() {
         val dollars = Money(12_000, "USD")
-        assertThrows(IllegalArgumentException::class.java) { stageOf(item(), null, dollars, DURING_COOLING) }
-        assertThrows(IllegalArgumentException::class.java) { isDueForDecision(item(), null, dollars, DURING_COOLING) }
+        assertThrows(IllegalArgumentException::class.java) {
+            stageOf(item(), null, Funding(dollars, required = true), DURING_COOLING)
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            isDueForDecision(item(), null, Funding(dollars, required = true), DURING_COOLING)
+        }
     }
 
     @Test

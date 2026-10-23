@@ -15,6 +15,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
@@ -70,7 +71,7 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
     )
 
     private fun state(items: List<Item>, money: FunMoney? = FunMoney.NotSetUp) =
-        HomeUiState(homeOverviewOf(items, mapOf(ready.id to reflection), now, ZoneOffset.UTC), money)
+        HomeUiState(homeOverviewOf(items, mapOf(ready.id to reflection), Savings.NONE, now, ZoneOffset.UTC), money)
 
     @Test
     fun firstStart() = capture(state(emptyList()))

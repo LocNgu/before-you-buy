@@ -11,6 +11,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.testing.testPhoto
@@ -113,7 +114,7 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
     fun gone() = capture(ItemDetailUiState(gone = true))
 
     private fun capture(item: Item, reflection: Reflection?, photo: File? = null) =
-        capture(ItemDetailUiState(itemDetailOf(item, reflection, now, ZoneOffset.UTC), photo = photo))
+        capture(ItemDetailUiState(itemDetailOf(item, reflection, Savings.NONE, now, ZoneOffset.UTC), photo = photo))
 
     private fun capture(state: ItemDetailUiState) {
         composeRule.setContent {

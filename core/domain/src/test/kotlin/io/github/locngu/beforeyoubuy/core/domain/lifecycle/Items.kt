@@ -15,8 +15,15 @@ internal val DURING_COOLING: Instant = Instant.parse("2026-10-15T10:00:00Z")
 internal val AFTER_COOLING: Instant = Instant.parse("2026-11-02T10:00:00Z")
 
 internal val PRICE = Money(12_000, "EUR")
-internal val FUNDED = PRICE
-internal val UNFUNDED = Money(11_999, "EUR")
+
+/** The price is set aside, and wants need it (ADR-0046). */
+internal val FUNDED = Funding(PRICE, required = true)
+
+/** One cent short, and wants need the price set aside. */
+internal val UNFUNDED = Funding(Money(11_999, "EUR"), required = true)
+
+/** Money condition off: without fun money, or with its switch off (ADR-0046). */
+internal fun notRequired(price: Money = PRICE) = Funding(Money(0, price.currency), required = false)
 
 internal fun item(kind: ItemKind = ItemKind.WANT) =
     Item(id = ItemId(1), name = "Camera", price = PRICE, addedAt = ADDED, coolingEndsAt = COOLING_ENDS, kind = kind)

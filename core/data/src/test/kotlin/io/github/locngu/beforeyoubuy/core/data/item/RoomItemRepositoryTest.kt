@@ -12,6 +12,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +45,12 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     /** Records [decision] as the app would: checked by `applyDecision` against the stored state. */
     private suspend fun decide(current: Item, decision: Decision): Boolean {
-        val applied = applyDecision(current, FULL_REFLECTION, current.price, decision) as DecisionResult.Applied
+        val applied = applyDecision(
+            current,
+            FULL_REFLECTION,
+            Funding(current.price, required = true),
+            decision
+        ) as DecisionResult.Applied
         return repository.recordDecision(current, decision, applied.item)
     }
 
@@ -182,7 +188,12 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
         val reflection = Reflection("Hikes", UsageFrequency.WEEKLY, listOf("Heavy"))
         repository.setReflection(item.id, reflection)
         val decision = buy()
-        val applied = applyDecision(item, reflection, item.price, decision) as DecisionResult.Applied
+        val applied = applyDecision(
+            item,
+            reflection,
+            Funding(item.price, required = true),
+            decision
+        ) as DecisionResult.Applied
 
         assertTrue(repository.recordDecision(item, decision, applied.item))
 

@@ -10,12 +10,14 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.AFTER_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COMPLETE_REFLECTION
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isDueForDecision
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -46,14 +48,20 @@ class DecidingTest {
     fun `a ready want is bought plainly, a need as a need, anything else early`() {
         assertEquals(
             BuyPath.BUY,
-            decisionOverviewOf(ready, COMPLETE_REFLECTION, emptyList(), AFTER_COOLING, zone).buyPath
+            decisionOverviewOf(ready, COMPLETE_REFLECTION, emptyList(), Savings.NONE, AFTER_COOLING, zone).buyPath
         )
-        assertEquals(BuyPath.BUY_NEED, decisionOverviewOf(need, null, emptyList(), DURING_COOLING, zone).buyPath)
+        assertEquals(
+            BuyPath.BUY_NEED,
+            decisionOverviewOf(need, null, emptyList(), Savings.NONE, DURING_COOLING, zone).buyPath
+        )
         assertEquals(
             BuyPath.EARLY,
-            decisionOverviewOf(ready, COMPLETE_REFLECTION, emptyList(), DURING_COOLING, zone).buyPath
+            decisionOverviewOf(ready, COMPLETE_REFLECTION, emptyList(), Savings.NONE, DURING_COOLING, zone).buyPath
         )
-        assertEquals(BuyPath.EARLY, decisionOverviewOf(ready, null, emptyList(), AFTER_COOLING, zone).buyPath)
+        assertEquals(
+            BuyPath.EARLY,
+            decisionOverviewOf(ready, null, emptyList(), Savings.NONE, AFTER_COOLING, zone).buyPath
+        )
     }
 
     @Test
@@ -65,7 +73,7 @@ class DecidingTest {
 
     @Test
     fun `the overview has the days left, how long it's wanted and whether it's reflected`() {
-        val overview = decisionOverviewOf(ready, null, emptyList(), DURING_COOLING, zone)
+        val overview = decisionOverviewOf(ready, null, emptyList(), Savings.NONE, DURING_COOLING, zone)
 
         assertEquals(Stage.COOLING_OFF, overview.stage)
         assertEquals(16, overview.daysLeft)
@@ -86,6 +94,7 @@ class DecidingTest {
                 ready,
                 COMPLETE_REFLECTION,
                 listOf(ready, newer, ended, older, priority),
+                Savings.NONE,
                 AFTER_COOLING,
                 zone
             )
@@ -98,7 +107,7 @@ class DecidingTest {
     fun `what else the money could do shows a few and counts the rest`() {
         val others = (2L..6L).map { other(it, addedAt = ADDED.plusSeconds(it)) }
 
-        val overview = decisionOverviewOf(ready, COMPLETE_REFLECTION, others, AFTER_COOLING, zone)
+        val overview = decisionOverviewOf(ready, COMPLETE_REFLECTION, others, Savings.NONE, AFTER_COOLING, zone)
 
         assertEquals(others.take(OTHER_ITEMS_SHOWN).map { it.id }, overview.others.map { it.id })
         assertEquals(2, overview.moreOthers)
@@ -110,7 +119,7 @@ class DecidingTest {
 
         assertEquals(
             LocalDate.of(2026, 11, 9),
-            decisionOverviewOf(waited, COMPLETE_REFLECTION, emptyList(), AFTER_COOLING, zone).recheckOn
+            decisionOverviewOf(waited, COMPLETE_REFLECTION, emptyList(), Savings.NONE, AFTER_COOLING, zone).recheckOn
         )
     }
 
@@ -158,7 +167,14 @@ class DecidingTest {
         assertEquals(AFTER_COOLING, decision.decidedAt)
         assertEquals(Money(11_000, "EUR"), decision.actualPrice)
         assertNull(decision.earlyReason)
-        assertTrue(applyDecision(ready, COMPLETE_REFLECTION, ready.price, decision) is DecisionResult.Applied)
+        assertTrue(
+            applyDecision(
+                ready,
+                COMPLETE_REFLECTION,
+                Funding(ready.price, required = true),
+                decision
+            ) is DecisionResult.Applied
+        )
     }
 
     @Test
@@ -168,7 +184,14 @@ class DecidingTest {
         val decision = purchaseDecision(onEndDay, ready, BuyPath.BUY, locale, AFTER_COOLING, zone)
 
         assertEquals(Instant.parse("2026-10-31T23:59:59.999Z"), decision.decidedAt)
-        assertTrue(applyDecision(ready, COMPLETE_REFLECTION, ready.price, decision) is DecisionResult.Applied)
+        assertTrue(
+            applyDecision(
+                ready,
+                COMPLETE_REFLECTION,
+                Funding(ready.price, required = true),
+                decision
+            ) is DecisionResult.Applied
+        )
     }
 
     @Test
@@ -179,7 +202,9 @@ class DecidingTest {
 
         assertEquals(DecisionType.BUY_EARLY, decision.type)
         assertEquals("Old one broke", decision.earlyReason)
-        assertTrue(applyDecision(ready, null, ready.price, decision) is DecisionResult.Applied)
+        assertTrue(
+            applyDecision(ready, null, Funding(ready.price, required = true), decision) is DecisionResult.Applied
+        )
     }
 
     @Test
@@ -194,7 +219,7 @@ class DecidingTest {
         val decision = purchaseDecision(form(need, duringCooling), need, BuyPath.BUY_NEED, locale, DURING_COOLING, zone)
 
         assertEquals(DecisionType.BUY_NEED, decision.type)
-        assertTrue(applyDecision(need, null, need.price, decision) is DecisionResult.Applied)
+        assertTrue(applyDecision(need, null, Funding(need.price, required = true), decision) is DecisionResult.Applied)
     }
 
     @Test
@@ -204,9 +229,23 @@ class DecidingTest {
 
         assertEquals(DecisionType.WAIT, decision.type)
         assertEquals(waitUntil, decision.waitUntil)
-        val waited = (applyDecision(ready, COMPLETE_REFLECTION, ready.price, decision) as DecisionResult.Applied).item
-        assertFalse(isDueForDecision(waited, COMPLETE_REFLECTION, ready.price, waitUntil.minusMillis(1)))
-        assertTrue(isDueForDecision(waited, COMPLETE_REFLECTION, ready.price, waitUntil))
+        val waited = (
+            applyDecision(
+                ready,
+                COMPLETE_REFLECTION,
+                Funding(ready.price, required = true),
+                decision
+            ) as DecisionResult.Applied
+            ).item
+        assertFalse(
+            isDueForDecision(
+                waited,
+                COMPLETE_REFLECTION,
+                Funding(ready.price, required = true),
+                waitUntil.minusMillis(1)
+            )
+        )
+        assertTrue(isDueForDecision(waited, COMPLETE_REFLECTION, Funding(ready.price, required = true), waitUntil))
     }
 
     @Test
