@@ -247,6 +247,27 @@ internal class RoomPoolRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun `a ledger row in an unknown currency is left out instead of failing the flow`() = runTest {
+        execSql(
+            "INSERT INTO pool_entries (type, amount_minor, currency, at) VALUES " +
+                "('ADJUSTMENT', 700, 'XYZ', 1), ('ADJUSTMENT', 300, 'EUR', 2)"
+        )
+        assertEquals(listOf(PoolEntry.Adjustment(eur(300), null, Instant.ofEpochMilli(2))), pool.entries.first())
+    }
+
+    @Test
+    fun `an allowance in an unknown currency or with a negative amount reads as not set up`() = runTest {
+        execSql(
+            "INSERT INTO allowance (id, monthly_minor, currency, accrual_day, start_date) " +
+                "VALUES (1, 30000, 'XYZ', 1, '2026-10-23')"
+        )
+        assertNull(pool.allowance.first())
+        execSql("UPDATE allowance SET currency = 'EUR', monthly_minor = -1")
+        assertNull(pool.allowance.first())
+        assertTrue(pool.setUp(monthly, 1, eur(0), on("2026-10-23"), zone))
+    }
+
+    @Test
     fun `an out-of-range stored accrual day is clamped, an unreadable start date reads as not set up`() = runTest {
         execSql(
             "INSERT INTO allowance (id, monthly_minor, currency, accrual_day, start_date) " +

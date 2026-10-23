@@ -162,10 +162,10 @@ class FunMoneyViewModel @Inject constructor(
 
     override fun save() {
         val state = uiState.value
-        val form = state.form ?: return
-        // Busy is checked on the editor itself: uiState may not have caught up with a tap a moment ago.
+        // The form and busy come from the editor itself: uiState may not have caught up with a tap a moment ago.
+        val form = editor.value.form ?: return
         if (!state.canSave || editor.value.busy) return
-        val monthly = (parse(form.monthly) as MoneyParseResult.Success).money
+        val monthly = (parse(form.monthly) as? MoneyParseResult.Success)?.money ?: return
         val starting = startingBalanceOf(form) ?: return
         val setUp = state.money is FunMoney.SetUp
         editor.update { it.copy(busy = true) }
@@ -225,9 +225,9 @@ class FunMoneyViewModel @Inject constructor(
 
     /** The typed adjustment if it can be applied now: above zero, the screen set up and idle. */
     private fun adjustmentAmount(): Money? {
-        val state = uiState.value
-        if (!state.canAdjust || editor.value.busy) return null
-        return (parse(state.form?.adjustment ?: return null) as? MoneyParseResult.Success)?.money
+        if (!uiState.value.canAdjust || editor.value.busy) return null
+        val amount = (parse(editor.value.form?.adjustment ?: return null) as? MoneyParseResult.Success)?.money
+        return amount?.takeIf { it.minorUnits > 0 }
     }
 
     private fun edit(change: (Editor) -> Editor) = editor.update { if (it.busy || it.form == null) it else change(it) }

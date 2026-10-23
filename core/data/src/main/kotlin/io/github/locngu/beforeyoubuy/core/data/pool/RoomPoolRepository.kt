@@ -31,7 +31,7 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
         pool.observeAllowance().map { it?.toDomain() }.distinctUntilChanged()
 
     override val entries: Flow<List<PoolEntry>> =
-        pool.observeEntries().map { rows -> rows.map { it.toDomain() } }.distinctUntilChanged()
+        pool.observeEntries().map { rows -> rows.mapNotNull { it.toDomain() } }.distinctUntilChanged()
 
     override suspend fun setUp(
         monthlyAmount: Money,
@@ -101,11 +101,17 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
     }
 }
 
-/** Unreadable stored values: a day outside 1–28 is clamped, an unreadable start date reads as not set up (ADR-0032). */
-internal fun AllowanceEntity.toDomain(): AllowanceSettings? {
-    val start = runCatching { LocalDate.parse(startDate) }.getOrNull() ?: return null
-    return AllowanceSettings(Money(monthlyMinor, currency), AllowanceSettings.clampAccrualDay(accrualDay), start)
-}
+/**
+ * Unreadable stored values (ADR-0032): a day outside 1–28 is clamped; an unreadable start date, unknown currency or
+ * negative amount reads as not set up, and setting up again replaces the row.
+ */
+internal fun AllowanceEntity.toDomain(): AllowanceSettings? = runCatching {
+    AllowanceSettings(
+        Money(monthlyMinor, currency),
+        AllowanceSettings.clampAccrualDay(accrualDay),
+        LocalDate.parse(startDate)
+    )
+}.getOrNull()
 
 internal fun AllowanceSettings.toEntity(): AllowanceEntity = AllowanceEntity(
     monthlyMinor = monthlyAmount.minorUnits,
@@ -119,10 +125,11 @@ internal enum class PoolEntryType { STARTING_BALANCE, ACCRUAL, ADJUSTMENT, PURCH
 
 /**
  * Rows this version can't read fully (an unknown type, an unreadable month, a negative credit) read as an
- * adjustment by the stored amount, so the balance stays right (ADR-0032).
+ * adjustment by the stored amount, so the balance stays right (ADR-0032). A row in an unknown currency has no
+ * amount this version can count and is left out (null).
  */
-internal fun PoolEntryEntity.toDomain(): PoolEntry {
-    val change = Money(amountMinor, currency)
+internal fun PoolEntryEntity.toDomain(): PoolEntry? {
+    val change = runCatching { Money(amountMinor, currency) }.getOrNull() ?: return null
     val at = Instant.ofEpochMilli(at)
     val type = runCatching { PoolEntryType.valueOf(type) }.getOrNull()
     return runCatching {

@@ -22,19 +22,15 @@ sealed interface FunMoney {
 /**
  * The fun money from the stored [allowance] and ledger [entries], with nothing set aside yet (#23 adds savings).
  *
- * An entry in another currency than the allowance is relabeled to it, as a currency change does (ADR-0033): that
- * happens for a moment while a currency change is read (the allowance and the entries arrive separately), and must
- * never hide the fun money if a stray row stays (ADR-0032).
+ * Entries in another currency than the allowance are relabeled to it ([poolBalanceOf]): the allowance and the entries
+ * arrive separately, so for a moment during a currency change they differ.
  */
 fun funMoneyOf(allowance: AllowanceSettings?, entries: List<PoolEntry>): FunMoney {
     if (allowance == null) return FunMoney.NotSetUp
     val currency = allowance.monthlyAmount.currency
     return FunMoney.SetUp(
         allowance = allowance,
-        balance = PoolBalance(
-            pool = entries.map { it.change.relabeled(currency) }.total(currency),
-            committed = Money(0, currency)
-        ),
+        balance = poolBalanceOf(entries, committed = Money(0, currency)),
         nextAccrual = nextAccrualDate(allowance, entries.lastAccruedMonth()),
         startingBalance = entries.filterIsInstance<PoolEntry.StartingBalance>()
             .map { it.change.relabeled(currency) }

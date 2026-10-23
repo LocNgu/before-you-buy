@@ -48,10 +48,10 @@ class PoolBalanceTest {
     }
 
     @Test
-    fun `mixed currencies throw`() {
-        assertThrows(IllegalArgumentException::class.java) {
-            poolBalanceOf(listOf(PoolEntry.StartingBalance(Money(100, "USD"), at)), zero)
-        }
+    fun `an entry in another currency is relabeled, keeping its number`() {
+        assertEquals(eur(100), poolBalanceOf(listOf(PoolEntry.StartingBalance(Money(100, "USD"), at)), zero).pool)
+        val inYen = poolBalanceOf(listOf(PoolEntry.StartingBalance(eur(5_050), at)), Money(0, "JPY"))
+        assertEquals(Money(51, "JPY"), inYen.pool)
     }
 
     @Test
