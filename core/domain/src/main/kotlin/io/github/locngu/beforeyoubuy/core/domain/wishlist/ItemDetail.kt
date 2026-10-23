@@ -7,6 +7,9 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isReflected
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.SavingsProgress
+import io.github.locngu.beforeyoubuy.core.domain.pool.progressOf
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -22,6 +25,8 @@ import java.time.temporal.ChronoUnit
  *   delay defeats it, so the link is only in the overflow menu then (ADR-0013).
  * @property imageProminent the photo may show large. While cooling off it's a small thumbnail to tap (ADR-0013).
  * @property recheckOn as in [WishlistEntry.recheckOn]: the date a "Wait" decision set, while the item waits for it.
+ * @property savings what is set aside for a want (brief §4.6); null for a need, which is never saved for (ADR-0044).
+ * @property funMoneySetUp money can be set aside; without fun money, detail offers to set it up instead.
  */
 data class ItemDetail(
     val item: Item,
@@ -32,15 +37,17 @@ data class ItemDetail(
     val reflected: Boolean,
     val linkProminent: Boolean,
     val imageProminent: Boolean,
-    val recheckOn: LocalDate? = null
+    val recheckOn: LocalDate? = null,
+    val savings: SavingsProgress? = null,
+    val funMoneySetUp: Boolean = false
 )
 
 /**
- * Item detail for an active [item] at [now] in [zone], with the reflection answers given so far. Like [wishlistOf],
- * every item counts as funded until savings exist (M2). Purchased and rejected items have no stage and throw.
+ * Item detail for an active [item] at [now] in [zone], with the reflection answers given so far and the [savings]
+ * (as in [wishlistOf]). Purchased and rejected items have no stage and throw.
  */
-fun itemDetailOf(item: Item, reflection: Reflection?, now: Instant, zone: ZoneId): ItemDetail {
-    val stage = stageOf(item, reflection, item.price, now)
+fun itemDetailOf(item: Item, reflection: Reflection?, savings: Savings, now: Instant, zone: ZoneId): ItemDetail {
+    val stage = stageOf(item, reflection, savings.fundingOf(item), now)
     return ItemDetail(
         item = item,
         reflection = reflection,
@@ -51,7 +58,9 @@ fun itemDetailOf(item: Item, reflection: Reflection?, now: Instant, zone: ZoneId
         reflected = isReflected(item, reflection),
         linkProminent = isCooledOff(item, now),
         imageProminent = isCooledOff(item, now),
-        recheckOn = recheckOnOf(item, stage, now, zone)
+        recheckOn = recheckOnOf(item, stage, now, zone),
+        savings = savings.progressOf(item),
+        funMoneySetUp = savings.setUp
     )
 }
 

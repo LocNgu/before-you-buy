@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COMPLETE_REFLECTION
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -25,7 +26,7 @@ class ItemDetailTest {
 
     @Test
     fun `while cooling off the link isn't prominent and the reasons are asked for`() {
-        val detail = itemDetailOf(item(), null, DURING_COOLING, zone)
+        val detail = itemDetailOf(item(), null, Savings.NONE, DURING_COOLING, zone)
 
         assertEquals(Stage.COOLING_OFF, detail.stage)
         assertEquals(16, detail.daysLeft)
@@ -37,7 +38,7 @@ class ItemDetailTest {
 
     @Test
     fun `after cooling off the link may show as a button`() {
-        val detail = itemDetailOf(item(), COMPLETE_REFLECTION, AFTER_COOLING, zone)
+        val detail = itemDetailOf(item(), COMPLETE_REFLECTION, Savings.NONE, AFTER_COOLING, zone)
 
         assertEquals(Stage.READY, detail.stage)
         assertEquals(0, detail.daysLeft)
@@ -48,7 +49,7 @@ class ItemDetailTest {
 
     @Test
     fun `partial answers still ask for reflection`() {
-        val detail = itemDetailOf(item(), Reflection(why = "Hikes"), AFTER_COOLING, zone)
+        val detail = itemDetailOf(item(), Reflection(why = "Hikes"), Savings.NONE, AFTER_COOLING, zone)
 
         assertEquals(Stage.NEEDS_REFLECTION, detail.stage)
         assertFalse(detail.reflected)
@@ -56,7 +57,7 @@ class ItemDetailTest {
 
     @Test
     fun `a need is ready at once and never asked for reasons`() {
-        val detail = itemDetailOf(item(ItemKind.NEED), null, DURING_COOLING, zone)
+        val detail = itemDetailOf(item(ItemKind.NEED), null, Savings.NONE, DURING_COOLING, zone)
 
         assertEquals(Stage.READY, detail.stage)
         assertTrue(detail.reflected)
@@ -68,7 +69,7 @@ class ItemDetailTest {
     @Test
     fun `ended items have no detail`() {
         assertThrows(IllegalArgumentException::class.java) {
-            itemDetailOf(item().copy(status = ItemStatus.REJECTED), null, DURING_COOLING, zone)
+            itemDetailOf(item().copy(status = ItemStatus.REJECTED), null, Savings.NONE, DURING_COOLING, zone)
         }
     }
 
@@ -103,9 +104,9 @@ class ItemDetailTest {
 
         assertEquals(
             LocalDate.of(2026, 11, 9),
-            itemDetailOf(waited, COMPLETE_REFLECTION, AFTER_COOLING, zone).recheckOn
+            itemDetailOf(waited, COMPLETE_REFLECTION, Savings.NONE, AFTER_COOLING, zone).recheckOn
         )
-        assertNull(itemDetailOf(waited, COMPLETE_REFLECTION, recheck, zone).recheckOn)
-        assertNull(itemDetailOf(waited, null, AFTER_COOLING, zone).recheckOn)
+        assertNull(itemDetailOf(waited, COMPLETE_REFLECTION, Savings.NONE, recheck, zone).recheckOn)
+        assertNull(itemDetailOf(waited, null, Savings.NONE, AFTER_COOLING, zone).recheckOn)
     }
 }

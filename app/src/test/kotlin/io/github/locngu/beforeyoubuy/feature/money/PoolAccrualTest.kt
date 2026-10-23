@@ -16,7 +16,7 @@ class PoolAccrualTest {
     @Test
     fun `credits what is due in the device's zone, once`() = runTest {
         val pool = FakePoolRepository()
-        pool.setUp(Money(30_000, "EUR"), 1, Money(0, "EUR"), Instant.parse("2026-10-23T10:00:00Z"), berlin)
+        pool.setUp(Money(30_000, "EUR"), 1, Money(0, "EUR"), true, Instant.parse("2026-10-23T10:00:00Z"), berlin)
         // Still 31 Oct in UTC, already 1 Nov in Berlin.
         val accrual = PoolAccrual(pool, MutableClock(Instant.parse("2026-10-31T23:30:00Z"), berlin))
 

@@ -15,6 +15,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
@@ -63,14 +64,29 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
     private val coolingLater = item(5, t("Tent", "Zelt"), 320, endsInDays = 60)
 
     private val funMoney = FunMoney.SetUp(
-        allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.parse("2026-09-20")),
-        balance = PoolBalance(pool = Money(64_550, "EUR"), committed = Money(0, "EUR")),
+        allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.parse("2026-09-20"), wantsNeedFunding = false),
+        balance = PoolBalance(pool = Money(104_550, "EUR"), committed = Money(70_000, "EUR")),
         nextAccrual = LocalDate.parse("2026-11-01"),
         startingBalance = Money(12_000, "EUR")
     )
 
-    private fun state(items: List<Item>, money: FunMoney? = FunMoney.NotSetUp) =
-        HomeUiState(homeOverviewOf(items, mapOf(ready.id to reflection), now, ZoneOffset.UTC), money)
+    // The switch is off here, so the camera is to decide without its price set aside (ADR-0046).
+    private val savings = Savings(
+        setUp = true,
+        required = false,
+        byItem = mapOf(coolingSoon.id to Money(60_000, "EUR"), coolingLater.id to Money(10_000, "EUR"))
+    )
+
+    private fun state(items: List<Item>, money: FunMoney? = FunMoney.NotSetUp) = HomeUiState(
+        homeOverviewOf(
+            items,
+            mapOf(ready.id to reflection),
+            if (money is FunMoney.SetUp) savings else Savings.NONE,
+            now,
+            ZoneOffset.UTC
+        ),
+        money
+    )
 
     @Test
     fun firstStart() = capture(state(emptyList()))
@@ -94,6 +110,7 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
                     onOpenWishlist = {},
                     onOpenHistory = {},
                     onOpenFunMoney = {},
+                    onOpenItem = {},
                     snackbarHostState = SnackbarHostState()
                 )
             }

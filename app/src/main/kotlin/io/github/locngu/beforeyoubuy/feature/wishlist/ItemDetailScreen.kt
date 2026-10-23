@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -25,10 +29,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,6 +60,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -63,15 +72,23 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.MAX_IMAGE_SIZE_PX
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.ItemDetail
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.webLink
+import io.github.locngu.beforeyoubuy.feature.capture.priceErrorMessage
+import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
 import io.github.locngu.beforeyoubuy.feature.reflection.upgradeOrNewLabel
 import io.github.locngu.beforeyoubuy.feature.reflection.usageLabel
+import io.github.locngu.beforeyoubuy.ui.components.ButtonPair
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.PrimaryButton
+import io.github.locngu.beforeyoubuy.ui.components.SecondaryButton
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
+import io.github.locngu.beforeyoubuy.ui.format.currencySymbol
+import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 import io.github.locngu.beforeyoubuy.ui.format.formattedDate
 import java.io.File
 import kotlinx.coroutines.launch
@@ -79,7 +96,7 @@ import kotlinx.coroutines.launch
 /**
  * One item (brief §6.3): the user's reasons and the countdown first, the shop link out of the way while cooling off
  * (ADR-0013). [onEdit] opens the edit screen, [onReflect] the reflection questions (brief §6.4), [onDecide] the
- * decision screen (brief §6.5).
+ * decision screen (brief §6.5), [onOpenFunMoney] the fun money screen to set it up (brief §4.5).
  */
 @Composable
 fun ItemDetailScreen(
@@ -87,6 +104,7 @@ fun ItemDetailScreen(
     onEdit: () -> Unit,
     onReflect: () -> Unit,
     onDecide: () -> Unit,
+    onOpenFunMoney: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ItemDetailViewModel =
         hiltViewModel<ItemDetailViewModel, ItemDetailViewModel.Factory> { it.create(itemId) }
@@ -94,10 +112,13 @@ fun ItemDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val resources by rememberUpdatedState(LocalResources.current)
+    val locale = currentLocale()
+    LaunchedEffect(viewModel, locale) { viewModel.setLocale(locale) }
     LaunchedEffect(viewModel, snackbarHostState) {
         viewModel.message.collect {
             val text = when (it) {
                 ItemDetailMessage.CHANGED_MEANWHILE -> resources.getString(R.string.item_changed_meanwhile)
+                ItemDetailMessage.SAVINGS_CHANGED_MEANWHILE -> resources.getString(R.string.savings_changed_meanwhile)
             }
             snackbarHostState.showSnackbar(text)
         }
@@ -112,6 +133,8 @@ fun ItemDetailScreen(
         onReflect = onReflect,
         onDecide = onDecide,
         onMarkAsNeed = viewModel::markAsNeed,
+        onOpenFunMoney = onOpenFunMoney,
+        savingsActions = viewModel,
         onCopyLink = { link ->
             scope.launch {
                 clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, link)))
@@ -144,6 +167,8 @@ fun ItemDetailContent(
     onReflect: () -> Unit,
     onDecide: () -> Unit,
     onMarkAsNeed: () -> Unit,
+    onOpenFunMoney: () -> Unit,
+    savingsActions: SavingsActions,
     onCopyLink: (String) -> Unit,
     onOpenLink: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -178,9 +203,18 @@ fun ItemDetailContent(
                     onReflect,
                     onDecide,
                     onMarkAsNeed,
+                    onOpenFunMoney,
+                    savingsActions,
+                    state.canSetAside,
                     onOpenLink,
                     Modifier.padding(innerPadding)
                 )
+        }
+    }
+    val sheet = state.sheet
+    if (detail != null && sheet != null) {
+        ModalBottomSheet(onDismissRequest = savingsActions::dismissSavings) {
+            SavingsSheetContent(sheet, detail.item.name, savingsActions)
         }
     }
 }
@@ -224,6 +258,9 @@ private fun Detail(
     onReflect: () -> Unit,
     onDecide: () -> Unit,
     onMarkAsNeed: () -> Unit,
+    onOpenFunMoney: () -> Unit,
+    savingsActions: SavingsActions,
+    canSetAside: Boolean,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -235,10 +272,138 @@ private fun Detail(
         // The user's own reasons come before anything about the product (ADR-0013).
         Reasons(detail, onReflect)
         if (photo != null) Photo(detail, photo)
+        Savings(detail, onOpenFunMoney, savingsActions, canSetAside)
         Details(detail)
         Decide(detail, onDecide)
         Actions(detail, onMarkAsNeed, onOpenLink)
     }
+}
+
+/**
+ * What is set aside for a want (brief §4.6), with equal "Set aside" and "Take back" buttons, each enabled while there
+ * is something to move ([canSetAside], money set aside); without fun money, a way to set it up. Nothing for a need,
+ * which is never saved for (ADR-0044). Saving can start while it cools off.
+ */
+@Composable
+private fun Savings(detail: ItemDetail, onOpenFunMoney: () -> Unit, actions: SavingsActions, canSetAside: Boolean) {
+    val progress = detail.savings ?: return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(stringResource(R.string.savings_title))
+        if (!detail.funMoneySetUp) {
+            SecondaryText(stringResource(R.string.savings_not_set_up), Modifier.padding(horizontal = 16.dp))
+            // Lines the label up with the text above; the button's own padding stays part of the touch target.
+            TextButton(onClick = onOpenFunMoney, modifier = Modifier.padding(horizontal = 16.dp).offset(x = (-12).dp)) {
+                Text(stringResource(R.string.savings_set_up))
+            }
+            return@Column
+        }
+        SavingsProgressBar(progress, Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(onClick = actions::openSetAside, enabled = canSetAside, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.savings_set_aside))
+            }
+            OutlinedButton(
+                onClick = actions::openTakeBack,
+                enabled = progress.allocated.minorUnits > 0,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.savings_take_back))
+            }
+        }
+    }
+}
+
+/**
+ * The "Set aside" / "Take back" sheet's content (a bottom sheet is its own window, so screenshots draw this): the
+ * amount, how much there is to move, quick chips and the confirm button.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SavingsSheetContent(sheet: SavingsSheet, itemName: String, actions: SavingsActions, modifier: Modifier = Modifier) {
+    val locale = currentLocale()
+    val setAside = sheet.mode == SavingsMode.SET_ASIDE
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = stringResource(
+                if (setAside) R.string.savings_sheet_set_aside_title else R.string.savings_sheet_take_back_title,
+                itemName
+            ),
+            style = MaterialTheme.typography.titleLarge
+        )
+        SecondaryText(
+            stringResource(
+                if (setAside) R.string.savings_not_set_aside else R.string.savings_held,
+                sheet.shown.format(locale)
+            )
+        )
+        val error = sheet.error?.let { savingsErrorMessage(it, sheet) }
+        OutlinedTextField(
+            value = sheet.amount,
+            onValueChange = actions::onSavingsAmountChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.savings_amount)) },
+            suffix = { Text(currencySymbol(sheet.limit.currency)) },
+            isError = error != null,
+            supportingText = error?.let { { Text(it) } },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { actions.confirmSavings() })
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Each fills in its amount, so it reads as an amount, not "+50".
+            sheet.quickAmounts.forEach {
+                SuggestionChip(onClick = { actions.onSavingsChip(it) }, label = { Text(it.format(locale)) })
+            }
+            sheet.rest?.let { rest ->
+                SuggestionChip(
+                    onClick = { actions.onSavingsChip(rest) },
+                    label = {
+                        Text(
+                            stringResource(
+                                if (setAside) R.string.savings_chip_rest else R.string.savings_chip_all,
+                                rest.format(locale)
+                            )
+                        )
+                    }
+                )
+            }
+        }
+        // Equal buttons: neither direction is pushed (ADR-0012).
+        ButtonPair(
+            start = { SecondaryButton(stringResource(R.string.dialog_cancel), actions::dismissSavings, it) },
+            end = {
+                SecondaryButton(
+                    stringResource(if (setAside) R.string.savings_set_aside else R.string.savings_take_back),
+                    actions::confirmSavings,
+                    it,
+                    enabled = sheet.canConfirm
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun savingsErrorMessage(error: SavingsError, sheet: SavingsSheet): String = when (error) {
+    is SavingsError.Unreadable ->
+        priceErrorMessage(error.result, sheet.limit.currency, R.string.savings_amount_zero).orEmpty()
+
+    SavingsError.Zero -> stringResource(R.string.savings_amount_zero)
+
+    SavingsError.MoreThanLimit -> stringResource(
+        if (sheet.mode == SavingsMode.SET_ASIDE) {
+            R.string.savings_set_aside_up_to
+        } else {
+            R.string.savings_take_back_up_to
+        },
+        sheet.limit.format(currentLocale())
+    )
 }
 
 @Composable
@@ -249,7 +414,7 @@ private fun Header(detail: ItemDetail) {
         MoneyText(item.price, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StageChip(detail.stage, waiting = detail.recheckOn != null)
-            StageStatus(detail.stage, detail.daysLeft, detail.recheckOn)
+            StageStatus(detail.stage, detail.daysLeft, detail.recheckOn, detail.savings?.shownToGo)
         }
         val wanted = if (detail.wantedForDays == 0) {
             stringResource(R.string.item_added_today)
@@ -472,7 +637,7 @@ private fun Actions(detail: ItemDetail, onMarkAsNeed: () -> Unit, onOpenLink: (S
         AlertDialog(
             onDismissRequest = { confirming = false },
             title = { Text(stringResource(R.string.item_mark_as_need_title)) },
-            text = { Text(stringResource(R.string.item_mark_as_need_body)) },
+            text = { MarkAsNeedBody(detail.savings?.allocated) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -488,7 +653,25 @@ private fun Actions(detail: ItemDetail, onMarkAsNeed: () -> Unit, onOpenLink: (S
     }
 }
 
+/**
+ * Why a need is different, and, if money is set aside for the want, that it goes back to the fun money (ADR-0044).
+ * Edit asks the same when its switch makes a want with savings a need.
+ */
 @Composable
-private fun SecondaryText(text: String, style: TextStyle = MaterialTheme.typography.bodyMedium) {
-    Text(text, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant)
+internal fun MarkAsNeedBody(allocated: Money?) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.item_mark_as_need_body))
+        if (allocated != null && allocated.minorUnits > 0) {
+            Text(stringResource(R.string.item_mark_as_need_release, allocated.format(currentLocale())))
+        }
+    }
+}
+
+@Composable
+private fun SecondaryText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.bodyMedium
+) {
+    Text(text, modifier = modifier, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

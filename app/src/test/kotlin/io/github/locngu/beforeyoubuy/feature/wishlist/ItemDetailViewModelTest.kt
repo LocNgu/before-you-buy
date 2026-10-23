@@ -12,9 +12,11 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
+import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
@@ -38,6 +40,7 @@ class ItemDetailViewModelTest {
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
     private val policies = FakePolicyRepository()
+    private val pool = FakePoolRepository(items)
     private val images = FakeItemImageStore()
 
     private val reflection =
@@ -62,7 +65,7 @@ class ItemDetailViewModelTest {
         return items.stored.single { it.id == id }
     }
 
-    private fun viewModelFor(item: Item) = ItemDetailViewModel(item.id.value, items, policies, images, clock)
+    private fun viewModelFor(item: Item) = ItemDetailViewModel(item.id.value, items, pool, policies, images, clock)
 
     private fun TestScope.pass(duration: Duration) {
         clock.advance(duration)
@@ -165,5 +168,153 @@ class ItemDetailViewModelTest {
             assertEquals(ItemDetailMessage.CHANGED_MEANWHILE, awaitItem())
             assertEquals(ItemKind.WANT, items.stored.single().kind)
         }
+    }
+
+    private suspend fun setUpFunMoney(starting: Long, wantsNeedFunding: Boolean = true) {
+        pool.setUp(Money(30_000, "EUR"), 1, Money(starting, "EUR"), wantsNeedFunding, start, clock.zone)
+    }
+
+    /** A want whose wait is over and whose answers are given: only money can hold it back. */
+    private suspend fun readyItem(): Item = add(endsInHours = -1).also { items.reflect(it.id, reflection) }
+
+    @Test
+    fun `setting aside moves money to the item, and it's Ready once its price is set aside`() =
+        runTest(UnconfinedTestDispatcher()) {
+            setUpFunMoney(starting = 20_000)
+            val item = readyItem()
+            val viewModel = viewModelFor(item).apply { setLocale(Locale.GERMANY) }
+            viewModel.uiState.launchIn(backgroundScope)
+            assertEquals(Stage.SAVING, viewModel.uiState.value.detail!!.stage)
+
+            viewModel.openSetAside()
+            // 200 € aren't set aside yet, but the camera costs 120 €: never more than its price (ADR-0046).
+            assertEquals(Money(12_000, "EUR"), viewModel.uiState.value.sheet!!.limit)
+            viewModel.onSavingsAmountChange("60")
+            viewModel.confirmSavings()
+
+            assertNull(viewModel.uiState.value.sheet)
+            assertEquals(Money(6_000, "EUR"), viewModel.uiState.value.detail!!.savings!!.allocated)
+            assertEquals(Stage.SAVING, viewModel.uiState.value.detail!!.stage)
+
+            viewModel.openSetAside()
+            // "The rest": what's still to go, here less than what isn't set aside.
+            assertEquals(Money(6_000, "EUR"), viewModel.uiState.value.sheet!!.rest)
+            viewModel.onSavingsChip(viewModel.uiState.value.sheet!!.rest!!)
+            viewModel.confirmSavings()
+
+            assertEquals(Stage.READY, viewModel.uiState.value.detail!!.stage)
+            assertTrue(viewModel.uiState.value.detail!!.savings!!.complete)
+        }
+
+    @Test
+    fun `more than isn't set aside yet shows why and writes nothing`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 5_000)
+        val item = readyItem()
+        val viewModel = viewModelFor(item).apply { setLocale(Locale.GERMANY) }
+        viewModel.uiState.launchIn(backgroundScope)
+
+        viewModel.openSetAside()
+        viewModel.onSavingsAmountChange("50,01")
+        val sheet = viewModel.uiState.value.sheet!!
+        assertEquals(SavingsError.MoreThanLimit, sheet.error)
+        assertFalse(sheet.canConfirm)
+        // The rest is capped by what isn't set aside.
+        assertEquals(Money(5_000, "EUR"), sheet.rest)
+        viewModel.confirmSavings()
+
+        assertEquals(emptyList<Any>(), pool.allocations.value)
+        assertTrue(viewModel.uiState.value.sheet != null)
+    }
+
+    @Test
+    fun `taking back is limited by what is set aside`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 20_000)
+        val item = readyItem()
+        pool.setAside(item.id, Money(6_000, "EUR"), start)
+        val viewModel = viewModelFor(item).apply { setLocale(Locale.GERMANY) }
+        viewModel.uiState.launchIn(backgroundScope)
+
+        viewModel.openTakeBack()
+        assertEquals(Money(6_000, "EUR"), viewModel.uiState.value.sheet!!.limit)
+        assertEquals(Money(6_000, "EUR"), viewModel.uiState.value.sheet!!.rest)
+        viewModel.onSavingsAmountChange("61")
+        assertEquals(SavingsError.MoreThanLimit, viewModel.uiState.value.sheet!!.error)
+        viewModel.onSavingsAmountChange("10")
+        viewModel.confirmSavings()
+
+        assertEquals(Money(5_000, "EUR"), viewModel.uiState.value.detail!!.savings!!.allocated)
+    }
+
+    @Test
+    fun `an empty or zero amount can't be confirmed, and an empty one shows no error`() =
+        runTest(UnconfinedTestDispatcher()) {
+            setUpFunMoney(starting = 20_000)
+            val viewModel = viewModelFor(readyItem()).apply { setLocale(Locale.GERMANY) }
+            viewModel.uiState.launchIn(backgroundScope)
+
+            viewModel.openSetAside()
+            assertNull(viewModel.uiState.value.sheet!!.error)
+            assertFalse(viewModel.uiState.value.sheet!!.canConfirm)
+            viewModel.onSavingsAmountChange("0")
+            assertEquals(SavingsError.Zero, viewModel.uiState.value.sheet!!.error)
+            viewModel.onSavingsAmountChange("")
+            assertNull(viewModel.uiState.value.sheet!!.error)
+
+            viewModel.dismissSavings()
+            assertNull(viewModel.uiState.value.sheet)
+        }
+
+    @Test
+    fun `without fun money nothing can be set aside, and a want is Ready without savings`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val viewModel = viewModelFor(readyItem()).apply { setLocale(Locale.GERMANY) }
+            viewModel.uiState.launchIn(backgroundScope)
+
+            val detail = viewModel.uiState.value.detail!!
+            assertFalse(detail.funMoneySetUp)
+            assertEquals(Stage.READY, detail.stage)
+            viewModel.openSetAside()
+            assertNull(viewModel.uiState.value.sheet)
+        }
+
+    @Test
+    fun `with the switch off a want is Ready without savings, which still show`() =
+        runTest(UnconfinedTestDispatcher()) {
+            setUpFunMoney(starting = 20_000, wantsNeedFunding = false)
+            val item = readyItem()
+            pool.setAside(item.id, Money(3_000, "EUR"), start)
+            val viewModel = viewModelFor(item).apply { setLocale(Locale.GERMANY) }
+            viewModel.uiState.launchIn(backgroundScope)
+
+            val detail = viewModel.uiState.value.detail!!
+            assertEquals(Stage.READY, detail.stage)
+            assertEquals(Money(3_000, "EUR"), detail.savings!!.allocated)
+        }
+
+    @Test
+    fun `a need has no savings`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 20_000)
+        val item = add(endsInHours = 24)
+        items.update(item, item.copy(kind = ItemKind.NEED, markedAsNeedAt = start))
+        val viewModel = viewModelFor(item)
+        viewModel.uiState.launchIn(backgroundScope)
+
+        assertNull(viewModel.uiState.value.detail!!.savings)
+        viewModel.openSetAside()
+        assertNull(viewModel.uiState.value.sheet)
+    }
+
+    @Test
+    fun `with nothing left to set aside, setting aside isn't offered`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 6_000)
+        val camera = readyItem()
+        val bike = add(endsInHours = 24)
+        pool.setAside(bike.id, Money(6_000, "EUR"), start)
+        val viewModel = viewModelFor(camera).apply { setLocale(Locale.GERMANY) }
+        viewModel.uiState.launchIn(backgroundScope)
+
+        assertFalse(viewModel.uiState.value.canSetAside)
+        viewModel.openSetAside()
+        assertNull(viewModel.uiState.value.sheet)
     }
 }

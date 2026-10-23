@@ -38,6 +38,12 @@ data class Money(val minorUnits: Long, val currency: String) : Comparable<Money>
         /** Minor-unit digits of an ISO 4217 [currency] (2 for EUR, 0 for JPY, 3 for BHD). */
         fun fractionDigits(currency: String): Int =
             Currency.getInstance(currency).defaultFractionDigits.coerceAtLeast(0)
+
+        /** [units] whole units of [currency], exactly: 100 → 100.00 € or 100 ¥. Throws on overflow. */
+        fun ofWholeUnits(units: Long, currency: String): Money {
+            val minorPerMajor = (1..fractionDigits(currency)).fold(1L) { acc, _ -> Math.multiplyExact(acc, 10L) }
+            return Money(Math.multiplyExact(units, minorPerMajor), currency)
+        }
     }
 }
 

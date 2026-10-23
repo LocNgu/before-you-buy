@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -136,6 +137,19 @@ fun ItemEditContent(
                     PhotoField(state, actions, onPickPhoto)
                 }
         }
+    }
+    state.confirmRelease?.let { allocated ->
+        AlertDialog(
+            onDismissRequest = actions::dismissRelease,
+            title = { Text(stringResource(R.string.item_mark_as_need_title)) },
+            text = { MarkAsNeedBody(allocated) },
+            confirmButton = {
+                TextButton(onClick = actions::confirmRelease) { Text(stringResource(R.string.quick_add_save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = actions::dismissRelease) { Text(stringResource(R.string.dialog_cancel)) }
+            }
+        )
     }
 }
 

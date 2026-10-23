@@ -7,6 +7,9 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.SavingsProgress
+import io.github.locngu.beforeyoubuy.core.domain.pool.progressOf
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -19,8 +22,16 @@ import java.time.temporal.ChronoUnit
  * @property daysLeft calendar days of cooling-off left (ADR-0018); at least 1 while [stage] is
  *   [Stage.COOLING_OFF] and 0 otherwise.
  * @property recheckOn the date a "Wait" decision set, while the item waits for it; null otherwise (see [isWaiting]).
+ * @property savings what is set aside for a want while fun money is set up (brief §4.6); null for needs and without
+ *   fun money.
  */
-data class WishlistEntry(val item: Item, val stage: Stage, val daysLeft: Int, val recheckOn: LocalDate? = null)
+data class WishlistEntry(
+    val item: Item,
+    val stage: Stage,
+    val daysLeft: Int,
+    val recheckOn: LocalDate? = null,
+    val savings: SavingsProgress? = null
+)
 
 /**
  * The entries in one [stage], soonest cooling-off end first. [waiting] marks the group of Ready items the user chose
@@ -40,12 +51,13 @@ val WISHLIST_STAGE_ORDER: List<Stage> = listOf(Stage.READY, Stage.NEEDS_REFLECTI
  * Ready items with a "Wait" re-check date still ahead ([isWaiting]) form a last, [WishlistGroup.waiting] group
  * instead of being Ready, soonest re-check first.
  *
- * Savings don't exist before M2, so every item counts as funded: its allocation is its own price (see
- * [stageOf]). [reflections] holds the answers given so far; an item without an entry has none.
+ * [reflections] holds the answers given so far; an item without an entry has none. [savings] holds what is set aside
+ * per item and whether wants need it to be Ready (ADR-0046).
  */
 fun wishlistOf(
     items: List<Item>,
     reflections: Map<ItemId, Reflection>,
+    savings: Savings,
     now: Instant,
     zone: ZoneId
 ): List<WishlistGroup> {
@@ -53,8 +65,14 @@ fun wishlistOf(
         items
             .filter { it.status == ItemStatus.ACTIVE }
             .map { item ->
-                val stage = stageOf(item, reflections[item.id], item.price, now)
-                WishlistEntry(item, stage, daysLeft(item, now, zone), recheckOnOf(item, stage, now, zone))
+                val stage = stageOf(item, reflections[item.id], savings.fundingOf(item), now)
+                WishlistEntry(
+                    item,
+                    stage,
+                    daysLeft(item, now, zone),
+                    recheckOnOf(item, stage, now, zone),
+                    savings.progressOf(item).takeIf { savings.setUp }
+                )
             }
     val (waiting, deciding) = entries.partition { it.recheckOn != null }
     val byStage = deciding.groupBy { it.stage }

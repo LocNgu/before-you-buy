@@ -14,7 +14,7 @@ class FunMoneyTest {
 
     @Test
     fun `without an allowance it isn't set up, whatever the ledger holds`() {
-        assertEquals(FunMoney.NotSetUp, funMoneyOf(null, emptyList()))
+        assertEquals(FunMoney.NotSetUp, funMoneyOf(null, emptyList(), Savings.NONE))
     }
 
     @Test
@@ -30,7 +30,7 @@ class FunMoneyTest {
                 nextAccrual = LocalDate.parse("2026-12-01"),
                 startingBalance = Money(10_000, "EUR")
             ),
-            funMoneyOf(allowance, entries)
+            funMoneyOf(allowance, entries, Savings.NONE)
         )
     }
 
@@ -38,7 +38,11 @@ class FunMoneyTest {
     fun `entries in another currency are relabeled instead of hiding the fun money`() {
         // A half-read currency change, or a stray row: the numbers stay, as a currency change keeps them.
         val inYen = allowance.copy(monthlyAmount = Money(300, "JPY"))
-        val money = funMoneyOf(inYen, listOf(PoolEntry.StartingBalance(Money(5_050, "EUR"), at))) as FunMoney.SetUp
+        val money = funMoneyOf(
+            inYen,
+            listOf(PoolEntry.StartingBalance(Money(5_050, "EUR"), at)),
+            Savings.NONE
+        ) as FunMoney.SetUp
         assertEquals(Money(51, "JPY"), money.balance.pool)
     }
 }

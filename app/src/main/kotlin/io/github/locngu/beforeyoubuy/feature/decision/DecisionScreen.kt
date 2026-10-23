@@ -15,6 +15,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +62,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.feature.capture.DayPicker
 import io.github.locngu.beforeyoubuy.feature.capture.priceErrorMessage
+import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
 import io.github.locngu.beforeyoubuy.feature.reflection.usageLabel
 import io.github.locngu.beforeyoubuy.ui.components.ButtonPair
 import io.github.locngu.beforeyoubuy.ui.components.CountdownText
@@ -166,6 +168,32 @@ fun DecisionContent(
                 }
         }
     }
+    state.confirmBelowZero?.let { BelowZeroDialog(it, actions) }
+}
+
+/** Buying for more than is set aside and not set aside asks first (issue #23); the purchase is the only record. */
+@Composable
+private fun BelowZeroDialog(belowZero: BelowZero, actions: DecisionActions) {
+    val locale = currentLocale()
+    AlertDialog(
+        onDismissRequest = actions::dismissBelowZero,
+        title = { Text(stringResource(R.string.fun_money_below_zero_title)) },
+        text = {
+            Text(
+                stringResource(
+                    R.string.decision_below_zero_body,
+                    belowZero.paid.format(locale),
+                    belowZero.leaves.format(locale)
+                )
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = actions::confirmBelowZero) { Text(stringResource(R.string.decision_buy_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = actions::dismissBelowZero) { Text(stringResource(R.string.dialog_cancel)) }
+        }
+    )
 }
 
 @Composable
@@ -233,6 +261,8 @@ private fun Header(overview: DecisionOverview) {
             else -> SecondaryText(stringResource(R.string.decision_cooling_done))
         }
         overview.recheckOn?.let { SecondaryText(stringResource(R.string.decision_recheck_on, formattedDate(it))) }
+        // The amount saved (brief §6.5); nothing for a need or without fun money.
+        overview.savings?.let { SavingsProgressBar(it, Modifier.fillMaxWidth()) }
     }
 }
 
@@ -318,6 +348,11 @@ private fun BuyStep(state: DecisionUiState, overview: DecisionOverview, form: De
                         pluralStringResource(R.plurals.decision_early_days_left, overview.daysLeft, overview.daysLeft)
 
                     !overview.reflected -> stringResource(R.string.decision_early_wait_over)
+
+                    overview.stage == Stage.SAVING -> stringResource(
+                        R.string.decision_early_saving,
+                        (overview.savings?.shownToGo ?: overview.item.price).format(currentLocale())
+                    )
 
                     // Cooling off ended while this step was open; it stays an early purchase (ADR-0006).
                     else -> stringResource(R.string.decision_cooling_done)

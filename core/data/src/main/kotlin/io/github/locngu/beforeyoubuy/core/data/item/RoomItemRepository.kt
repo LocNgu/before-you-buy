@@ -2,6 +2,8 @@ package io.github.locngu.beforeyoubuy.core.data.item
 
 import androidx.room.withTransaction
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
+import io.github.locngu.beforeyoubuy.core.data.pool.toDomain
+import io.github.locngu.beforeyoubuy.core.data.pool.toEntity
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.HistoryEntry
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
@@ -9,6 +11,11 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.money.relabeled
+import io.github.locngu.beforeyoubuy.core.domain.money.total
+import io.github.locngu.beforeyoubuy.core.domain.pool.poolPurchaseOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.releaseWhenMarkedAsNeed
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -17,6 +24,7 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
     private val reflections = database.reflectionDao()
     private val decisions = database.decisionDao()
     private val policies = database.policyDao()
+    private val pool = database.poolDao()
 
     override suspend fun add(item: Item): ItemId {
         require(item.status == ItemStatus.ACTIVE) { "New items are active, was ${item.status}" }
@@ -32,6 +40,10 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
         return writeIfUnchanged(current) {
             requireAppCurrency(edited)
             items.update(edited.toEntity())
+            // A want that becomes a need gives back what was set aside for it (ADR-0044).
+            releaseWhenMarkedAsNeed(current, edited, allocatedFor(current))?.let {
+                pool.insertAllocation(it.toEntity())
+            }
         }
     }
 
@@ -69,7 +81,18 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
         return writeIfUnchanged(current) {
             decisions.insert(decision.toEntity(current.id))
             items.update(result.toEntity())
+            // A want's purchase is spent from the fun money with its decision (brief §4.6); a need's never is.
+            val funMoneySetUp = pool.getAllowance()?.toDomain() != null
+            poolPurchaseOf(current, decision, funMoneySetUp)?.let { pool.insertEntry(it.toEntity()) }
         }
+    }
+
+    /** What is set aside for [item] in its currency, from the stored allocations. */
+    private suspend fun allocatedFor(item: Item): Money {
+        val currency = item.price.currency
+        return pool.getAllocationsFor(item.id.value)
+            .mapNotNull { it.toDomain()?.amount?.relabeled(currency) }
+            .total(currency)
     }
 
     override suspend fun delete(current: Item): Boolean {

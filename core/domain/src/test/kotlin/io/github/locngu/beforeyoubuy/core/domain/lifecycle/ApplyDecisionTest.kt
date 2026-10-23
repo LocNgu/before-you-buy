@@ -40,9 +40,9 @@ class ApplyDecisionTest {
         at: Instant = AFTER_COOLING,
         earlyReason: String? = null,
         waitUntil: Instant? = null,
-        allocated: Money = FUNDED,
+        funding: Funding = FUNDED,
         reflection: Reflection? = COMPLETE_REFLECTION
-    ) = applyDecision(item, reflection, allocated, decision(type, at, earlyReason, waitUntil))
+    ) = applyDecision(item, reflection, funding, decision(type, at, earlyReason, waitUntil))
 
     private fun applied(result: DecisionResult): Item = (result as DecisionResult.Applied).item
 
@@ -56,7 +56,7 @@ class ApplyDecisionTest {
     fun `buy is refused for a want that isn't ready`() {
         assertEquals(DecisionResult.NotReady, decide(ready, DecisionType.BUY, at = DURING_COOLING))
         assertEquals(DecisionResult.NotReady, decide(ready, DecisionType.BUY, reflection = null))
-        assertEquals(DecisionResult.NotReady, decide(ready, DecisionType.BUY, allocated = UNFUNDED))
+        assertEquals(DecisionResult.NotReady, decide(ready, DecisionType.BUY, funding = UNFUNDED))
     }
 
     @Test
@@ -77,7 +77,7 @@ class ApplyDecisionTest {
         assertEquals(early, applied(decide(ready, DecisionType.BUY_EARLY, reflection = null, earlyReason = "On sale")))
         assertEquals(
             early,
-            applied(decide(ready, DecisionType.BUY_EARLY, allocated = UNFUNDED, earlyReason = "On sale"))
+            applied(decide(ready, DecisionType.BUY_EARLY, funding = UNFUNDED, earlyReason = "On sale"))
         )
         // Confirmed just as cooling off ended: the friction was already gone through, so it still counts.
         assertEquals(early, applied(decide(ready, DecisionType.BUY_EARLY, at = COOLING_ENDS, earlyReason = "On sale")))
@@ -88,7 +88,7 @@ class ApplyDecisionTest {
         assertEquals(ItemStatus.PURCHASED, applied(decide(need, DecisionType.BUY_NEED, at = ADDED)).status)
         assertEquals(
             ItemStatus.PURCHASED,
-            applied(decide(need, DecisionType.BUY_NEED, at = ADDED, allocated = UNFUNDED)).status
+            applied(decide(need, DecisionType.BUY_NEED, at = ADDED, funding = UNFUNDED)).status
         )
 
         assertEquals(DecisionResult.NotNeed, decide(ready, DecisionType.BUY_NEED))
@@ -123,7 +123,7 @@ class ApplyDecisionTest {
         val expected = ready.copy(status = ItemStatus.REJECTED, prioritySlot = null)
         assertEquals(expected, applied(decide(ready, DecisionType.REJECT, at = DURING_COOLING)))
         assertEquals(expected, applied(decide(ready, DecisionType.REJECT, reflection = null)))
-        assertEquals(expected, applied(decide(ready, DecisionType.REJECT, allocated = UNFUNDED)))
+        assertEquals(expected, applied(decide(ready, DecisionType.REJECT, funding = UNFUNDED)))
         assertEquals(expected, applied(decide(ready, DecisionType.REJECT)))
         assertEquals(ItemStatus.REJECTED, applied(decide(need, DecisionType.REJECT)).status)
 
@@ -163,7 +163,9 @@ class ApplyDecisionTest {
     fun `savings in another currency throw for every decision`() {
         val dollars = Money(12_000, "USD")
         for (type in listOf(DecisionType.REJECT, DecisionType.BUY_NEED)) {
-            assertThrows(IllegalArgumentException::class.java) { decide(need, type, allocated = dollars) }
+            assertThrows(IllegalArgumentException::class.java) {
+                decide(need, type, funding = Funding(dollars, required = true))
+            }
         }
     }
 

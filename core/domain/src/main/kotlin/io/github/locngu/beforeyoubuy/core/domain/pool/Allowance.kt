@@ -13,8 +13,15 @@ import java.time.ZoneId
  * @property accrualDay 1–[MAX_ACCRUAL_DAY], so every month has it; [clampAccrualDay] fits other values in.
  * @property startDate the day the allowance was set up. The first credit is the first accrual day on or after it;
  *   the starting balance covers the time before.
+ * @property wantsNeedFunding the "Wants need their price set aside" switch: a want is only Ready once its price is set
+ *   aside. Off, the waiting period and the answers are enough (ADR-0046). On by default.
  */
-data class AllowanceSettings(val monthlyAmount: Money, val accrualDay: Int, val startDate: LocalDate) {
+data class AllowanceSettings(
+    val monthlyAmount: Money,
+    val accrualDay: Int,
+    val startDate: LocalDate,
+    val wantsNeedFunding: Boolean = true
+) {
     init {
         require(monthlyAmount.minorUnits >= 0) { "The monthly amount can't be negative, was $monthlyAmount" }
         require(accrualDay in 1..MAX_ACCRUAL_DAY) { "Accrual day must be 1–$MAX_ACCRUAL_DAY, was $accrualDay" }

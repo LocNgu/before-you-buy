@@ -137,6 +137,46 @@ internal class MigrationTest {
         }
     }
 
+    @Test
+    fun `4 to 5 adds empty allocations and turns the funding switch on`() = runTest {
+        createFromSchema(4) { db ->
+            db.execSQL("INSERT INTO policy (id, currency, cooling_off_rules) VALUES (1, 'EUR', NULL)")
+            db.execSQL(
+                "INSERT INTO items (id, name, price_minor, currency, added_at, cooling_ends_at, kind, status) " +
+                    "VALUES (7, 'Camera', 120000, 'EUR', 1000, 2000, 'WANT', 'ACTIVE')"
+            )
+            db.execSQL(
+                "INSERT INTO allowance (id, monthly_minor, currency, accrual_day, start_date) " +
+                    "VALUES (1, 30000, 'EUR', 1, '2026-10-23')"
+            )
+            db.execSQL(
+                "INSERT INTO pool_entries (type, amount_minor, currency, at) VALUES ('STARTING_BALANCE', 5000, 'EUR', 0)"
+            )
+        }
+
+        val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
+            .addMigrations(*MIGRATIONS)
+            .withPolicyRow { "USD" }
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val pool = database.poolDao()
+            assertEquals(
+                AllowanceEntity(1, 30_000, "EUR", 1, "2026-10-23", wantsNeedFunding = true),
+                pool.getAllowance()
+            )
+            assertEquals(1, pool.getEntries().size)
+            assertEquals(emptyList<AllocationEntity>(), pool.getAllocations())
+
+            // Allocations follow their item, as in a fresh database.
+            pool.insertAllocation(AllocationEntity(itemId = 7, amountMinor = 100, currency = "EUR", at = 0))
+            database.itemDao().delete(7)
+            assertEquals(emptyList<AllocationEntity>(), pool.getAllocations())
+        } finally {
+            database.close()
+        }
+    }
+
     /** A database file as [version] of the committed schema created it, with [fill]'s rows. */
     private fun createFromSchema(version: Int, fill: (SQLiteDatabase) -> Unit) {
         val schema = File(SCHEMAS, "$version.json").readText()

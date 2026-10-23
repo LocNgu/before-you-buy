@@ -11,9 +11,8 @@
     <string name="home_considering_empty">Noch nichts. Füge etwas hinzu, das du gern kaufen würdest. Es wartet auf deiner Wunschliste, während du darüber nachdenkst.</string>
     <!-- Über dem Artikel, dessen Wartezeit als Nächstes endet, mit seinem Countdown. -->
     <string name="home_next_cooling_end">Als Nächstes endet die Wartezeit für</string>
-    <!-- Platzhalter bis Sparen pro Wunsch (#23). -->
+    <!-- „Wofür spare ich?“ auf der Startseite (ADR-0046): Wünsche mit dem, was dafür zurückgelegt ist. -->
     <string name="home_saving_title">Sparen für</string>
-    <string name="home_saving_soon">Bald: Sparen pro Wunsch.</string>
     <!-- Spaßgeld (Brief §4.5, ADR-0045): schlichte Beträge für Wünsche, nie „verfügbar zum Ausgeben“ (ADR-0014). -->
     <string name="home_money_title">Spaßgeld</string>
     <string name="home_money_not_set_up">Wähle einen monatlichen Betrag für Dinge, die du dir wünschst. Er kommt jeden Monat von selbst dazu.</string>
@@ -294,4 +293,32 @@
     <string name="notification_permission_text">Erhalte eine ruhige Benachrichtigung, wenn eine Wartezeit endet – höchstens einmal am Tag.</string>
     <string name="notification_permission_allow">Benachrichtigungen erlauben</string>
     <string name="notification_permission_not_now">Jetzt nicht</string>
+
+    <!-- Savings per item (#23, ADR-0046): "set aside", never "saved" or "available". -->
+    <string name="fun_money_wants_need_funding">Wünsche brauchen ihren Preis zurückgelegt</string>
+    <string name="fun_money_wants_need_funding_explained">Ein Wunsch ist bereit zur Entscheidung, sobald sein Preis zurückgelegt ist. Aus: Die Wartezeit und deine Gründe reichen.</string>
+    <string name="home_saving_not_set_up">Richte Spaßgeld ein, um Geld für deine Wünsche zurückzulegen.</string>
+    <string name="home_saving_empty">Noch keine Wünsche, für die du Geld zurücklegen kannst.</string>
+    <string name="savings_title">Zurückgelegt</string>
+    <string name="savings_progress">%1$s von %2$s zurückgelegt · noch %3$s</string>
+    <string name="savings_progress_complete">%1$s von %2$s zurückgelegt</string>
+    <string name="savings_to_go">Noch %1$s</string>
+    <string name="savings_not_set_up">Leg dafür Geld aus deinem Spaßgeld zurück.</string>
+    <string name="savings_set_up">Spaßgeld einrichten</string>
+    <string name="savings_set_aside">Zurücklegen</string>
+    <string name="savings_take_back">Zurücknehmen</string>
+    <string name="savings_sheet_set_aside_title">Für %1$s zurücklegen</string>
+    <string name="savings_sheet_take_back_title">Von %1$s zurücknehmen</string>
+    <string name="savings_amount">Betrag</string>
+    <string name="savings_not_set_aside">Noch nicht zurückgelegt: %1$s</string>
+    <string name="savings_held">Dafür zurückgelegt: %1$s</string>
+    <string name="savings_chip_rest">Den Rest (%1$s)</string>
+    <string name="savings_chip_all">Alles (%1$s)</string>
+    <string name="savings_set_aside_up_to">Hier kannst du bis zu %1$s zurücklegen.</string>
+    <string name="savings_take_back_up_to">Du kannst bis zu %1$s zurücknehmen.</string>
+    <string name="savings_amount_zero">Gib einen Betrag über null ein.</string>
+    <string name="savings_changed_meanwhile">Inzwischen hat sich etwas geändert. Es wurde nichts zurückgelegt oder zurückgenommen.</string>
+    <string name="item_mark_as_need_release">Die dafür zurückgelegten %1$s gehen zurück in dein Spaßgeld.</string>
+    <string name="decision_early_saving">Die Wartezeit ist vorbei, aber vom Preis sind %1$s noch nicht zurückgelegt.</string>
+    <string name="decision_below_zero_body">Wenn du %1$s bezahlst, bleiben %2$s noch nicht zurückgelegt.</string>
 </resources>

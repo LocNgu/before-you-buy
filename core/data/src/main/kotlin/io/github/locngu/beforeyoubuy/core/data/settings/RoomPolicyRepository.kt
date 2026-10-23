@@ -56,7 +56,7 @@ internal class RoomPolicyRepository(private val database: BeforeYouBuyDatabase) 
                 val paid = Money(it.actualPriceMinor!!, it.actualPriceCurrency!!).relabeled(currency)
                 decisions.setActualPrice(it.id, paid.minorUnits, currency)
             }
-            // The fun money too: the monthly amount and every ledger line keep their numbers.
+            // The fun money too: the monthly amount, every ledger line and what is set aside keep their numbers.
             pool.getAllowance()?.let {
                 val monthly = Money(it.monthlyMinor, it.currency).relabeled(currency)
                 pool.updateAllowance(it.copy(monthlyMinor = monthly.minorUnits, currency = currency))
@@ -64,6 +64,10 @@ internal class RoomPolicyRepository(private val database: BeforeYouBuyDatabase) 
             pool.getEntries().forEach {
                 val amount = Money(it.amountMinor, it.currency).relabeled(currency)
                 pool.setEntryAmount(it.id, amount.minorUnits, currency)
+            }
+            pool.getAllocations().forEach {
+                val amount = Money(it.amountMinor, it.currency).relabeled(currency)
+                pool.setAllocationAmount(it.id, amount.minorUnits, currency)
             }
             // Default tiers stay null: the defaults in the new currency have the same numbers (ADR-0033).
             val rules = row.coolingOffRules?.let { CoolingOffRulesJson.decode(it, row.currency) }?.relabeled(currency)

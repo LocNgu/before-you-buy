@@ -12,11 +12,19 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.notifications.ItemNotifications
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationLogRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.Allocation
+import io.github.locngu.beforeyoubuy.core.domain.pool.AllocationResult
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolEntry
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.accrualsDue
 import io.github.locngu.beforeyoubuy.core.domain.pool.lastAccruedMonth
+import io.github.locngu.beforeyoubuy.core.domain.pool.poolBalanceOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.savingsOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.setAside as checkSetAside
+import io.github.locngu.beforeyoubuy.core.domain.pool.takeBack as checkTakeBack
 import io.github.locngu.beforeyoubuy.core.domain.settings.AppPreferences
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
@@ -185,10 +193,15 @@ class FakePolicyRepository(initial: Policy = Policy("EUR", CoolingOffRules.defau
     override suspend fun changeCurrency(currency: String) = TODO("Not needed yet")
 }
 
-/** The allowance and ledger in memory, with the real accrual rules ([accrualsDue]). */
-class FakePoolRepository : PoolRepository {
+/**
+ * The allowance, ledger and allocations in memory, with the real accrual and allocation rules ([accrualsDue],
+ * `setAside`, `takeBack`). Allocations are checked against [items]' active items; without them nothing can be set
+ * aside.
+ */
+class FakePoolRepository(private val items: FakeItemRepository? = null) : PoolRepository {
     override val allowance = MutableStateFlow<AllowanceSettings?>(null)
     override val entries = MutableStateFlow(emptyList<PoolEntry>())
+    override val allocations = MutableStateFlow(emptyList<Allocation>())
 
     /** Every adjustment written, in order. */
     val adjustments get() = entries.value.filterIsInstance<PoolEntry.Adjustment>()
@@ -197,11 +210,13 @@ class FakePoolRepository : PoolRepository {
         monthlyAmount: Money,
         accrualDay: Int,
         startingBalance: Money,
+        wantsNeedFunding: Boolean,
         now: Instant,
         zone: ZoneId
     ): Boolean {
         if (allowance.value != null) return false
-        allowance.value = AllowanceSettings(monthlyAmount, accrualDay, now.atZone(zone).toLocalDate())
+        allowance.value =
+            AllowanceSettings(monthlyAmount, accrualDay, now.atZone(zone).toLocalDate(), wantsNeedFunding)
         if (startingBalance.minorUnits > 0) entries.value += PoolEntry.StartingBalance(startingBalance, now)
         accrue(now, zone)
         return true
@@ -211,11 +226,13 @@ class FakePoolRepository : PoolRepository {
         monthlyAmount: Money,
         accrualDay: Int,
         startingBalance: Money,
+        wantsNeedFunding: Boolean,
         now: Instant,
         zone: ZoneId
     ) {
         accrue(now, zone)
         allowance.value = checkNotNull(allowance.value).changed(monthlyAmount, accrualDay)
+            .copy(wantsNeedFunding = wantsNeedFunding)
         accrue(now, zone)
         val since = entries.value.filterIsInstance<PoolEntry.StartingBalance>().minOfOrNull { it.at }
         entries.value = entries.value.filterNot { it is PoolEntry.StartingBalance }
@@ -233,6 +250,26 @@ class FakePoolRepository : PoolRepository {
         val due = accrualsDue(settings, entries.value.lastAccruedMonth(), now, zone)
         entries.value += due.map { PoolEntry.Accrual(it, settings.monthlyAmount, now) }
         return due.size
+    }
+
+    override suspend fun setAside(itemId: ItemId, amount: Money, at: Instant): AllocationResult =
+        allocate(itemId) { item, savings, balance ->
+            checkSetAside(item, amount, balance, savings.allocatedFor(item), at)
+        }
+
+    override suspend fun takeBack(itemId: ItemId, amount: Money, at: Instant): AllocationResult =
+        allocate(itemId) { item, savings, _ -> checkTakeBack(item, amount, savings.allocatedFor(item), at) }
+
+    private fun allocate(itemId: ItemId, check: (Item, Savings, PoolBalance?) -> AllocationResult): AllocationResult {
+        val all = items?.stored.orEmpty()
+        val item = all.find { it.id == itemId } ?: return AllocationResult.NotActive
+        val savings = savingsOf(allowance.value, allocations.value, all.filter { it.status == ItemStatus.ACTIVE })
+        val balance = allowance.value?.let {
+            poolBalanceOf(entries.value, savings.committed(it.monthlyAmount.currency))
+        }
+        return check(item, savings, balance).also {
+            if (it is AllocationResult.Allowed) allocations.value += it.allocation
+        }
     }
 }
 

@@ -55,9 +55,8 @@ class CoolingOffRules private constructor(val tiers: List<CoolingOffTier>) {
 
         /** [DEFAULT_COOLING_OFF_TIERS] with thresholds in [currency]'s major units (100 → 100.00 € or 100 ¥). */
         fun defaults(currency: String): CoolingOffRules {
-            val minorPerMajor = (1..Money.fractionDigits(currency)).fold(1L) { acc, _ -> Math.multiplyExact(acc, 10L) }
             val tiers = DEFAULT_COOLING_OFF_TIERS.map {
-                CoolingOffTier(Money(Math.multiplyExact(it.minMajorUnitsInclusive, minorPerMajor), currency), it.period)
+                CoolingOffTier(Money.ofWholeUnits(it.minMajorUnitsInclusive, currency), it.period)
             }
             return CoolingOffRules(tiers)
         }
