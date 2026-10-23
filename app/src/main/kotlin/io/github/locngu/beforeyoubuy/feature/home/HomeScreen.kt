@@ -30,12 +30,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.home.HomeOverview
+import io.github.locngu.beforeyoubuy.core.domain.home.SavingFor
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
 import io.github.locngu.beforeyoubuy.feature.money.FunMoneyAmounts
+import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
 import io.github.locngu.beforeyoubuy.feature.wishlist.StageChip
 import io.github.locngu.beforeyoubuy.feature.wishlist.StageStatus
 import io.github.locngu.beforeyoubuy.ui.components.CountdownText
@@ -43,8 +45,9 @@ import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 
 /**
- * Home (brief §6.1): what can I decide on, what am I considering, what am I saving for (from #23) and how much fun
- * money there is for wants. [onOpenFunMoney] sets it up or changes it. Quick add is hosted by the navigation, so this only asks to open it with [onAdd].
+ * Home (brief §6.1): what can I decide on, what am I considering, what am I saving for and how much fun money there
+ * is for wants. [onOpenFunMoney] sets it up or changes it; [onOpenItem] opens a want saved for. Quick add is hosted by
+ * the navigation, so this only asks to open it with [onAdd].
  */
 @Composable
 fun HomeScreen(
@@ -53,6 +56,7 @@ fun HomeScreen(
     onOpenWishlist: () -> Unit,
     onOpenHistory: () -> Unit,
     onOpenFunMoney: () -> Unit,
+    onOpenItem: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
@@ -65,6 +69,7 @@ fun HomeScreen(
         onOpenWishlist = onOpenWishlist,
         onOpenHistory = onOpenHistory,
         onOpenFunMoney = onOpenFunMoney,
+        onOpenItem = onOpenItem,
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
@@ -83,6 +88,7 @@ fun HomeContent(
     onOpenWishlist: () -> Unit,
     onOpenHistory: () -> Unit,
     onOpenFunMoney: () -> Unit,
+    onOpenItem: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -104,6 +110,7 @@ fun HomeContent(
             onOpenDecision = onOpenDecision,
             onOpenWishlist = onOpenWishlist,
             onOpenFunMoney = onOpenFunMoney,
+            onOpenItem = onOpenItem,
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -116,6 +123,7 @@ private fun HomeSections(
     onOpenDecision: (ItemId) -> Unit,
     onOpenWishlist: () -> Unit,
     onOpenFunMoney: () -> Unit,
+    onOpenItem: (ItemId) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Leaves room for the floating button, so the last section isn't hidden behind it.
@@ -129,9 +137,19 @@ private fun HomeSections(
         item(key = "considering") {
             Considering(overview.activeCount, overview.nextCoolingEnd, onOpenWishlist)
         }
-        // Placeholder until savings per item exist (#23): no amounts, nothing to tap.
-        item(key = "saving") {
-            ComingSoon(stringResource(R.string.home_saving_title), stringResource(R.string.home_saving_soon))
+        item(key = "saving") { SectionHeader(stringResource(R.string.home_saving_title)) }
+        when {
+            money == null -> Unit
+
+            money == FunMoney.NotSetUp ->
+                item(key = "saving_not_set_up") { QuietLine(stringResource(R.string.home_saving_not_set_up)) }
+
+            overview.savingFor.isEmpty() ->
+                item(key = "saving_empty") { QuietLine(stringResource(R.string.home_saving_empty)) }
+
+            else -> items(overview.savingFor, key = { "saving_${it.item.id.value}" }) { saving ->
+                SavingForRow(saving, onClick = { onOpenItem(saving.item.id) })
+            }
         }
         if (money != null) item(key = "money") { FunMoneySection(money, onOpenFunMoney) }
     }
@@ -247,16 +265,35 @@ private fun FunMoneySection(money: FunMoney, onOpenFunMoney: () -> Unit) {
     }
 }
 
-/** A section a later issue fills in. Quiet, with no amount, so it can't read as money to spend (ADR-0014). */
+/**
+ * A want saved for (brief §6.1 "What am I saving for?"): its name and what is set aside of its price. Tapping opens
+ * it, where money is set aside.
+ */
 @Composable
-private fun ComingSoon(title: String, body: String) {
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        SectionHeader(title)
+private fun SavingForRow(saving: SavingFor, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         Text(
-            text = body,
-            modifier = Modifier.padding(horizontal = 16.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = saving.item.name,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
         )
+        SavingsProgressBar(saving.progress, Modifier.fillMaxWidth())
     }
+}
+
+/** One quiet line under a section heading. */
+@Composable
+private fun QuietLine(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }

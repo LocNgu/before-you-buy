@@ -14,7 +14,10 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.time.today
@@ -23,6 +26,7 @@ import io.github.locngu.beforeyoubuy.core.domain.wishlist.editFormOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.editedItem
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.waitChange
 import io.github.locngu.beforeyoubuy.feature.capture.ItemFormActions
+import io.github.locngu.beforeyoubuy.feature.money.observeSavings
 import java.io.File
 import java.time.Clock
 import java.time.LocalDate
@@ -50,6 +54,8 @@ import kotlinx.coroutines.launch
  * @property photo the photo saving keeps: the stored one, a newly picked one, or none once removed.
  * @property importingPhoto a picked photo is being copied; saving waits for it.
  * @property photoFailed the last picked image couldn't be read; the previous photo stays.
+ * @property confirmRelease saving makes a want with this much set aside a need, which gives it back (ADR-0044): the
+ *   user confirms first.
  */
 data class ItemEditUiState(
     val form: CaptureForm? = null,
@@ -63,7 +69,8 @@ data class ItemEditUiState(
     val conflict: Boolean = false,
     val photo: File? = null,
     val importingPhoto: Boolean = false,
-    val photoFailed: Boolean = false
+    val photoFailed: Boolean = false,
+    val confirmRelease: Money? = null
 )
 
 /** How saving would change the wait, with the end date in the device's zone (from the injected clock). */
@@ -80,7 +87,12 @@ interface ItemEditActions : ItemFormActions {
 
     fun onRemovePhoto()
 
+    /** Saves, or asks first if that gives back money set aside ([ItemEditUiState.confirmRelease]). */
     fun save()
+
+    fun confirmRelease()
+
+    fun dismissRelease()
 }
 
 /**
@@ -92,6 +104,7 @@ interface ItemEditActions : ItemFormActions {
 class ItemEditViewModel @AssistedInject constructor(
     @Assisted itemId: Long,
     private val items: ItemRepository,
+    pool: PoolRepository,
     policies: PolicyRepository,
     private val images: ItemImageStore,
     private val clock: Clock
@@ -108,6 +121,8 @@ class ItemEditViewModel @AssistedInject constructor(
     private val stored: StateFlow<Loaded?> =
         items.observeById(id).map(::Loaded).stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val policy: StateFlow<Policy?> = policies.policy.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val savings: StateFlow<Savings?> =
+        observeSavings(items, pool).stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val savedEvents = Channel<Unit>(Channel.BUFFERED)
 
     val uiState: StateFlow<ItemEditUiState> =
@@ -181,13 +196,30 @@ class ItemEditViewModel @AssistedInject constructor(
      * silently undone. Then nothing is written and [ItemEditUiState.conflict] says so; saving again applies the
      * form to the newer item.
      */
-    override fun save() {
+    override fun save() = save(releaseConfirmed = false)
+
+    override fun confirmRelease() {
+        if (editor.value.confirmRelease == null) return
+        editor.update { it.copy(confirmRelease = null) }
+        save(releaseConfirmed = true)
+    }
+
+    override fun dismissRelease() = editor.update { it.copy(confirmRelease = null) }
+
+    private fun save(releaseConfirmed: Boolean) {
         val current = editor.value
         val form = current.form ?: return
         val item = current.base ?: return
         val policy = policy.value ?: return
         val locale = locale.value ?: return
         if (current.saving || current.importing > 0 || !canEdit(item, form, policy, locale)) return
+        val allocated = savings.value?.allocatedFor(item)
+        if (!releaseConfirmed && item.kind == ItemKind.WANT && form.kind == ItemKind.NEED &&
+            allocated != null && allocated.minorUnits > 0
+        ) {
+            editor.value = current.copy(confirmRelease = allocated)
+            return
+        }
         editor.value = current.copy(saving = true, conflict = false)
         viewModelScope.launch {
             val written = try {
@@ -247,7 +279,8 @@ class ItemEditViewModel @AssistedInject constructor(
             conflict = editor.conflict,
             photo = editor.imageRef?.let(images::fileFor),
             importingPhoto = editor.importing > 0,
-            photoFailed = editor.photoFailed
+            photoFailed = editor.photoFailed,
+            confirmRelease = editor.confirmRelease
         )
     }
 
@@ -272,6 +305,7 @@ class ItemEditViewModel @AssistedInject constructor(
         val importing: Int = 0,
         val photoFailed: Boolean = false,
         val saving: Boolean = false,
-        val conflict: Boolean = false
+        val conflict: Boolean = false,
+        val confirmRelease: Money? = null
     )
 }

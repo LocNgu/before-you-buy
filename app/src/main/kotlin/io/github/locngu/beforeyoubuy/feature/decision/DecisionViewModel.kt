@@ -27,7 +27,16 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.money.relabeled
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.poolPurchaseOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.purchaseNeedsConfirmation
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
+import io.github.locngu.beforeyoubuy.feature.money.observeSavings
 import java.time.Clock
 import java.time.LocalDate
 import java.util.Locale
@@ -86,6 +95,8 @@ enum class DecisionMessage {
  * @property purchase how the BUY step's fields read; null without a [form].
  * @property purchaseDates the dates the BUY step's date picker offers.
  * @property earliestWait the first date the WAIT step offers (tomorrow).
+ * @property confirmBelowZero a purchase that would leave less than nothing not set aside, waiting for a confirmation
+ *   (issue #23).
  */
 data class DecisionUiState(
     val overview: DecisionOverview? = null,
@@ -97,8 +108,12 @@ data class DecisionUiState(
     val purchaseDates: ClosedRange<LocalDate>? = null,
     val today: LocalDate? = null,
     val earliestWait: LocalDate? = null,
-    val saving: Boolean = false
+    val saving: Boolean = false,
+    val confirmBelowZero: BelowZero? = null
 )
+
+/** Paying [paid] would leave [leaves] (below zero) not yet set aside. */
+data class BelowZero(val paid: Money, val leaves: Money)
 
 /** What the user can do on the decision screen. */
 interface DecisionActions {
@@ -122,8 +137,15 @@ interface DecisionActions {
 
     fun onNoteChange(note: String)
 
-    /** Records the open step's decision, if its inputs are valid. */
+    /**
+     * Records the open step's decision, if its inputs are valid. A purchase that would leave less than nothing not set
+     * aside asks first ([DecisionUiState.confirmBelowZero]).
+     */
     fun confirm()
+
+    fun confirmBelowZero()
+
+    fun dismissBelowZero()
 }
 
 /**
@@ -136,6 +158,7 @@ interface DecisionActions {
 class DecisionViewModel @AssistedInject constructor(
     @Assisted itemId: Long,
     private val items: ItemRepository,
+    pool: PoolRepository,
     private val clock: Clock
 ) : ViewModel(),
     DecisionActions {
@@ -148,10 +171,13 @@ class DecisionViewModel @AssistedInject constructor(
     private val editor = MutableStateFlow(Editor())
     private val outcomes = Channel<DecisionOutcome>(Channel.BUFFERED)
     private val messages = Channel<DecisionMessage>(Channel.BUFFERED)
+    private val savings = observeSavings(items, pool)
+    private val funMoney: StateFlow<FunMoney?> =
+        combine(pool.allowance, pool.entries, savings, ::funMoneyOf).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val loaded: Flow<Loaded> =
-        combine(items.observeById(id), items.observeReflection(id), items.observeActive(), ::Triple)
-            .flatMapLatest { (item, reflection, active) ->
+        combine(items.observeById(id), items.observeReflection(id), items.observeActive(), savings, ::Inputs)
+            .flatMapLatest { (item, reflection, active, savings) ->
                 flow {
                     if (item == null || item.status != ItemStatus.ACTIVE) {
                         emit(Loaded.Gone)
@@ -160,7 +186,7 @@ class DecisionViewModel @AssistedInject constructor(
                     // Recomputed when cooling off ends, a wait's date comes or the date changes, like item detail.
                     while (true) {
                         val now = clock.instant()
-                        emit(Loaded.Active(decisionOverviewOf(item, reflection, active, now, clock.zone)))
+                        emit(Loaded.Active(decisionOverviewOf(item, reflection, active, savings, now, clock.zone)))
                         delay(untilWishlistChanges(listOf(item), now, clock.zone).toMillis().coerceAtLeast(1))
                     }
                 }
@@ -236,14 +262,41 @@ class DecisionViewModel @AssistedInject constructor(
 
             DecisionStep.REJECT -> rejectDecision(form, now)
         }
-        record(overview.item, overview.reflection, decision)
+        val belowZero = belowZeroOf(overview, decision)
+        if (belowZero != null) {
+            editor.update { it.copy(pending = Pending(overview, decision, belowZero)) }
+            return
+        }
+        record(overview, decision)
     }
 
-    private fun record(item: Item, reflection: Reflection?, decision: Decision) {
+    override fun confirmBelowZero() {
+        val pending = editor.value.pending ?: return
+        editor.update { it.copy(pending = null) }
+        if (editor.value.saving || editor.value.decided) return
+        record(pending.overview, pending.decision)
+    }
+
+    override fun dismissBelowZero() = editor.update { it.copy(pending = null) }
+
+    /**
+     * What a want's purchase would leave not set aside, if that's below zero and fun money is set up; null otherwise.
+     * Its own savings are spent first ([purchaseNeedsConfirmation]).
+     */
+    private fun belowZeroOf(overview: DecisionOverview, decision: Decision): BelowZero? {
+        val paid = decision.actualPrice ?: return null
+        val balance = (funMoney.value as? FunMoney.SetUp)?.balance ?: return null
+        if (poolPurchaseOf(overview.item, decision, funMoneySetUp = true) == null) return null
+        val allocated = overview.funding.allocated
+        if (!purchaseNeedsConfirmation(balance, allocated, paid)) return null
+        return BelowZero(paid, balance.unallocated.relabeled(paid.currency) + allocated - paid)
+    }
+
+    private fun record(overview: DecisionOverview, decision: Decision) {
+        val item = overview.item
         editor.update { it.copy(saving = true) }
         viewModelScope.launch {
-            // Until savings exist (M2) every item counts as funded with its own price.
-            val result = applyDecision(item, reflection, item.price, decision)
+            val result = applyDecision(item, overview.reflection, overview.funding, decision)
             val stored = result is DecisionResult.Applied && items.recordDecision(item, decision, result.item)
             if (!stored) {
                 editor.update { it.copy(saving = false, step = DecisionStep.OVERVIEW) }
@@ -300,9 +353,20 @@ class DecisionViewModel @AssistedInject constructor(
             purchaseDates = purchaseDates(overview.item, path, today, clock.zone),
             today = today,
             earliestWait = earliestWaitDate(today),
-            saving = editor.saving
+            saving = editor.saving,
+            confirmBelowZero = editor.pending?.belowZero
         )
     }
+
+    private data class Inputs(
+        val item: Item?,
+        val reflection: Reflection?,
+        val active: List<Item>,
+        val savings: Savings
+    )
+
+    /** A purchase waiting for "Go below zero?". */
+    private data class Pending(val overview: DecisionOverview, val decision: Decision, val belowZero: BelowZero)
 
     private sealed interface Loaded {
         data object Gone : Loaded
@@ -317,6 +381,7 @@ class DecisionViewModel @AssistedInject constructor(
         val form: DecisionForm? = null,
         val locale: Locale? = null,
         val saving: Boolean = false,
-        val decided: Boolean = false
+        val decided: Boolean = false,
+        val pending: Pending? = null
     )
 }

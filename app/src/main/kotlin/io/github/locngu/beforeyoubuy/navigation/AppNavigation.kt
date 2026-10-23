@@ -109,6 +109,7 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                         onOpenWishlist = { backStack.open(Wishlist) },
                         onOpenHistory = { backStack.open(History) },
                         onOpenFunMoney = { backStack.open(FunMoney) },
+                        onOpenItem = { backStack.open(ItemDetail(it.value)) },
                         snackbarHostState = snackbarHostState
                     )
                 }
@@ -128,7 +129,8 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                         itemId = key.itemId,
                         onEdit = { backStack.open(ItemEdit(key.itemId)) },
                         onReflect = { backStack.open(ItemReflection(key.itemId)) },
-                        onDecide = { backStack.open(ItemDecision(key.itemId)) }
+                        onDecide = { backStack.open(ItemDecision(key.itemId)) },
+                        onOpenFunMoney = { backStack.open(FunMoney) }
                     )
                 }
                 entry<ItemEdit> { key ->

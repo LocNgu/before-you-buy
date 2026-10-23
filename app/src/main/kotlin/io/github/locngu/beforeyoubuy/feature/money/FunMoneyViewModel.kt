@@ -3,6 +3,7 @@ package io.github.locngu.beforeyoubuy.feature.money
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
@@ -55,11 +56,15 @@ data class FunMoneyUiState(
     val confirmTakeOut: TakeOut? = null
 )
 
-/** The fields as typed. An empty [startingBalance] is zero. */
+/**
+ * The fields as typed. An empty [startingBalance] is zero. [wantsNeedFunding] is the "Wants need their price set
+ * aside" switch, on unless turned off (ADR-0046).
+ */
 data class FunMoneyForm(
     val monthly: String = "",
     val accrualDay: Int = AllowanceSettings.DEFAULT_ACCRUAL_DAY,
     val startingBalance: String = "",
+    val wantsNeedFunding: Boolean = true,
     val adjustment: String = "",
     val note: String = ""
 )
@@ -74,6 +79,8 @@ interface FunMoneyActions {
     fun onAccrualDayChange(day: Int)
 
     fun onStartingBalanceChange(text: String)
+
+    fun onWantsNeedFundingChange(on: Boolean)
 
     fun save()
 
@@ -99,6 +106,7 @@ interface FunMoneyActions {
 @HiltViewModel
 class FunMoneyViewModel @Inject constructor(
     private val pool: PoolRepository,
+    items: ItemRepository,
     policies: PolicyRepository,
     private val clock: Clock
 ) : ViewModel(),
@@ -106,7 +114,8 @@ class FunMoneyViewModel @Inject constructor(
     private val editor = MutableStateFlow(Editor())
     private val locale = MutableStateFlow<Locale?>(null)
     private val money: StateFlow<FunMoney?> =
-        combine(pool.allowance, pool.entries, ::funMoneyOf).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        combine(pool.allowance, pool.entries, observeSavings(items, pool), ::funMoneyOf)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val currency: StateFlow<String?> =
         policies.policy.map { it.currency }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val savedEvents = Channel<Unit>(Channel.BUFFERED)
@@ -134,7 +143,8 @@ class FunMoneyViewModel @Inject constructor(
                         // No starting amount stays an empty, optional field.
                         startingBalance = loaded.startingBalance.takeIf { s -> s.minorUnits > 0 }
                             ?.formatForInput(locale)
-                            .orEmpty()
+                            .orEmpty(),
+                        wantsNeedFunding = loaded.allowance.wantsNeedFunding
                     )
                 }
                 it.copy(form = form)
@@ -155,6 +165,8 @@ class FunMoneyViewModel @Inject constructor(
 
     override fun onStartingBalanceChange(text: String) = edit { it.copy(form = it.form?.copy(startingBalance = text)) }
 
+    override fun onWantsNeedFundingChange(on: Boolean) = edit { it.copy(form = it.form?.copy(wantsNeedFunding = on)) }
+
     override fun onAdjustmentChange(text: String) =
         edit { it.copy(form = it.form?.copy(adjustment = text), adjustmentTyped = true) }
 
@@ -173,9 +185,9 @@ class FunMoneyViewModel @Inject constructor(
             try {
                 // Set up twice at once (two screens): the second writes nothing, which is fine to close on.
                 if (setUp) {
-                    pool.change(monthly, form.accrualDay, starting, clock.instant(), clock.zone)
+                    pool.change(monthly, form.accrualDay, starting, form.wantsNeedFunding, clock.instant(), clock.zone)
                 } else {
-                    pool.setUp(monthly, form.accrualDay, starting, clock.instant(), clock.zone)
+                    pool.setUp(monthly, form.accrualDay, starting, form.wantsNeedFunding, clock.instant(), clock.zone)
                 }
             } finally {
                 editor.update { it.copy(busy = false) }
