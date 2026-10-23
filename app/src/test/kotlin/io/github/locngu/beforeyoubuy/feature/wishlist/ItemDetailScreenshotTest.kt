@@ -158,7 +158,13 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
         Savings(setUp = true, required = true, byItem = mapOf(camera.id to Money(minor, "EUR")))
 
     private fun capture(item: Item, reflection: Reflection?, photo: File? = null, savings: Savings = Savings.NONE) =
-        capture(ItemDetailUiState(itemDetailOf(item, reflection, savings, now, ZoneOffset.UTC), photo = photo))
+        capture(
+            ItemDetailUiState(
+                itemDetailOf(item, reflection, savings, now, ZoneOffset.UTC),
+                photo = photo,
+                canSetAside = savings.setUp
+            )
+        )
 
     private fun captureSheet(sheet: SavingsSheet) {
         composeRule.setContent {

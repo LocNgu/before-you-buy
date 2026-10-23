@@ -28,11 +28,11 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
-import io.github.locngu.beforeyoubuy.core.domain.money.relabeled
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.leftAfterPurchase
 import io.github.locngu.beforeyoubuy.core.domain.pool.poolPurchaseOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.purchaseNeedsConfirmation
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
@@ -267,9 +267,11 @@ class DecisionViewModel @AssistedInject constructor(
 
             DecisionStep.REJECT -> rejectDecision(form, now)
         }
+        // Until the fun money is loaded, a purchase can't be checked against it: never skip the question.
+        if (decision.type.isPurchase && funMoney.value == null) return
         val belowZero = belowZeroOf(overview, decision)
         if (belowZero != null) {
-            editor.update { it.copy(pending = Pending(overview, decision, belowZero)) }
+            editor.update { it.copy(pending = Pending(decision, belowZero)) }
             return
         }
         record(overview, decision)
@@ -279,7 +281,8 @@ class DecisionViewModel @AssistedInject constructor(
         val pending = editor.value.pending ?: return
         editor.update { it.copy(pending = null) }
         if (editor.value.saving || editor.value.decided) return
-        record(pending.overview, pending.decision)
+        // Checked against the item and its savings as they are now, not as when the question opened.
+        record(uiState.value.overview ?: return, pending.decision)
     }
 
     override fun dismissBelowZero() = editor.update { it.copy(pending = null) }
@@ -294,7 +297,7 @@ class DecisionViewModel @AssistedInject constructor(
         if (poolPurchaseOf(overview.item, decision, funMoneySetUp = true) == null) return null
         val allocated = overview.funding.allocated
         if (!purchaseNeedsConfirmation(balance, allocated, paid)) return null
-        return BelowZero(paid, balance.unallocated.relabeled(paid.currency) + allocated - paid)
+        return BelowZero(paid, leftAfterPurchase(balance, allocated, paid))
     }
 
     private fun record(overview: DecisionOverview, decision: Decision) {
@@ -371,7 +374,7 @@ class DecisionViewModel @AssistedInject constructor(
     )
 
     /** A purchase waiting for "Go below zero?". */
-    private data class Pending(val overview: DecisionOverview, val decision: Decision, val belowZero: BelowZero)
+    private data class Pending(val decision: Decision, val belowZero: BelowZero)
 
     private sealed interface Loaded {
         data object Gone : Loaded

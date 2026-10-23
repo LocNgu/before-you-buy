@@ -148,11 +148,29 @@ fun poolPurchaseOf(item: Item, decision: Decision, funMoneySetUp: Boolean): Pool
 }
 
 /**
- * Whether buying a want for [paid] leaves less than nothing not set aside, so the user confirms first (issue #23).
- * The [allocated] savings are spent first: paying less returns the rest, paying more takes the difference.
+ * What isn't set aside after buying a want for [paid] (brief §4.6): its [allocated] savings are spent first, so paying
+ * less returns the rest and paying more takes the difference. In [paid]'s currency.
+ */
+fun leftAfterPurchase(balance: PoolBalance, allocated: Money, paid: Money): Money =
+    balance.unallocated.relabeled(paid.currency) + allocated.relabeled(paid.currency) - paid
+
+/**
+ * Whether buying a want for [paid] takes more than it held and leaves less than nothing not set aside
+ * ([leftAfterPurchase]), so the user confirms first (issue #23). Paying no more than was set aside never asks.
  */
 fun purchaseNeedsConfirmation(balance: PoolBalance, allocated: Money, paid: Money): Boolean =
-    needsConfirmation(balance, allocated.relabeled(paid.currency) - paid)
+    paid > allocated.relabeled(paid.currency) && leftAfterPurchase(balance, allocated, paid).minorUnits < 0
+
+/** The most that can be set aside now ([setAside]): what [balance] hasn't set aside, never below zero, in [currency]. */
+fun setAsideLimit(balance: PoolBalance, currency: String): Money =
+    maxOf(balance.unallocated.relabeled(currency), Money(0, currency))
+
+/**
+ * What "The rest" sets aside (ADR-0046): what [progress] still needs, at most [limit] ([setAsideLimit]); null when
+ * that's nothing.
+ */
+fun restToSetAside(progress: SavingsProgress, limit: Money): Money? =
+    minOf(progress.toGo, limit.relabeled(progress.toGo.currency)).takeIf { it.minorUnits > 0 }
 
 /**
  * The take-back to store when an edit turns [current], a want holding [allocated], into a need (ADR-0044): all of it

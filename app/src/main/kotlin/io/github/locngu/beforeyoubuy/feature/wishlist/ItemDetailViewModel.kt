@@ -16,11 +16,12 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
 import io.github.locngu.beforeyoubuy.core.domain.money.parseMoney
-import io.github.locngu.beforeyoubuy.core.domain.money.relabeled
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllocationResult
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
 import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.restToSetAside
+import io.github.locngu.beforeyoubuy.core.domain.pool.setAsideLimit
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.ItemDetail
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
@@ -48,13 +49,14 @@ import kotlinx.coroutines.launch
 /**
  * What item detail shows (brief §6.3). [detail] is null until loaded and while [gone]: the item was ended (e.g.
  * "Let it go" from a notification) or deleted. [photo] is the item's photo file, if it has one. [sheet] is the open
- * "Set aside" / "Take back" sheet, if any.
+ * "Set aside" / "Take back" sheet, if any. [canSetAside]: something isn't set aside yet, so "Set aside" is offered.
  */
 data class ItemDetailUiState(
     val detail: ItemDetail? = null,
     val gone: Boolean = false,
     val photo: File? = null,
-    val sheet: SavingsSheet? = null
+    val sheet: SavingsSheet? = null,
+    val canSetAside: Boolean = false
 )
 
 /** Which way the savings sheet moves money (brief §4.6). */
@@ -136,13 +138,10 @@ class ItemDetailViewModel @AssistedInject constructor(
     private val sheetEditor = MutableStateFlow<SheetEditor?>(null)
     private val locale = MutableStateFlow<Locale?>(null)
     private val savings = observeSavings(items, pool)
-    private val funMoney: StateFlow<FunMoney?> =
-        combine(
-            pool.allowance,
-            pool.entries,
-            savings,
-            ::funMoneyOf
-        ).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    // Only while the screen shows it: the sheet reads it through uiState.
+    private val funMoney: StateFlow<FunMoney?> = combine(pool.allowance, pool.entries, savings, ::funMoneyOf)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val details: Flow<ItemDetailUiState> =
         combine(items.observeById(id), items.observeReflection(id), savings, ::Triple)
@@ -167,7 +166,12 @@ class ItemDetailViewModel @AssistedInject constructor(
 
     val uiState: StateFlow<ItemDetailUiState> =
         combine(details, sheetEditor, funMoney, locale) { state, editor, money, locale ->
-            state.copy(sheet = editor?.let { sheetOf(it, state.detail, money, locale) })
+            val balance = (money as? FunMoney.SetUp)?.balance
+            val currency = state.detail?.item?.price?.currency
+            state.copy(
+                sheet = editor?.let { sheetOf(it, state.detail, money, locale) },
+                canSetAside = balance != null && currency != null && setAsideLimit(balance, currency).minorUnits > 0
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ItemDetailUiState())
 
     /** One-shot messages for the snackbar. */
@@ -200,8 +204,10 @@ class ItemDetailViewModel @AssistedInject constructor(
     override fun openTakeBack() = open(SavingsMode.TAKE_BACK)
 
     private fun open(mode: SavingsMode) {
-        val detail = uiState.value.detail ?: return
+        val state = uiState.value
+        val detail = state.detail ?: return
         if (!detail.funMoneySetUp || detail.savings == null) return
+        if (mode == SavingsMode.SET_ASIDE && !state.canSetAside) return
         sheetEditor.value = SheetEditor(mode)
     }
 
@@ -251,15 +257,13 @@ class ItemDetailViewModel @AssistedInject constructor(
         if (locale == null) return null
         val currency = progress.price.currency
         val limit = when (editor.mode) {
-            // Nothing can be set aside while less than nothing is left.
-            SavingsMode.SET_ASIDE -> balance.unallocated.relabeled(currency).let { maxOf(it, Money(0, currency)) }
-
+            SavingsMode.SET_ASIDE -> setAsideLimit(balance, currency)
             SavingsMode.TAKE_BACK -> progress.allocated
         }
         val rest = when (editor.mode) {
-            SavingsMode.SET_ASIDE -> minOf(progress.toGo, limit)
-            SavingsMode.TAKE_BACK -> progress.allocated
-        }.takeIf { it.minorUnits > 0 }
+            SavingsMode.SET_ASIDE -> restToSetAside(progress, limit)
+            SavingsMode.TAKE_BACK -> progress.allocated.takeIf { it.minorUnits > 0 }
+        }
         val parsed = parseMoney(editor.amount, currency, locale)
         val error = when {
             parsed !is MoneyParseResult.Success -> SavingsError.Unreadable(parsed)

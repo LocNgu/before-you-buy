@@ -18,6 +18,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.releaseWhenMarkedAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.time.today
@@ -213,20 +214,17 @@ class ItemEditViewModel @AssistedInject constructor(
         val policy = policy.value ?: return
         val locale = locale.value ?: return
         if (current.saving || current.importing > 0 || !canEdit(item, form, policy, locale)) return
-        val allocated = savings.value?.allocatedFor(item)
-        if (!releaseConfirmed && item.kind == ItemKind.WANT && form.kind == ItemKind.NEED &&
-            allocated != null && allocated.minorUnits > 0
-        ) {
+        // Until the savings are loaded, whether saving gives money back is unknown: never skip the question.
+        val allocated = savings.value?.allocatedFor(item) ?: return
+        val edited = editedItem(item, form, policy, locale, clock.instant(), clock.zone, current.imageRef)
+        if (!releaseConfirmed && releaseWhenMarkedAsNeed(item, edited, allocated) != null) {
             editor.value = current.copy(confirmRelease = allocated)
             return
         }
         editor.value = current.copy(saving = true, conflict = false)
         viewModelScope.launch {
             val written = try {
-                items.update(
-                    item,
-                    editedItem(item, form, policy, locale, clock.instant(), clock.zone, current.imageRef)
-                )
+                items.update(item, edited)
             } finally {
                 editor.update { it.copy(saving = false) }
             }

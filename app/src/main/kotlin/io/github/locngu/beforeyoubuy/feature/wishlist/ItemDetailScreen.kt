@@ -91,7 +91,6 @@ import io.github.locngu.beforeyoubuy.ui.format.currencySymbol
 import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 import io.github.locngu.beforeyoubuy.ui.format.formattedDate
 import java.io.File
-import kotlin.math.pow
 import kotlinx.coroutines.launch
 
 /**
@@ -206,6 +205,7 @@ fun ItemDetailContent(
                     onMarkAsNeed,
                     onOpenFunMoney,
                     savingsActions,
+                    state.canSetAside,
                     onOpenLink,
                     Modifier.padding(innerPadding)
                 )
@@ -260,6 +260,7 @@ private fun Detail(
     onMarkAsNeed: () -> Unit,
     onOpenFunMoney: () -> Unit,
     savingsActions: SavingsActions,
+    canSetAside: Boolean,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -271,7 +272,7 @@ private fun Detail(
         // The user's own reasons come before anything about the product (ADR-0013).
         Reasons(detail, onReflect)
         if (photo != null) Photo(detail, photo)
-        Savings(detail, onOpenFunMoney, savingsActions)
+        Savings(detail, onOpenFunMoney, savingsActions, canSetAside)
         Details(detail)
         Decide(detail, onDecide)
         Actions(detail, onMarkAsNeed, onOpenLink)
@@ -279,11 +280,12 @@ private fun Detail(
 }
 
 /**
- * What is set aside for a want (brief §4.6), with equal "Set aside" and "Take back" buttons; without fun money, a way
- * to set it up. Nothing for a need, which is never saved for (ADR-0044). Saving can start while it cools off.
+ * What is set aside for a want (brief §4.6), with equal "Set aside" and "Take back" buttons, each enabled while there
+ * is something to move ([canSetAside], money set aside); without fun money, a way to set it up. Nothing for a need,
+ * which is never saved for (ADR-0044). Saving can start while it cools off.
  */
 @Composable
-private fun Savings(detail: ItemDetail, onOpenFunMoney: () -> Unit, actions: SavingsActions) {
+private fun Savings(detail: ItemDetail, onOpenFunMoney: () -> Unit, actions: SavingsActions, canSetAside: Boolean) {
     val progress = detail.savings ?: return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(stringResource(R.string.savings_title))
@@ -300,7 +302,7 @@ private fun Savings(detail: ItemDetail, onOpenFunMoney: () -> Unit, actions: Sav
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(onClick = actions::openSetAside, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = actions::openSetAside, enabled = canSetAside, modifier = Modifier.weight(1f)) {
                 Text(stringResource(R.string.savings_set_aside))
             }
             OutlinedButton(
@@ -355,7 +357,9 @@ fun SavingsSheetContent(sheet: SavingsSheet, itemName: String, actions: SavingsA
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (setAside) {
-                QUICK_AMOUNTS.map { wholeUnits(it, sheet.limit.currency) }.filter { it <= sheet.limit }.forEach {
+                QUICK_AMOUNTS.map {
+                    Money.ofWholeUnits(it, sheet.limit.currency)
+                }.filter { it <= sheet.limit }.forEach {
                     SuggestionChip(
                         onClick = { actions.onSavingsChip(it) },
                         label = { Text(stringResource(R.string.savings_chip_add, it.format(locale))) }
@@ -393,9 +397,6 @@ fun SavingsSheetContent(sheet: SavingsSheet, itemName: String, actions: SavingsA
 
 /** The chips' amounts in whole units of the currency: +50, +100. */
 private val QUICK_AMOUNTS = listOf(50L, 100L)
-
-private fun wholeUnits(units: Long, currency: String): Money =
-    Money(units * 10.0.pow(Money.fractionDigits(currency)).toLong(), currency)
 
 @Composable
 private fun savingsErrorMessage(error: SavingsError, sheet: SavingsSheet): String = when (error) {

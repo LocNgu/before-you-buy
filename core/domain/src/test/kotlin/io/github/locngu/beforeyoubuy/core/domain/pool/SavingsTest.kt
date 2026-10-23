@@ -240,4 +240,26 @@ class SavingsTest {
             savingsOf(allowance, allocations, listOf(camera)).fundingOf(camera)
         )
     }
+
+    @Test
+    fun `what a purchase leaves is what wasn't set aside plus its savings minus the price`() {
+        val before = balance(pool = 15_000, committed = 12_000)
+        assertEquals(eur(5_000), leftAfterPurchase(before, allocated = eur(12_000), paid = eur(10_000)))
+        assertEquals(eur(-1_000), leftAfterPurchase(before, allocated = eur(12_000), paid = eur(16_000)))
+    }
+
+    @Test
+    fun `the set-aside limit is what isn't set aside, never below zero`() {
+        assertEquals(eur(18_000), setAsideLimit(balance(30_000, committed = 12_000), "EUR"))
+        assertEquals(eur(0), setAsideLimit(balance(-500), "EUR"))
+    }
+
+    @Test
+    fun `the rest is what's still to go, at most the limit, and nothing once covered`() {
+        val progress = SavingsProgress(eur(6_000), eur(12_000))
+        assertEquals(eur(6_000), restToSetAside(progress, eur(10_000)))
+        assertEquals(eur(2_500), restToSetAside(progress, eur(2_500)))
+        assertNull(restToSetAside(progress, eur(0)))
+        assertNull(restToSetAside(SavingsProgress(eur(12_000), eur(12_000)), eur(10_000)))
+    }
 }

@@ -302,4 +302,18 @@ class ItemDetailViewModelTest {
         viewModel.openSetAside()
         assertNull(viewModel.uiState.value.sheet)
     }
+
+    @Test
+    fun `with nothing left to set aside, setting aside isn't offered`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 6_000)
+        val camera = readyItem()
+        val bike = add(endsInHours = 24)
+        pool.setAside(bike.id, Money(6_000, "EUR"), start)
+        val viewModel = viewModelFor(camera).apply { setLocale(Locale.GERMANY) }
+        viewModel.uiState.launchIn(backgroundScope)
+
+        assertFalse(viewModel.uiState.value.canSetAside)
+        viewModel.openSetAside()
+        assertNull(viewModel.uiState.value.sheet)
+    }
 }
