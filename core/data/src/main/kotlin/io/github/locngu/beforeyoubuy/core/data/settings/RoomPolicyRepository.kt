@@ -24,6 +24,7 @@ internal class RoomPolicyRepository(private val database: BeforeYouBuyDatabase) 
     private val policies = database.policyDao()
     private val items = database.itemDao()
     private val decisions = database.decisionDao()
+    private val pool = database.poolDao()
 
     // The row is created when the database opens (withPolicyRow), so null never lasts; no default is guessed here.
     override val policy: Flow<Policy> = policies.observe().filterNotNull().map { it.toDomain() }.distinctUntilChanged()
@@ -54,6 +55,15 @@ internal class RoomPolicyRepository(private val database: BeforeYouBuyDatabase) 
             decisions.getWithActualPrice().forEach {
                 val paid = Money(it.actualPriceMinor!!, it.actualPriceCurrency!!).relabeled(currency)
                 decisions.setActualPrice(it.id, paid.minorUnits, currency)
+            }
+            // The fun money too: the monthly amount and every ledger line keep their numbers.
+            pool.getAllowance()?.let {
+                val monthly = Money(it.monthlyMinor, it.currency).relabeled(currency)
+                pool.updateAllowance(it.copy(monthlyMinor = monthly.minorUnits, currency = currency))
+            }
+            pool.getEntries().forEach {
+                val amount = Money(it.amountMinor, it.currency).relabeled(currency)
+                pool.setEntryAmount(it.id, amount.minorUnits, currency)
             }
             // Default tiers stay null: the defaults in the new currency have the same numbers (ADR-0033).
             val rules = row.coolingOffRules?.let { CoolingOffRulesJson.decode(it, row.currency) }?.relabeled(currency)

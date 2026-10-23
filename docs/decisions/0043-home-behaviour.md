@@ -1,6 +1,6 @@
 # ADR-0043: Home: "To decide" includes items whose wait ended without answers, links on Home instead of a bottom bar, no Settings entry before Settings exists
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0045 (the "Monthly allowance" placeholder is now the "Fun money" section)
 **Type**: product
 **Date**: 2026-10-22
 

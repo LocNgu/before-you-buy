@@ -18,9 +18,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ItemEntity::class,
         ReflectionEntity::class,
         DecisionEntity::class,
-        ItemNotificationsEntity::class
+        ItemNotificationsEntity::class,
+        AllowanceEntity::class,
+        PoolEntryEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
@@ -33,6 +35,8 @@ internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
     abstract fun decisionDao(): DecisionDao
 
     abstract fun notificationDao(): NotificationDao
+
+    abstract fun poolDao(): PoolDao
 
     companion object {
         const val NAME = "before-you-buy.db"
@@ -69,8 +73,32 @@ internal val MIGRATION_2_3: Migration = object : Migration(2, 3) {
     }
 }
 
+/**
+ * 3 → 4 (issue #22): `allowance` and the `pool_entries` ledger. There was no fun money before, so both start empty
+ * and Home offers to set it up.
+ */
+internal val MIGRATION_3_4: Migration = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `allowance` (`id` INTEGER NOT NULL, `monthly_minor` INTEGER NOT NULL, " +
+                "`currency` TEXT NOT NULL, `accrual_day` INTEGER NOT NULL, `start_date` TEXT NOT NULL, " +
+                "PRIMARY KEY(`id`))"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `pool_entries` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`type` TEXT NOT NULL, `amount_minor` INTEGER NOT NULL, `currency` TEXT NOT NULL, " +
+                "`at` INTEGER NOT NULL, `accrual_month` TEXT, `item_id` INTEGER, `note` TEXT, " +
+                "FOREIGN KEY(`item_id`) REFERENCES `items`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )"
+        )
+        db.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_pool_entries_accrual_month` ON `pool_entries` (`accrual_month`)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pool_entries_item_id` ON `pool_entries` (`item_id`)")
+    }
+}
+
 /** Every migration, oldest first. A new schema version adds its own here, with a test in `MigrationTest`. */
-internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 
 /**
  * Makes sure the policy row exists whenever the database opens, before anything reads it: the currency is fixed

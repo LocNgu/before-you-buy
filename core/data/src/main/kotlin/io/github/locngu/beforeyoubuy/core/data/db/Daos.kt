@@ -3,6 +3,7 @@ package io.github.locngu.beforeyoubuy.core.data.db
 import androidx.room.Dao
 import androidx.room.Embedded
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
@@ -129,6 +130,41 @@ internal interface PolicyDao {
 
     @Update
     suspend fun update(policy: PolicyEntity): Int
+}
+
+/** The allowance row and the pool's ledger (`PoolRepository`). Ledger rows are only ever inserted. */
+@Dao
+internal interface PoolDao {
+    @Query("SELECT * FROM allowance WHERE id = ${AllowanceEntity.ID}")
+    fun observeAllowance(): Flow<AllowanceEntity?>
+
+    @Query("SELECT * FROM allowance WHERE id = ${AllowanceEntity.ID}")
+    suspend fun getAllowance(): AllowanceEntity?
+
+    /** Returns -1 and writes nothing if the allowance exists already. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllowance(allowance: AllowanceEntity): Long
+
+    @Update
+    suspend fun updateAllowance(allowance: AllowanceEntity): Int
+
+    @Query("SELECT * FROM pool_entries ORDER BY at, id")
+    fun observeEntries(): Flow<List<PoolEntryEntity>>
+
+    @Query("SELECT * FROM pool_entries")
+    suspend fun getEntries(): List<PoolEntryEntity>
+
+    /** The newest credited month (`2026-11`; ISO text sorts by date), or null if none is. */
+    @Query("SELECT MAX(accrual_month) FROM pool_entries")
+    suspend fun lastAccruedMonth(): String?
+
+    /** Returns the new id, or -1 and writes nothing for a month that is already credited. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertEntry(entry: PoolEntryEntity): Long
+
+    /** Changes only the amount, for a currency relabel (ADR-0033); what happened never changes. */
+    @Query("UPDATE pool_entries SET amount_minor = :minor, currency = :currency WHERE id = :id")
+    suspend fun setEntryAmount(id: Long, minor: Long, currency: String)
 }
 
 internal data class HistoryRow(

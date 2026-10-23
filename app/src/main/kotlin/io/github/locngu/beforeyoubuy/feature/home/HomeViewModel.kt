@@ -6,6 +6,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.locngu.beforeyoubuy.core.domain.home.HomeOverview
 import io.github.locngu.beforeyoubuy.core.domain.home.homeOverviewOf
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
 import java.time.Clock
 import javax.inject.Inject
@@ -13,29 +16,39 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 
-/** What Home shows (brief §6.1). [overview] is null until the first load. */
-data class HomeUiState(val overview: HomeOverview? = null)
+/** What Home shows (brief §6.1). [overview] is null until the first load; [money] too, separately. */
+data class HomeUiState(val overview: HomeOverview? = null, val money: FunMoney? = null)
 
 /**
- * Home: what can be decided, what's being considered (brief §6.1). The sections are `homeOverviewOf` in
- * `:core:domain`; like the wishlist, this recomputes when a cooling-off or "Wait" ends or the date changes
- * (ADR-0018), not only when the database does.
+ * Home: what can be decided, what's being considered, how much fun money there is (brief §6.1). The sections are
+ * `homeOverviewOf` and `funMoneyOf` in `:core:domain`; like the wishlist, this recomputes when a cooling-off or
+ * "Wait" ends or the date changes (ADR-0018), not only when the database does.
  */
 @HiltViewModel
-class HomeViewModel @Inject constructor(items: ItemRepository, private val clock: Clock) : ViewModel() {
-    val uiState: StateFlow<HomeUiState> =
+class HomeViewModel @Inject constructor(items: ItemRepository, pool: PoolRepository, private val clock: Clock) :
+    ViewModel() {
+    private val overview =
         combine(items.observeActive(), items.observeReflections(), ::Pair)
             .flatMapLatest { (active, reflections) ->
                 flow {
                     while (true) {
                         val now = clock.instant()
-                        emit(HomeUiState(homeOverviewOf(active, reflections, now, clock.zone)))
+                        emit(homeOverviewOf(active, reflections, now, clock.zone))
                         delay(untilWishlistChanges(active, now, clock.zone).toMillis().coerceAtLeast(1))
                     }
                 }
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+            }
+
+    // A half-read currency change (null) keeps the amounts shown before.
+    private val money = combine(pool.allowance, pool.entries, ::funMoneyOf).filterNotNull()
+
+    val uiState: StateFlow<HomeUiState> =
+        combine(overview.onStart<HomeOverview?> { emit(null) }, money.onStart<FunMoney?> { emit(null) }, ::HomeUiState)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 }

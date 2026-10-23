@@ -1,5 +1,6 @@
 package io.github.locngu.beforeyoubuy.feature.capture
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -241,14 +242,18 @@ internal fun DayPicker(
     }
 }
 
-/** What's wrong with the typed price; null for a price that reads. */
+/** What's wrong with the typed price (or other amount); null for an amount that reads. [missing] says what to enter. */
 @Composable
-internal fun priceErrorMessage(error: MoneyParseResult, currency: String?): String? {
+internal fun priceErrorMessage(
+    error: MoneyParseResult,
+    currency: String?,
+    @StringRes missing: Int = R.string.quick_add_price_missing
+): String? {
     val locale = currentLocale()
     return when (error) {
         is MoneyParseResult.Success -> null
 
-        MoneyParseResult.Empty -> stringResource(R.string.quick_add_price_missing)
+        MoneyParseResult.Empty -> stringResource(missing)
 
         MoneyParseResult.Invalid -> {
             val example = remember(currency, locale) { currency?.let { Money(1_250, it).formatForInput(locale) } }

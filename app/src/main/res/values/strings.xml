@@ -11,11 +11,42 @@
     <string name="home_considering_empty">Nothing yet. Add something you’d like to buy. It waits on your wishlist while you think it over.</string>
     <!-- Above the item whose waiting period ends first, with its countdown. -->
     <string name="home_next_cooling_end">Next waiting period to end</string>
-    <!-- Placeholders until M2. -->
+    <!-- Placeholder until savings per item (#23). -->
     <string name="home_saving_title">Saving for</string>
     <string name="home_saving_soon">Coming soon: savings per item.</string>
-    <string name="home_money_title">Monthly allowance</string>
-    <string name="home_money_soon">Coming soon: a monthly amount for the things you want.</string>
+    <!-- Fun money (brief §4.5, ADR-0045): plain amounts for wants, never "available to spend" (ADR-0014). -->
+    <string name="home_money_title">Fun money</string>
+    <string name="home_money_not_set_up">Choose a monthly amount for the things you want. It’s added each month by itself.</string>
+    <string name="home_money_set_up">Set up</string>
+    <string name="home_money_manage">Change or adjust</string>
+    <string name="home_money_pool">Fun money for wants</string>
+    <string name="home_money_committed">Set aside for wants</string>
+    <string name="home_money_unallocated">Not yet set aside</string>
+
+    <!-- The fun money screen (issue #22). The app never moves real money (ADR-0010). -->
+    <string name="fun_money_title">Fun money</string>
+    <string name="fun_money_explained">A monthly amount for the things you want, added by itself on the day you choose. It’s only a number in this app; no real money moves.</string>
+    <string name="fun_money_balance_title">Now</string>
+    <!-- %1$s: a date, e.g. "1 Nov 2026". -->
+    <string name="fun_money_next_accrual">Next monthly amount on %1$s</string>
+    <string name="fun_money_monthly_title">Each month</string>
+    <string name="fun_money_monthly">Monthly amount</string>
+    <string name="fun_money_amount_missing">Enter an amount</string>
+    <string name="fun_money_accrual_day">Added on day of the month</string>
+    <!-- %1$s: a date, e.g. "1 Nov 2026". -->
+    <string name="fun_money_first_accrual">First added on %1$s</string>
+    <string name="fun_money_starting_balance">Starting amount (optional)</string>
+    <string name="fun_money_starting_balance_explained">What you have for wants today, before the first monthly amount.</string>
+    <string name="fun_money_changes_apply">A new amount or day applies from the next month on.</string>
+    <string name="fun_money_adjust_title">Adjust the amount</string>
+    <string name="fun_money_adjust_explained">If the number here and your real money drift apart, correct it.</string>
+    <string name="fun_money_adjust_amount">Amount</string>
+    <string name="fun_money_adjust_note">Note (optional)</string>
+    <string name="fun_money_add">Add</string>
+    <string name="fun_money_take_out">Take out</string>
+    <string name="fun_money_below_zero_title">Go below zero?</string>
+    <!-- %1$s: the amount to take out; %2$s: what's left not set aside afterwards, below zero, e.g. "-50 €". -->
+    <string name="fun_money_below_zero_body">Taking out %1$s leaves %2$s not yet set aside.</string>
 
     <!-- Countdown on items that are cooling off. -->
     <string name="countdown_over">Cooling-off over</string>

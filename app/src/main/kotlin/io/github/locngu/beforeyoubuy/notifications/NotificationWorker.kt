@@ -12,16 +12,21 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import io.github.locngu.beforeyoubuy.core.domain.notifications.untilNextDailyCheck
+import io.github.locngu.beforeyoubuy.feature.money.PoolAccrual
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 
-/** Runs [NotificationCheck] once a day (brief §8). WorkManager, never exact alarms. */
+/**
+ * Runs [NotificationCheck] once a day (brief §8). WorkManager, never exact alarms. It also credits the monthly fun
+ * money ([PoolAccrual], brief §4.5), so it arrives on its day even if the app isn't opened.
+ */
 class NotificationWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        EntryPointAccessors.fromApplication(applicationContext, NotificationsEntryPoint::class.java)
-            .notificationCheck()
-            .run()
+        val entryPoint = EntryPointAccessors.fromApplication(applicationContext, NotificationsEntryPoint::class.java)
+        // Retried by the next run or app start; it never keeps the notifications from going out.
+        runCatching { entryPoint.poolAccrual().run() }
+        entryPoint.notificationCheck().run()
         return Result.success()
     }
 
@@ -57,4 +62,6 @@ interface NotificationsEntryPoint {
     fun notificationCheck(): NotificationCheck
 
     fun letItGo(): LetItGo
+
+    fun poolAccrual(): PoolAccrual
 }

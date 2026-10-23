@@ -11,6 +11,7 @@ import io.github.locngu.beforeyoubuy.core.data.item.FULL_REFLECTION
 import io.github.locngu.beforeyoubuy.core.data.item.RoomItemRepository
 import io.github.locngu.beforeyoubuy.core.data.item.buy
 import io.github.locngu.beforeyoubuy.core.data.item.reject
+import io.github.locngu.beforeyoubuy.core.data.pool.RoomPoolRepository
 import io.github.locngu.beforeyoubuy.core.data.testing.assertThrowsIllegalArgument
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRulesResult
@@ -153,6 +154,25 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
         assertEquals(Money(12_000, "USD"), stored(bought).price)
         assertEquals(Money(11_500, "USD"), items.observeDecisions(bought.id).first().single().actualPrice)
         assertEquals(endBefore, stored(waiting).coolingEndsAt)
+    }
+
+    @Test
+    fun `a currency change relabels the fun money too`() = runTest {
+        val pool = RoomPoolRepository(database)
+        val setUpAt = Instant.parse("2026-10-01T10:00:00Z")
+        pool.setUp(Money(30_000, "EUR"), 1, Money(5_050, "EUR"), setUpAt, zone)
+        pool.adjust(Money(-1_025, "EUR"), "Cash", setUpAt)
+
+        policies.changeCurrency("JPY")
+
+        assertEquals(Money(300, "JPY"), pool.allowance.first()?.monthlyAmount)
+        // 50,50 € → 51 ¥, 300,00 € → 300 ¥, −10,25 € → −10 ¥.
+        assertEquals(
+            listOf(Money(51, "JPY"), Money(300, "JPY"), Money(-10, "JPY")),
+            pool.entries.first().map { it.change }
+        )
+        // Accruals keep working in the new currency.
+        pool.change(Money(500, "JPY"), 1, setUpAt, zone)
     }
 
     @Test

@@ -28,9 +28,10 @@ fun isReflected(item: Item, reflection: Reflection?): Boolean {
 
 /**
  * Brief §5 `funded`: the money set aside for the item covers its price. [allocated] must be in the item's
- * currency. Until savings exist (M2), callers pass the price itself.
+ * currency. Always true for a `NEED`, which never uses fun money (ADR-0044). Until savings exist (#23), callers pass
+ * the price itself.
  */
-fun isFunded(item: Item, allocated: Money): Boolean = allocated >= item.price
+fun isFunded(item: Item, allocated: Money): Boolean = item.kind == ItemKind.NEED || allocated >= item.price
 
 /**
  * The stage of an active item, per the table in brief §5. The first unmet condition wins: cooled off, then

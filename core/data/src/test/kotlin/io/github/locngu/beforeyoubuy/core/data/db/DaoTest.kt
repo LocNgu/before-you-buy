@@ -26,6 +26,7 @@ internal class DaoTest : DatabaseTest() {
         val columns = tables.flatMap { table -> queryStrings("SELECT name FROM pragma_table_info('$table')") }
 
         assertTrue("items" in tables && "reflections" in tables && "decisions" in tables)
+        assertTrue("allowance" in tables && "pool_entries" in tables)
         assertTrue(columns.none { "stage" in it.lowercase() })
     }
 

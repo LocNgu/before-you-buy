@@ -32,6 +32,8 @@ import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.home.HomeOverview
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
 import io.github.locngu.beforeyoubuy.feature.wishlist.StageChip
@@ -41,8 +43,8 @@ import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 
 /**
- * Home (brief §6.1): what can I decide on, what am I considering, and, from M2, what am I saving for and how much
- * money do I have for wants. Quick add is hosted by the navigation, so this only asks to open it with [onAdd].
+ * Home (brief §6.1): what can I decide on, what am I considering, what am I saving for (from #23) and how much fun
+ * money there is for wants. [onOpenFunMoney] sets it up or changes it. Quick add is hosted by the navigation, so this only asks to open it with [onAdd].
  */
 @Composable
 fun HomeScreen(
@@ -50,6 +52,7 @@ fun HomeScreen(
     onOpenDecision: (ItemId) -> Unit,
     onOpenWishlist: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenFunMoney: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel()
@@ -61,6 +64,7 @@ fun HomeScreen(
         onOpenDecision = onOpenDecision,
         onOpenWishlist = onOpenWishlist,
         onOpenHistory = onOpenHistory,
+        onOpenFunMoney = onOpenFunMoney,
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
@@ -78,6 +82,7 @@ fun HomeContent(
     onOpenDecision: (ItemId) -> Unit,
     onOpenWishlist: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenFunMoney: () -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier
 ) {
@@ -93,15 +98,24 @@ fun HomeContent(
         floatingActionButton = { QuickAddButton(onClick = onAdd) }
     ) { innerPadding ->
         val overview = state.overview ?: return@Scaffold
-        HomeSections(overview, onOpenDecision, onOpenWishlist, Modifier.padding(innerPadding))
+        HomeSections(
+            overview = overview,
+            money = state.money,
+            onOpenDecision = onOpenDecision,
+            onOpenWishlist = onOpenWishlist,
+            onOpenFunMoney = onOpenFunMoney,
+            modifier = Modifier.padding(innerPadding)
+        )
     }
 }
 
 @Composable
 private fun HomeSections(
     overview: HomeOverview,
+    money: FunMoney?,
     onOpenDecision: (ItemId) -> Unit,
     onOpenWishlist: () -> Unit,
+    onOpenFunMoney: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Leaves room for the floating button, so the last section isn't hidden behind it.
@@ -115,13 +129,11 @@ private fun HomeSections(
         item(key = "considering") {
             Considering(overview.activeCount, overview.nextCoolingEnd, onOpenWishlist)
         }
-        // Placeholders until M2 builds savings and the monthly allowance: no amounts, nothing to tap.
+        // Placeholder until savings per item exist (#23): no amounts, nothing to tap.
         item(key = "saving") {
             ComingSoon(stringResource(R.string.home_saving_title), stringResource(R.string.home_saving_soon))
         }
-        item(key = "money") {
-            ComingSoon(stringResource(R.string.home_money_title), stringResource(R.string.home_money_soon))
-        }
+        if (money != null) item(key = "money") { FunMoneySection(money, onOpenFunMoney) }
     }
 }
 
@@ -205,7 +217,58 @@ private fun Considering(activeCount: Int, next: WishlistEntry?, onOpenWishlist: 
     }
 }
 
-/** A section M2 fills in. Quiet, with no amount, so it can't read as money to spend (ADR-0014). */
+/**
+ * "Fun money": what's in the pool, set aside and not yet set aside (ADR-0045), or what it is and a way to set it up.
+ * Plain amounts, never "available to spend" (ADR-0014); the labels say they're for wants.
+ */
+@Composable
+private fun FunMoneySection(money: FunMoney, onOpenFunMoney: () -> Unit) {
+    Column {
+        SectionHeader(stringResource(R.string.home_money_title))
+        when (money) {
+            FunMoney.NotSetUp ->
+                Text(
+                    text = stringResource(R.string.home_money_not_set_up),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+            is FunMoney.SetUp ->
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    AmountRow(stringResource(R.string.home_money_pool), money.balance.pool)
+                    AmountRow(stringResource(R.string.home_money_committed), money.balance.committed)
+                    AmountRow(stringResource(R.string.home_money_unallocated), money.balance.unallocated)
+                }
+        }
+        // Lined up with the text above, like "Open wishlist".
+        TextButton(onClick = onOpenFunMoney, modifier = Modifier.padding(horizontal = 16.dp).offset(x = (-12).dp)) {
+            Text(
+                stringResource(
+                    if (money == FunMoney.NotSetUp) R.string.home_money_set_up else R.string.home_money_manage
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun AmountRow(label: String, amount: Money) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f).padding(end = 16.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        MoneyText(amount, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+/** A section a later issue fills in. Quiet, with no amount, so it can't read as money to spend (ADR-0014). */
 @Composable
 private fun ComingSoon(title: String, body: String) {
     Column(modifier = Modifier.padding(bottom = 8.dp)) {

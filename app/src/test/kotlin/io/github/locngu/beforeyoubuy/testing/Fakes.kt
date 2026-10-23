@@ -9,8 +9,14 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.notifications.ItemNotifications
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationLogRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolEntry
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.accrualsDue
+import io.github.locngu.beforeyoubuy.core.domain.pool.lastAccruedMonth
 import io.github.locngu.beforeyoubuy.core.domain.settings.AppPreferences
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
@@ -177,6 +183,46 @@ class FakePolicyRepository(initial: Policy = Policy("EUR", CoolingOffRules.defau
     }
 
     override suspend fun changeCurrency(currency: String) = TODO("Not needed yet")
+}
+
+/** The allowance and ledger in memory, with the real accrual rules ([accrualsDue]). */
+class FakePoolRepository : PoolRepository {
+    override val allowance = MutableStateFlow<AllowanceSettings?>(null)
+    override val entries = MutableStateFlow(emptyList<PoolEntry>())
+
+    /** Every adjustment written, in order. */
+    val adjustments get() = entries.value.filterIsInstance<PoolEntry.Adjustment>()
+
+    override suspend fun setUp(
+        monthlyAmount: Money,
+        accrualDay: Int,
+        startingBalance: Money,
+        now: Instant,
+        zone: ZoneId
+    ): Boolean {
+        if (allowance.value != null) return false
+        allowance.value = AllowanceSettings(monthlyAmount, accrualDay, now.atZone(zone).toLocalDate())
+        if (startingBalance.minorUnits > 0) entries.value += PoolEntry.StartingBalance(startingBalance, now)
+        accrue(now, zone)
+        return true
+    }
+
+    override suspend fun change(monthlyAmount: Money, accrualDay: Int, now: Instant, zone: ZoneId) {
+        accrue(now, zone)
+        allowance.value = checkNotNull(allowance.value).copy(monthlyAmount = monthlyAmount, accrualDay = accrualDay)
+        accrue(now, zone)
+    }
+
+    override suspend fun adjust(change: Money, note: String?, at: Instant) {
+        entries.value += PoolEntry.Adjustment(change, note?.trim()?.ifEmpty { null }, at)
+    }
+
+    override suspend fun accrue(now: Instant, zone: ZoneId): Int {
+        val settings = allowance.value ?: return 0
+        val due = accrualsDue(settings, entries.value.lastAccruedMonth(), now, zone)
+        entries.value += due.map { PoolEntry.Accrual(it, settings.monthlyAmount, now) }
+        return due.size
+    }
 }
 
 /** [AppPreferences] in memory, the defaults unless set otherwise. */
