@@ -14,17 +14,17 @@
     <!-- Platzhalter bis Sparen pro Wunsch (#23). -->
     <string name="home_saving_title">Sparen für</string>
     <string name="home_saving_soon">Bald: Sparen pro Wunsch.</string>
-    <!-- Taschengeld (Brief §4.5, ADR-0045): schlichte Beträge für Wünsche, nie „verfügbar zum Ausgeben“ (ADR-0014). -->
-    <string name="home_money_title">Taschengeld</string>
+    <!-- Spaßgeld (Brief §4.5, ADR-0045): schlichte Beträge für Wünsche, nie „verfügbar zum Ausgeben“ (ADR-0014). -->
+    <string name="home_money_title">Spaßgeld</string>
     <string name="home_money_not_set_up">Wähle einen monatlichen Betrag für Dinge, die du dir wünschst. Er kommt jeden Monat von selbst dazu.</string>
     <string name="home_money_set_up">Einrichten</string>
     <string name="home_money_manage">Ändern oder anpassen</string>
-    <string name="home_money_pool">Taschengeld für Wünsche</string>
+    <string name="home_money_pool">Spaßgeld für Wünsche</string>
     <string name="home_money_committed">Für Wünsche zurückgelegt</string>
     <string name="home_money_unallocated">Noch nicht zurückgelegt</string>
 
-    <!-- Der Taschengeld-Bildschirm (Issue #22). Die App bewegt nie echtes Geld (ADR-0010). -->
-    <string name="fun_money_title">Taschengeld</string>
+    <!-- Der Spaßgeld-Bildschirm (Issue #22). Die App bewegt nie echtes Geld (ADR-0010). -->
+    <string name="fun_money_title">Spaßgeld</string>
     <string name="fun_money_explained">Ein monatlicher Betrag für Dinge, die du dir wünschst. Er kommt an dem Tag, den du wählst, von selbst dazu. Er ist nur eine Zahl in dieser App; echtes Geld bewegt sich nicht.</string>
     <string name="fun_money_balance_title">Aktuell</string>
     <!-- %1$s: ein Datum, z. B. „1. Nov. 2026“. -->

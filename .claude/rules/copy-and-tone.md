@@ -13,5 +13,5 @@ paths:
 - **Never:** "you have money available", "you can afford", "you saved!", streaks, badges, urgency words ("only", "hurry", "last chance"), deal/price language (ADR-0012, ADR-0014).
 - Name the alternative concretely on decision surfaces: "Don't buy — keep 1,200 € for your Camera (#2)" beats "Cancel" (ADR-0014 context, research §1).
 - "Decided against", not "saved" or "resisted".
-- Every string exists in `values/` (English) and `values-de/` (German). German uses "du". Terms: Wartezeit (cooling-off), Wunschliste, Prioritäten, Dagegen entschieden, Gekauft, Verlauf (history), Taschengeld (fun money, ADR-0045), zurückgelegt (set aside) — confirm or extend in issue #29.
+- Every string exists in `values/` (English) and `values-de/` (German). German uses "du". Terms: Wartezeit (cooling-off), Wunschliste, Prioritäten, Dagegen entschieden, Gekauft, Verlauf (history), Spaßgeld (fun money, ADR-0045), zurückgelegt (set aside) — confirm or extend in issue #29.
 - Fun money labels (ADR-0045): "Fun money for wants", "Set aside for wants", "Not yet set aside". Never "available", "spend" or "you can afford".

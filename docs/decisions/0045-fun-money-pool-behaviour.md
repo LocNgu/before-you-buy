@@ -17,7 +17,7 @@ Alternatives considered:
 
 ## Decision
 
-- **Name:** "Fun money" in English; "Taschengeld" in German ("Spielgeld" reads as toy money). Confirm or change in the German copy review (#29).
+- **Name:** "Fun money" in English; "Spaßgeld" in German, the literal equivalent, chosen by the owner over "Taschengeld" and "Spielgeld" (toy money), "Wunschgeld", "Wunschtopf" and "Monatsbetrag".
 - **Setup** is its own screen, opened from Home's "Fun money" section ("Set up", then "Change or adjust"). #26 links to the same screen; Home still gets no Settings entry until then. The section replaces ADR-0043's placeholder and is the only tappable part of it.
 - **First credit:** the first accrual day on or after the setup date. Setting up on the accrual day itself credits that day; otherwise the next accrual day is the first (23 Oct with the 1st → 1 Nov). The starting balance covers the time before. The form shows the date ("First added on 1 Nov 2026").
 - **Accrual days** are 1–28, so every month has one; nothing is shifted to month ends. A stored value outside that range is clamped to it on read.
@@ -25,7 +25,7 @@ Alternatives considered:
 - **Changes** to the amount or day first credit every month already due under the old settings, then apply from the next accrual on. The first credited month stays, so moving the day before the first credit neither skips nor adds a month. Later, an earlier day can make the current month due right away; a later one waits for it. The screen says "Changes apply from the next monthly amount on."
 - **Ledger:** entries for the starting amount, each month's accrual, adjustments (± with an optional note) and purchases (#23). Accruals, adjustments and purchases are append-only. The last credited month is derived from the ledger; a unique month index makes a second credit impossible, whoever writes it.
 - **The starting amount stays editable** on the same screen, like the monthly amount and day: it's a setting, not an event, and replacing it keeps its original date. The owner: the app is not a budget planner, so correcting a number shouldn't need bookkeeping.
-- **Labels:** "Fun money for wants", "Set aside for wants", "Not yet set aside" (German: "Taschengeld für Wünsche", "Für Wünsche zurückgelegt", "Noch nicht zurückgelegt"). These replace the issue's "available for wants"; nothing says "available" or "spend".
+- **Labels:** "Fun money for wants", "Set aside for wants", "Not yet set aside" (German: "Spaßgeld für Wünsche", "Für Wünsche zurückgelegt", "Noch nicht zurückgelegt"). These replace the issue's "available for wants"; nothing says "available" or "spend".
 - **Adjustments:** "Add" and "Take out", equal buttons. Taking out more than is not yet set aside asks first ("Go below zero?"); adding never asks. A confirmed take-out may leave the balance below zero.
 
 ## Consequences
