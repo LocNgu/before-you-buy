@@ -351,7 +351,7 @@ private fun BuyStep(state: DecisionUiState, overview: DecisionOverview, form: De
 
                     overview.stage == Stage.SAVING -> stringResource(
                         R.string.decision_early_saving,
-                        (overview.savings?.toGo ?: overview.item.price).format(currentLocale())
+                        (overview.savings?.shownToGo ?: overview.item.price).format(currentLocale())
                     )
 
                     // Cooling off ended while this step was open; it stays an early purchase (ADR-0006).

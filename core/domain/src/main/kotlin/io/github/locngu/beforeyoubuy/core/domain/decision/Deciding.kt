@@ -73,8 +73,8 @@ data class DecisionOverview(
     val others: List<Item>,
     val moreOthers: Int,
     val recheckOn: LocalDate?,
-    val savings: SavingsProgress? = null,
-    val funding: Funding = Funding(item.price, required = false)
+    val savings: SavingsProgress?,
+    val funding: Funding
 )
 
 /** How many other items "What else this money could do" lists before "and N more". */

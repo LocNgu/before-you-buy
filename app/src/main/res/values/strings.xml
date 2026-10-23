@@ -11,7 +11,7 @@
     <string name="home_considering_empty">Nothing yet. Add something you’d like to buy. It waits on your wishlist while you think it over.</string>
     <!-- Above the item whose waiting period ends first, with its countdown. -->
     <string name="home_next_cooling_end">Next waiting period to end</string>
-    <!-- Placeholder until savings per item (#23). -->
+    <!-- Home's "What am I saving for?" (ADR-0046): wants with what is set aside for them. -->
     <string name="home_saving_title">Saving for</string>
     <!-- Fun money (brief §4.5, ADR-0045): plain amounts for wants, never "available to spend" (ADR-0014). -->
     <string name="home_money_title">Fun money</string>
@@ -335,12 +335,11 @@
     <string name="savings_held">Set aside for it: %1$s</string>
     <string name="savings_chip_rest">The rest (%1$s)</string>
     <string name="savings_chip_all">All (%1$s)</string>
-    <string name="savings_more_than_not_set_aside">Only %1$s isn’t set aside yet.</string>
-    <string name="savings_more_than_held">Only %1$s is set aside for it.</string>
+    <string name="savings_set_aside_up_to">You can set aside up to %1$s here.</string>
+    <string name="savings_take_back_up_to">You can take back up to %1$s.</string>
     <string name="savings_amount_zero">Enter an amount above zero.</string>
     <string name="savings_changed_meanwhile">Something changed meanwhile. Nothing was set aside or taken back.</string>
     <string name="item_mark_as_need_release">The %1$s set aside for it goes back to your fun money.</string>
     <string name="decision_early_saving">The waiting period is over, but %1$s of the price isn’t set aside yet.</string>
     <string name="decision_below_zero_body">Paying %1$s leaves %2$s not yet set aside.</string>
-    <string name="savings_chip_add" translatable="false">+%1$s</string>
 </resources>

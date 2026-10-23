@@ -16,10 +16,14 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
 import io.github.locngu.beforeyoubuy.core.domain.money.parseMoney
+import io.github.locngu.beforeyoubuy.core.domain.money.relabeled
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllocationResult
+import io.github.locngu.beforeyoubuy.core.domain.pool.AmountProblem
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.checkAmount
 import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.quickAmounts
 import io.github.locngu.beforeyoubuy.core.domain.pool.restToSetAside
 import io.github.locngu.beforeyoubuy.core.domain.pool.setAsideLimit
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
@@ -63,15 +67,18 @@ data class ItemDetailUiState(
 enum class SavingsMode { SET_ASIDE, TAKE_BACK }
 
 /**
- * The open savings sheet. [limit] is the most it can move: what isn't set aside yet, or what the item holds.
- * [rest] is what the "The rest" / "All" chip fills in; null when there is nothing to fill in. [error] shows once the
- * field has held text (ADR-0035).
+ * The open savings sheet. [limit] is the most it can move: what can be set aside now ([setAsideLimit]) or what the
+ * item holds. [shown] is the amount the sheet names: what isn't set aside yet, or what the item holds. [rest] is what
+ * the "The rest" / "All" chip fills in, [quickAmounts] the amount chips that fit; null or empty when there is
+ * nothing. [error] shows once the field has held text (ADR-0035).
  */
 data class SavingsSheet(
     val mode: SavingsMode,
     val amount: String,
     val limit: Money,
+    val shown: Money = limit,
     val rest: Money?,
+    val quickAmounts: List<Money> = emptyList(),
     val error: SavingsError? = null,
     val canConfirm: Boolean = false
 )
@@ -167,10 +174,10 @@ class ItemDetailViewModel @AssistedInject constructor(
     val uiState: StateFlow<ItemDetailUiState> =
         combine(details, sheetEditor, funMoney, locale) { state, editor, money, locale ->
             val balance = (money as? FunMoney.SetUp)?.balance
-            val currency = state.detail?.item?.price?.currency
+            val progress = state.detail?.savings
             state.copy(
                 sheet = editor?.let { sheetOf(it, state.detail, money, locale) },
-                canSetAside = balance != null && currency != null && setAsideLimit(balance, currency).minorUnits > 0
+                canSetAside = balance != null && progress != null && setAsideLimit(balance, progress).minorUnits > 0
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ItemDetailUiState())
 
@@ -235,6 +242,9 @@ class ItemDetailViewModel @AssistedInject constructor(
                     SavingsMode.SET_ASIDE -> pool.setAside(id, amount, clock.instant())
                     SavingsMode.TAKE_BACK -> pool.takeBack(id, amount, clock.instant())
                 }
+            } catch (_: IllegalArgumentException) {
+                // The currency changed while the sheet was open: the amount no longer fits. Nothing was written.
+                null
             } finally {
                 sheetEditor.update { it?.copy(busy = false) }
             }
@@ -257,25 +267,29 @@ class ItemDetailViewModel @AssistedInject constructor(
         if (locale == null) return null
         val currency = progress.price.currency
         val limit = when (editor.mode) {
-            SavingsMode.SET_ASIDE -> setAsideLimit(balance, currency)
+            SavingsMode.SET_ASIDE -> setAsideLimit(balance, progress)
             SavingsMode.TAKE_BACK -> progress.allocated
         }
-        val rest = when (editor.mode) {
-            SavingsMode.SET_ASIDE -> restToSetAside(progress, limit)
-            SavingsMode.TAKE_BACK -> progress.allocated.takeIf { it.minorUnits > 0 }
-        }
         val parsed = parseMoney(editor.amount, currency, locale)
-        val error = when {
-            parsed !is MoneyParseResult.Success -> SavingsError.Unreadable(parsed)
-            parsed.money.minorUnits <= 0 -> SavingsError.Zero
-            parsed.money > limit -> SavingsError.MoreThanLimit
-            else -> null
+        val error = if (parsed is MoneyParseResult.Success) {
+            when (checkAmount(parsed.money, limit)) {
+                AmountProblem.ZERO -> SavingsError.Zero
+                AmountProblem.MORE_THAN_LIMIT -> SavingsError.MoreThanLimit
+                null -> null
+            }
+        } else {
+            SavingsError.Unreadable(parsed)
         }
         return SavingsSheet(
             mode = editor.mode,
             amount = editor.amount,
             limit = limit,
-            rest = rest,
+            shown = when (editor.mode) {
+                SavingsMode.SET_ASIDE -> maxOf(balance.unallocated.relabeled(currency), Money(0, currency))
+                SavingsMode.TAKE_BACK -> progress.allocated
+            },
+            rest = restToSetAside(limit),
+            quickAmounts = if (editor.mode == SavingsMode.SET_ASIDE) quickAmounts(limit) else emptyList(),
             error = error.takeIf {
                 editor.typed &&
                     !(it is SavingsError.Unreadable && it.result == MoneyParseResult.Empty)

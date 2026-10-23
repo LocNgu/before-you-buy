@@ -339,7 +339,7 @@ fun SavingsSheetContent(sheet: SavingsSheet, itemName: String, actions: SavingsA
         SecondaryText(
             stringResource(
                 if (setAside) R.string.savings_not_set_aside else R.string.savings_held,
-                sheet.limit.format(locale)
+                sheet.shown.format(locale)
             )
         )
         val error = sheet.error?.let { savingsErrorMessage(it, sheet) }
@@ -356,15 +356,9 @@ fun SavingsSheetContent(sheet: SavingsSheet, itemName: String, actions: SavingsA
             keyboardActions = KeyboardActions(onDone = { actions.confirmSavings() })
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (setAside) {
-                QUICK_AMOUNTS.map {
-                    Money.ofWholeUnits(it, sheet.limit.currency)
-                }.filter { it <= sheet.limit }.forEach {
-                    SuggestionChip(
-                        onClick = { actions.onSavingsChip(it) },
-                        label = { Text(stringResource(R.string.savings_chip_add, it.format(locale))) }
-                    )
-                }
+            // Each fills in its amount, so it reads as an amount, not "+50".
+            sheet.quickAmounts.forEach {
+                SuggestionChip(onClick = { actions.onSavingsChip(it) }, label = { Text(it.format(locale)) })
             }
             sheet.rest?.let { rest ->
                 SuggestionChip(
@@ -395,9 +389,6 @@ fun SavingsSheetContent(sheet: SavingsSheet, itemName: String, actions: SavingsA
     }
 }
 
-/** The chips' amounts in whole units of the currency: +50, +100. */
-private val QUICK_AMOUNTS = listOf(50L, 100L)
-
 @Composable
 private fun savingsErrorMessage(error: SavingsError, sheet: SavingsSheet): String = when (error) {
     is SavingsError.Unreadable ->
@@ -407,9 +398,9 @@ private fun savingsErrorMessage(error: SavingsError, sheet: SavingsSheet): Strin
 
     SavingsError.MoreThanLimit -> stringResource(
         if (sheet.mode == SavingsMode.SET_ASIDE) {
-            R.string.savings_more_than_not_set_aside
+            R.string.savings_set_aside_up_to
         } else {
-            R.string.savings_more_than_held
+            R.string.savings_take_back_up_to
         },
         sheet.limit.format(currentLocale())
     )
@@ -423,7 +414,7 @@ private fun Header(detail: ItemDetail) {
         MoneyText(item.price, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StageChip(detail.stage, waiting = detail.recheckOn != null)
-            StageStatus(detail.stage, detail.daysLeft, detail.recheckOn, detail.savings?.toGo)
+            StageStatus(detail.stage, detail.daysLeft, detail.recheckOn, detail.savings?.shownToGo)
         }
         val wanted = if (detail.wantedForDays == 0) {
             stringResource(R.string.item_added_today)

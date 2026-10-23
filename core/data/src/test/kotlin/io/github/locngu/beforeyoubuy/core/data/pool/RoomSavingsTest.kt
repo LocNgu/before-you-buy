@@ -28,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -274,5 +275,29 @@ internal class RoomSavingsTest : DatabaseTest() {
         )
 
         assertEquals(listOf(Allocation(camera.id, eur(6_000), now)), pool.allocations.first())
+    }
+
+    @Test
+    fun `a purchase that can't be spent from the fun money keeps the decision out too`() = runTest {
+        setUp(starting = 30_000)
+        val camera = add()
+        execSql("CREATE TRIGGER fail_purchase BEFORE INSERT ON pool_entries BEGIN SELECT RAISE(ABORT, 'boom'); END")
+
+        val failure = runCatching { decide(camera, buy(paid = 12_000)) }.exceptionOrNull()
+
+        assertNotNull(failure)
+        assertEquals(emptyList<Decision>(), items.observeDecisions(camera.id).first())
+        assertEquals(camera, stored(camera))
+    }
+
+    @Test
+    fun `setting aside stops at the price`() = runTest {
+        setUp(starting = 30_000)
+        val camera = add()
+        pool.setAside(camera.id, eur(10_000), now)
+
+        assertEquals(AllocationResult.MoreThanToGo, pool.setAside(camera.id, eur(2_001), now))
+        assertTrue(pool.setAside(camera.id, eur(2_000), now) is AllocationResult.Allowed)
+        assertEquals(eur(12_000), allocatedFor(camera))
     }
 }

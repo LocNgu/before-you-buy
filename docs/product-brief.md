@@ -125,7 +125,7 @@ Example: *Fun money for wants 300 € · Set aside for wants 200 € · Not yet 
 
 Any active want can receive allocations from the unallocated pool ("put 100 € toward the camera"). Saving can start **on day 1, in parallel with cooling off.** Needs never receive any (ADR-0044).
 
-- Allocation is limited by `unallocated`; "Take back" returns money from an item.
+- Allocation is limited by `unallocated` and by the item's price (never more than what's still to go); "Take back" returns money from an item.
 - Reject → allocations return to unallocated.
 - Buy → allocations are consumed; if the actual price differs, the difference is taken from / returned to unallocated. Going below zero asks first; the purchase is the one ledger entry (ADR-0046).
 - A want turned into a need gives its allocations back (the user confirms).
@@ -147,7 +147,7 @@ An active item has three independent conditions:
 
 - `cooledOff` — now ≥ `coolingEndsAt` (always true for `NEED`)
 - `reflected` — required reflection answers present (always true for `NEED`)
-- `funded` — allocations ≥ price (always true for `NEED`, ADR-0044, and while funding isn't required, ADR-0046)
+- `funded` — allocations ≥ price, in whole units as shown (always true for `NEED`, ADR-0044, and while funding isn't required, ADR-0046)
 
 The **displayed stage** is derived, never stored:
 

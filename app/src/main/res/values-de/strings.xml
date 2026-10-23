@@ -11,7 +11,7 @@
     <string name="home_considering_empty">Noch nichts. Füge etwas hinzu, das du gern kaufen würdest. Es wartet auf deiner Wunschliste, während du darüber nachdenkst.</string>
     <!-- Über dem Artikel, dessen Wartezeit als Nächstes endet, mit seinem Countdown. -->
     <string name="home_next_cooling_end">Als Nächstes endet die Wartezeit für</string>
-    <!-- Platzhalter bis Sparen pro Wunsch (#23). -->
+    <!-- „Wofür spare ich?“ auf der Startseite (ADR-0046): Wünsche mit dem, was dafür zurückgelegt ist. -->
     <string name="home_saving_title">Sparen für</string>
     <!-- Spaßgeld (Brief §4.5, ADR-0045): schlichte Beträge für Wünsche, nie „verfügbar zum Ausgeben“ (ADR-0014). -->
     <string name="home_money_title">Spaßgeld</string>
@@ -314,8 +314,8 @@
     <string name="savings_held">Dafür zurückgelegt: %1$s</string>
     <string name="savings_chip_rest">Den Rest (%1$s)</string>
     <string name="savings_chip_all">Alles (%1$s)</string>
-    <string name="savings_more_than_not_set_aside">Nur %1$s sind noch nicht zurückgelegt.</string>
-    <string name="savings_more_than_held">Dafür sind nur %1$s zurückgelegt.</string>
+    <string name="savings_set_aside_up_to">Hier kannst du bis zu %1$s zurücklegen.</string>
+    <string name="savings_take_back_up_to">Du kannst bis zu %1$s zurücknehmen.</string>
     <string name="savings_amount_zero">Gib einen Betrag über null ein.</string>
     <string name="savings_changed_meanwhile">Inzwischen hat sich etwas geändert. Es wurde nichts zurückgelegt oder zurückgenommen.</string>
     <string name="item_mark_as_need_release">Die dafür zurückgelegten %1$s gehen zurück in dein Spaßgeld.</string>

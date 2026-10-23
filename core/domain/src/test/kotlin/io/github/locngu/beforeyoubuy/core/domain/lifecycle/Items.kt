@@ -19,8 +19,8 @@ internal val PRICE = Money(12_000, "EUR")
 /** The price is set aside, and wants need it (ADR-0046). */
 internal val FUNDED = Funding(PRICE, required = true)
 
-/** One cent short, and wants need the price set aside. */
-internal val UNFUNDED = Funding(Money(11_999, "EUR"), required = true)
+/** 119,49 € (shown as 119 €) of 120 €, and wants need the price set aside. */
+internal val UNFUNDED = Funding(Money(11_949, "EUR"), required = true)
 
 /** Money condition off: without fun money, or with its switch off (ADR-0046). */
 internal fun notRequired(price: Money = PRICE) = Funding(Money(0, price.currency), required = false)

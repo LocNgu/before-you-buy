@@ -11,6 +11,8 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COMPLETE_REFLECTION
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.coversPrice
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isFunded
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
@@ -133,29 +135,35 @@ class SavingsTest {
     fun `setting aside is limited by what isn't set aside yet`() {
         assertEquals(
             AllocationResult.Allowed(Allocation(camera.id, eur(10_000), at)),
-            setAside(camera, eur(10_000), balance(30_000, committed = 20_000), at)
+            setAside(camera, eur(10_000), balance(30_000, committed = 20_000), eur(0), at)
         )
-        assertEquals(AllocationResult.MoreThanNotSetAside, setAside(camera, eur(10_001), balance(30_000, 20_000), at))
-        assertEquals(AllocationResult.MoreThanNotSetAside, setAside(camera, eur(1), balance(-500), at))
+        assertEquals(
+            AllocationResult.MoreThanNotSetAside,
+            setAside(camera, eur(10_001), balance(30_000, 20_000), eur(0), at)
+        )
+        assertEquals(AllocationResult.MoreThanNotSetAside, setAside(camera, eur(1), balance(-500), eur(0), at))
     }
 
     @Test
     fun `saving can start while the item cools off`() {
         // Nothing about the stage: an active want can be saved for from day 1 (brief §4.6).
-        assertTrue(setAside(camera, eur(1_000), balance(30_000), camera.addedAt) is AllocationResult.Allowed)
+        assertTrue(setAside(camera, eur(1_000), balance(30_000), eur(0), camera.addedAt) is AllocationResult.Allowed)
     }
 
     @Test
     fun `setting aside is refused for a need, an ended item, nothing, or without fun money`() {
         val enough = balance(100_000)
-        assertEquals(AllocationResult.IsNeed, setAside(camera.copy(kind = ItemKind.NEED), eur(1_000), enough, at))
+        assertEquals(
+            AllocationResult.IsNeed,
+            setAside(camera.copy(kind = ItemKind.NEED), eur(1_000), enough, eur(0), at)
+        )
         assertEquals(
             AllocationResult.NotActive,
-            setAside(camera.copy(status = ItemStatus.REJECTED), eur(1_000), enough, at)
+            setAside(camera.copy(status = ItemStatus.REJECTED), eur(1_000), enough, eur(0), at)
         )
-        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(0), enough, at))
-        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(-100), enough, at))
-        assertEquals(AllocationResult.NotSetUp, setAside(camera, eur(1_000), null, at))
+        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(0), enough, eur(0), at))
+        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(-100), enough, eur(0), at))
+        assertEquals(AllocationResult.NotSetUp, setAside(camera, eur(1_000), null, eur(0), at))
     }
 
     @Test
@@ -174,7 +182,9 @@ class SavingsTest {
 
     @Test
     fun `amounts in another currency than the item's throw`() {
-        assertThrows(IllegalArgumentException::class.java) { setAside(camera, Money(1, "USD"), balance(100), at) }
+        assertThrows(IllegalArgumentException::class.java) {
+            setAside(camera, Money(1, "USD"), balance(100), eur(0), at)
+        }
         assertThrows(IllegalArgumentException::class.java) { takeBack(camera, Money(1, "USD"), eur(100), at) }
     }
 
@@ -249,17 +259,63 @@ class SavingsTest {
     }
 
     @Test
-    fun `the set-aside limit is what isn't set aside, never below zero`() {
-        assertEquals(eur(18_000), setAsideLimit(balance(30_000, committed = 12_000), "EUR"))
-        assertEquals(eur(0), setAsideLimit(balance(-500), "EUR"))
+    fun `the set-aside limit is what isn't set aside or what's still to go, whichever is less`() {
+        val progress = SavingsProgress(eur(6_000), eur(12_000))
+        assertEquals(eur(6_000), setAsideLimit(balance(30_000, committed = 12_000), progress))
+        assertEquals(eur(2_500), setAsideLimit(balance(2_500), progress))
+        assertEquals(eur(0), setAsideLimit(balance(-500), progress))
+        assertEquals(eur(0), setAsideLimit(balance(30_000), SavingsProgress(eur(12_000), eur(12_000))))
     }
 
     @Test
-    fun `the rest is what's still to go, at most the limit, and nothing once covered`() {
-        val progress = SavingsProgress(eur(6_000), eur(12_000))
-        assertEquals(eur(6_000), restToSetAside(progress, eur(10_000)))
-        assertEquals(eur(2_500), restToSetAside(progress, eur(2_500)))
-        assertNull(restToSetAside(progress, eur(0)))
-        assertNull(restToSetAside(SavingsProgress(eur(12_000), eur(12_000)), eur(10_000)))
+    fun `the rest is all the limit allows, and nothing when that's nothing`() {
+        assertEquals(eur(6_000), restToSetAside(eur(6_000)))
+        assertNull(restToSetAside(eur(0)))
+    }
+
+    @Test
+    fun `setting aside never goes beyond the price`() {
+        val enough = balance(100_000)
+        assertEquals(AllocationResult.MoreThanToGo, setAside(camera, eur(6_001), enough, eur(6_000), at))
+        assertTrue(setAside(camera, eur(6_000), enough, eur(6_000), at) is AllocationResult.Allowed)
+    }
+
+    @Test
+    fun `an item is funded once what's set aside reads as its price`() {
+        // 1.599,60 € of 1.600 € shows as "1.600 € of 1.600 €": funded, nothing shown to go.
+        val almost = SavingsProgress(Money(159_960, "EUR"), Money(160_000, "EUR"))
+        assertTrue(almost.complete)
+        assertEquals(eur(0), almost.toGo)
+        assertEquals(eur(0), almost.shownToGo)
+        assertEquals(1f, almost.fraction)
+        assertTrue(coversPrice(Money(159_950, "EUR"), Money(160_000, "EUR")))
+        assertFalse(coversPrice(Money(159_949, "EUR"), Money(160_000, "EUR")))
+        val bike = camera.copy(price = Money(160_000, "EUR"))
+        assertTrue(isFunded(bike, Funding(Money(159_960, "EUR"), required = true)))
+        assertFalse(isFunded(bike, Funding(Money(159_940, "EUR"), required = true)))
+    }
+
+    @Test
+    fun `what's shown to go is the difference of the amounts as shown`() {
+        // 18,40 € (18 €) of 19,60 € (20 €): "18 € of 20 € set aside · 2 € to go", never "1 €".
+        val progress = SavingsProgress(eur(1_840), eur(1_960))
+        assertEquals(eur(120), progress.toGo)
+        assertEquals(eur(200), progress.shownToGo)
+        assertEquals(eur(95_000), SavingsProgress(eur(65_000), eur(160_000)).shownToGo)
+    }
+
+    @Test
+    fun `quick amounts are 50 and 100 in whole units, those that fit`() {
+        assertEquals(listOf(eur(5_000), eur(10_000)), quickAmounts(eur(35_000)))
+        assertEquals(listOf(eur(5_000)), quickAmounts(eur(9_999)))
+        assertEquals(emptyList<Money>(), quickAmounts(eur(4_999)))
+        assertEquals(listOf(Money(50, "JPY"), Money(100, "JPY")), quickAmounts(Money(100, "JPY")))
+    }
+
+    @Test
+    fun `an amount is checked against the limit`() {
+        assertNull(checkAmount(eur(5_000), eur(5_000)))
+        assertEquals(AmountProblem.ZERO, checkAmount(eur(0), eur(5_000)))
+        assertEquals(AmountProblem.MORE_THAN_LIMIT, checkAmount(eur(5_001), eur(5_000)))
     }
 }

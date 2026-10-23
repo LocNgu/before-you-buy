@@ -5,6 +5,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.money.shownWholeUnits
 import io.github.locngu.beforeyoubuy.core.domain.reflection.ReflectionStep
 import io.github.locngu.beforeyoubuy.core.domain.reflection.isAnswered
 import io.github.locngu.beforeyoubuy.core.domain.reflection.isRequired
@@ -35,12 +36,22 @@ fun isReflected(item: Item, reflection: Reflection?): Boolean {
 data class Funding(val allocated: Money, val required: Boolean)
 
 /**
- * Brief §5 `funded`: the money set aside for the item covers its price, or wants don't need it ([Funding.required]
- * false, ADR-0046). [Funding.allocated] must be in the item's currency. Always true for a `NEED`, which never uses
- * fun money (ADR-0044).
+ * Brief §5 `funded`: the money set aside for the item covers its price ([coversPrice]), or wants don't need it
+ * ([Funding.required] false, ADR-0046). [Funding.allocated] must be in the item's currency. Always true for a `NEED`,
+ * which never uses fun money (ADR-0044).
  */
 fun isFunded(item: Item, funding: Funding): Boolean =
-    item.kind == ItemKind.NEED || !funding.required || funding.allocated >= item.price
+    item.kind == ItemKind.NEED || !funding.required || coversPrice(funding.allocated, item.price)
+
+/**
+ * Whether [allocated] covers [price] as the screen shows them, in whole units (ADR-0034): 1.599,60 € set aside for
+ * 1.600 € reads "1.600 € of 1.600 €" and counts as covered, so the screen never shows the full price set aside on
+ * an item that isn't funded (ADR-0046). Both must be in one currency.
+ */
+fun coversPrice(allocated: Money, price: Money): Boolean {
+    require(allocated.currency == price.currency) { "Can't compare ${allocated.currency} with ${price.currency}" }
+    return allocated.shownWholeUnits() >= price.shownWholeUnits()
+}
 
 /**
  * The stage of an active item, per the table in brief §5. The first unmet condition wins: cooled off, then

@@ -187,7 +187,8 @@ class ItemDetailViewModelTest {
             assertEquals(Stage.SAVING, viewModel.uiState.value.detail!!.stage)
 
             viewModel.openSetAside()
-            assertEquals(Money(20_000, "EUR"), viewModel.uiState.value.sheet!!.limit)
+            // 200 € aren't set aside yet, but the camera costs 120 €: never more than its price (ADR-0046).
+            assertEquals(Money(12_000, "EUR"), viewModel.uiState.value.sheet!!.limit)
             viewModel.onSavingsAmountChange("60")
             viewModel.confirmSavings()
 

@@ -156,7 +156,7 @@ private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StageChip(entry.stage, waiting = entry.recheckOn != null)
-                StageStatus(entry.stage, entry.daysLeft, entry.recheckOn, entry.savings?.toGo)
+                StageStatus(entry.stage, entry.daysLeft, entry.recheckOn, entry.savings?.shownToGo)
             }
             // How far the savings are, once something is set aside; detail has the amounts (brief §4.6).
             entry.savings?.takeIf { it.allocated.minorUnits > 0 }?.let { savings ->

@@ -13,6 +13,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.quickAmounts
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.testing.testPhoto
@@ -128,16 +129,24 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
 
     @Test
     fun setAsideSheet() = captureSheet(
-        SavingsSheet(SavingsMode.SET_ASIDE, amount = "", limit = Money(35_000, "EUR"), rest = Money(35_000, "EUR"))
+        SavingsSheet(
+            SavingsMode.SET_ASIDE,
+            amount = "",
+            limit = Money(35_000, "EUR"),
+            rest = Money(35_000, "EUR"),
+            quickAmounts = quickAmounts(Money(35_000, "EUR"))
+        )
     )
 
     @Test
     fun setAsideSheetTooMuch() = captureSheet(
         SavingsSheet(
             SavingsMode.SET_ASIDE,
-            amount = "400",
-            limit = Money(35_000, "EUR"),
-            rest = Money(35_000, "EUR"),
+            amount = "600",
+            limit = Money(54_900, "EUR"),
+            shown = Money(80_000, "EUR"),
+            rest = Money(54_900, "EUR"),
+            quickAmounts = quickAmounts(Money(54_900, "EUR")),
             error = SavingsError.MoreThanLimit
         )
     )

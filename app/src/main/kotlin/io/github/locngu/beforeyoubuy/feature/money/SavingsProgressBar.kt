@@ -46,6 +46,6 @@ fun savingsText(progress: SavingsProgress): String {
     return if (progress.complete) {
         stringResource(R.string.savings_progress_complete, allocated, price)
     } else {
-        stringResource(R.string.savings_progress, allocated, price, progress.toGo.format(locale))
+        stringResource(R.string.savings_progress, allocated, price, progress.shownToGo.format(locale))
     }
 }
