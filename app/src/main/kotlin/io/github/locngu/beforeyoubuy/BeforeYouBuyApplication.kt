@@ -52,6 +52,15 @@ open class BeforeYouBuyApplication :
         NotificationWorker.schedule(this, clock.instant(), clock.zone)
     }
 
+    /**
+     * Work each time the app comes to the front ([MainActivity.onStart]): a process that lived past the accrual day
+     * credits it now, not only at the next process start or daily worker run (ADR-0045). Idempotent, so extra runs
+     * cost nothing. Like [onAppStart], a no-op in Robolectric tests.
+     */
+    open fun onAppForeground() {
+        appScope.launch { runCatching { poolAccrual.run() } }
+    }
+
     // WorkManager initializes on first use with this (its start-up initializer is removed in the
     // manifest). Workers get their dependencies through Hilt entry points (NotificationsEntryPoint), so the default
     // worker factory is enough.

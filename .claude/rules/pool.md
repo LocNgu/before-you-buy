@@ -26,7 +26,7 @@ paths:
 
 ## App (`:app` `feature/money/`)
 
-- `PoolAccrual.run()` credits what's due with the injected clock. It runs at app start (`onAppStart`), in `MainActivity.onStart` (a process that lived past the accrual day) and in `NotificationWorker` (via `NotificationsEntryPoint`; cancellation is rethrown, other failures never stop notifications). A failure retries next time.
+- `PoolAccrual.run()` credits what's due with the injected clock. It runs at app start (`onAppStart`), in `onAppForeground` (called from `MainActivity.onStart`: a process that lived past the accrual day) and in `NotificationWorker` (via `NotificationsEntryPoint`; cancellation is rethrown, other failures never stop notifications). A failure retries next time.
 - `FunMoneyViewModel` / `FunMoneyScreen` (`FunMoney` nav key, opened from Home; #26 links here too): not set up → monthly amount, day, optional starting amount, "First added on …"; set up → the three amounts and "Next monthly amount on …", the same form without starting amount, and "Adjust the amount" with equal "Add" / "Take out" buttons. Save closes; an adjustment stays and clears its fields. Taps check `busy` on the editor itself, not only `uiState` (which may lag a tap), so a double tap never writes twice. `FunMoneyAmounts` is the three amounts for Home and this screen. Errors show once a field held text (ADR-0035); amounts read with `parseMoney` and `priceErrorMessage`.
 - Labels and terms: `.claude/rules/copy-and-tone.md` (never "available" or "spend").
 
