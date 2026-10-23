@@ -21,7 +21,7 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0005](0005-price-tiered-cooling-off.md) | product | Price-tiered cooling-off; price edits only extend it |
 | [0006](0006-soft-lock-early-purchase.md) | product | Soft lock: early purchase allowed with friction, always logged |
 | [0007](0007-parallel-lifecycle-derived-stage.md) | product | Waiting and saving in parallel; Ready = cooled + reflected + funded; stage derived |
-| [0008](0008-need-fast-path.md) | product | `NEED` items skip cooling-off and reflection, still logged |
+| [0008](0008-need-fast-path.md) | product | `NEED` items skip cooling-off and reflection, still logged (pool clause amended by ADR-0044) |
 | [0009](0009-reflection-after-capture.md) | product | Reflection after capture, required before Ready, includes reasons against |
 | [0010](0010-monthly-allowance-earmarks.md) | product | Discretionary money = auto-accruing monthly allowance; savings are earmarks |
 | [0011](0011-priorities-head-to-head.md) | product | 1–5 priority slots (default 3); new items win a slot head-to-head |
@@ -56,4 +56,6 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0040](0040-decision-screen-behaviour.md) | product | Decision screen: Buy/Reject pair + Wait when Ready or a need, else Reject + "Decide early…"; waited items in their own group; purchases dated back via `decidedAt`; reject note in `decisions.note` (Home's "To decide" amended by ADR-0043) |
 | [0041](0041-history-behaviour.md) | product | History: one period filter for both tabs; "Want it again?" adds a fresh want (same facts, no answers, never a need); delete only on purpose, with a confirm |
 | [0042](0042-notification-behaviour.md) | product | Notifications: waiting periods before nudges; per-item log in Room; daily check around 10:00 via WorkManager; permission asked once after the first item; "Let it go" removes the notification silently |
-| [0043](0043-home-behaviour.md) | product | Home: "To decide" = due for decision + waits ended without answers; Wishlist/History linked from Home (no bottom bar); no Settings entry until #26; M2 sections as quiet placeholders |
+| [0043](0043-home-behaviour.md) | product | Home: "To decide" = due for decision + waits ended without answers; Wishlist/History linked from Home (no bottom bar); no Settings entry until #26; M2 sections as quiet placeholders (money placeholder amended by ADR-0045) |
+| [0044](0044-needs-outside-the-fun-money.md) | product | Needs always count as funded, never use the discretionary pool, and have no budget; amends ADR-0008 |
+| [0045](0045-fun-money-pool-behaviour.md) | product | Fun money: first credit on the next accrual day, days 1–28, catch-up once per month, changes from the next accrual, append-only ledger, calm labels, setup screen from Home |

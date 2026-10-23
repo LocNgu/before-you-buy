@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 
 // Storage conventions (ADR-0018, ADR-0019, ADR-0032): money is `*_minor` Long + currency code, instants are epoch
 // millis, dates are ISO-8601 text, enums are their names and are read defensively. Never a stage column (ADR-0007).
-// M2 adds `allocations` and `pool_entries` next to these, referencing `items.id`.
+// #23 adds `allocations` next to these, referencing `items.id`.
 
 /**
  * The app's currency and cooling-off tiers (`Policy`): one row, id [ID]. Next to the items so a tier or currency
@@ -117,4 +117,50 @@ internal data class ItemNotificationsEntity(
     @PrimaryKey @ColumnInfo(name = "item_id") val itemId: Long,
     @ColumnInfo(name = "waiting_period_over_at") val waitingPeriodOverAt: Long?,
     @ColumnInfo(name = "reflection_nudged_at") val reflectionNudgedAt: Long?
+)
+
+/**
+ * The monthly allowance (`AllowanceSettings`, brief §4.5): one row, id [ID], absent until it is set up; added in
+ * version 4 ([MIGRATION_3_4]). [startDate] is ISO-8601 text.
+ */
+@Entity(tableName = "allowance")
+internal data class AllowanceEntity(
+    @PrimaryKey val id: Int = ID,
+    @ColumnInfo(name = "monthly_minor") val monthlyMinor: Long,
+    val currency: String,
+    @ColumnInfo(name = "accrual_day") val accrualDay: Int,
+    @ColumnInfo(name = "start_date") val startDate: String
+) {
+    companion object {
+        const val ID = 1
+    }
+}
+
+/**
+ * One line of the pool's ledger (`PoolEntry`), append-only; added in version 4 ([MIGRATION_3_4]). [amountMinor] is
+ * the signed change to the pool (a purchase is negative). [accrualMonth] (`2026-11`) is set only for accruals and is
+ * unique, so a month can't be credited twice, whoever credits it. A purchase keeps its row when its item is deleted
+ * from history; [itemId] becomes null.
+ */
+@Entity(
+    tableName = "pool_entries",
+    foreignKeys = [
+        ForeignKey(
+            entity = ItemEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["item_id"],
+            onDelete = ForeignKey.SET_NULL
+        )
+    ],
+    indices = [Index(value = ["accrual_month"], unique = true), Index("item_id")]
+)
+internal data class PoolEntryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val type: String,
+    @ColumnInfo(name = "amount_minor") val amountMinor: Long,
+    val currency: String,
+    val at: Long,
+    @ColumnInfo(name = "accrual_month") val accrualMonth: String? = null,
+    @ColumnInfo(name = "item_id") val itemId: Long? = null,
+    val note: String? = null
 )

@@ -10,7 +10,8 @@ import java.time.Instant
 import java.time.ZoneId
 
 /**
- * What Home answers about the wishlist (brief §6.1). The money questions come with M2.
+ * What Home answers about the wishlist (brief §6.1). The fun money is
+ * [io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf]; savings per item come with #23.
  *
  * @property toDecide "What can I decide on?": Ready items that aren't waiting for a "Wait" date (needs included,
  *   exactly those [io.github.locngu.beforeyoubuy.core.domain.lifecycle.isDueForDecision] accepts), then wants whose

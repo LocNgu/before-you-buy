@@ -105,7 +105,7 @@ A user can mark an item as `NEED` (e.g. "fridge broke"). A need:
 - skips the cooling-off period and reflection requirement
 - goes straight to the decision screen
 - is recorded in history as a need (so the user can later see whether "needs" were really needs)
-- is **not** drawn from the discretionary pool by default (it's a necessity), but can be if the user chooses
+- counts as funded and is **never** drawn from the discretionary pool, which is for fun things; there is no budget for needs (ADR-0044). Something paid from fun money is recorded as a want
 
 Without this path users stop using the app for "real" purchases.
 
@@ -119,7 +119,7 @@ Manual, no bank connection.
 - `committed = sum of allocations to active items`
 - `unallocated = pool − committed` (shown prominently; may never go below zero through allocation)
 
-Example: *300 € available · 200 € committed to wishlist · 100 € unallocated*.
+Example: *Fun money for wants 300 € · Set aside for wants 200 € · Not yet set aside 100 €*. Never "available" or "spend" (ADR-0045). First credit, catch-up and changes: ADR-0045.
 
 ### 4.6 Savings per item (earmarks)
 
@@ -144,7 +144,7 @@ An active item has three independent conditions:
 
 - `cooledOff` — now ≥ `coolingEndsAt` (always true for `NEED`)
 - `reflected` — required reflection answers present (always true for `NEED`)
-- `funded` — allocations ≥ price
+- `funded` — allocations ≥ price (always true for `NEED`, ADR-0044)
 
 The **displayed stage** is derived, never stored:
 
@@ -277,4 +277,3 @@ All decisions are recorded as ADRs in [`docs/decisions/`](decisions/README.md) (
 - **Final app name and logo** — #31 (descriptive names are hard to register as EU word marks — see `research.md`)
 - **Google Play account type** — #34 — personal (12 testers × 14 days closed test) vs organization (D-U-N-S, exempt)
 - **Monetization model** — #41 — and with it EU DSA trader status (public address) and German business registration
-- **Needs and fun money** — #23 — do needs need funding, may they ever use the discretionary pool, and should needs have a budget at all? Discussion and proposal in the issue

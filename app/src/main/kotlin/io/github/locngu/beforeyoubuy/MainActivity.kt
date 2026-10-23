@@ -33,6 +33,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        (application as BeforeYouBuyApplication).onAppForeground()
+    }
+
     // The app was open already: a tap brings it forward with a new intent (FLAG_ACTIVITY_SINGLE_TOP).
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

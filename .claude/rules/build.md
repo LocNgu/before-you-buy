@@ -52,7 +52,7 @@ paths:
 ## Tests
 
 - JVM tests for `:core:domain`; Robolectric + Compose UI tests in `:app` under `src/test`. No instrumented tests.
-- Robolectric runs with `TestApplication` (`src/test/resources/robolectric.properties`). Its `onAppStart()` is a no-op, so start-up work never races tests. All app-start work goes into `BeforeYouBuyApplication.onAppStart()`.
+- Robolectric runs with `TestApplication` (`src/test/resources/robolectric.properties`). Its `onAppStart()` and `onAppForeground()` are no-ops, so start-up work never races tests. All app-start work goes into `BeforeYouBuyApplication.onAppStart()`, work on each return to the front into `onAppForeground()` (called from `MainActivity.onStart`).
 - WorkManager's start-up initializer is removed in the manifest; it initializes on first use from `BeforeYouBuyApplication.workManagerConfiguration`. Don't re-add the initializer. Workers use the default factory and get dependencies through a Hilt `@EntryPoint`; test them with `androidx.work:work-testing` (`WorkManagerTestInitHelper`, `TestListenableWorkerBuilder`).
 - Inject `java.time.Clock`; production gets `SystemZoneClock`, which reads the device zone on every call (debug builds: moved by `DebugClockOffset`, zero unless set; `src/debug` and `src/release` each bind `ClockOffset`). Tests pass `Clock.fixed(...)` or a fake.
 - Compose tests use the `androidx.compose.ui.test.junit4.v2` rules (`createComposeRule`, `createAndroidComposeRule`).

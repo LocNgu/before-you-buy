@@ -8,10 +8,14 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
+import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.launchIn
@@ -32,6 +36,7 @@ class HomeViewModelTest {
     private val start = Instant.parse("2026-10-16T10:00:00Z")
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
+    private val pool = FakePoolRepository()
     private lateinit var viewModel: HomeViewModel
 
     private val reflection =
@@ -40,7 +45,7 @@ class HomeViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        viewModel = HomeViewModel(items, clock)
+        viewModel = HomeViewModel(items, pool, clock)
     }
 
     @After
@@ -140,6 +145,33 @@ class HomeViewModelTest {
         pass(Duration.ofHours(5))
 
         assertEquals(listOf("Camera" to Stage.READY), toDecide)
+    }
+
+    @Test
+    fun `fun money is offered for setup until it exists`() = runTest(UnconfinedTestDispatcher()) {
+        assertNull(viewModel.uiState.value.money)
+
+        viewModel.uiState.launchIn(backgroundScope)
+
+        assertEquals(FunMoney.NotSetUp, viewModel.uiState.value.money)
+    }
+
+    @Test
+    fun `fun money shows the balance with nothing set aside yet`() = runTest(UnconfinedTestDispatcher()) {
+        viewModel.uiState.launchIn(backgroundScope)
+
+        pool.setUp(Money(30_000, "EUR"), 1, Money(5_000, "EUR"), start, clock.zone)
+        pool.adjust(Money(-1_000, "EUR"), null, start)
+
+        val money = viewModel.uiState.value.money as FunMoney.SetUp
+        assertEquals(PoolBalance(Money(4_000, "EUR"), Money(0, "EUR")), money.balance)
+        assertEquals(Money(4_000, "EUR"), money.balance.unallocated)
+        assertEquals(LocalDate.parse("2026-11-01"), money.nextAccrual)
+
+        // The monthly amount arrives (app start or the daily worker) while Home is open.
+        clock.advance(Duration.ofDays(16))
+        pool.accrue(clock.instant(), clock.zone)
+        assertEquals(Money(34_000, "EUR"), (viewModel.uiState.value.money as FunMoney.SetUp).balance.pool)
     }
 
     @Test

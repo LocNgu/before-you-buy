@@ -23,6 +23,7 @@ import io.github.locngu.beforeyoubuy.feature.decision.DecisionScreen
 import io.github.locngu.beforeyoubuy.feature.history.HistoryItemScreen
 import io.github.locngu.beforeyoubuy.feature.history.HistoryScreen
 import io.github.locngu.beforeyoubuy.feature.home.HomeScreen
+import io.github.locngu.beforeyoubuy.feature.money.FunMoneyScreen
 import io.github.locngu.beforeyoubuy.feature.reflection.ReflectionScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemEditScreen
@@ -62,6 +63,10 @@ data object History : NavKey
 /** One purchased or decided-against item, read-only (brief §6.6). */
 @Serializable
 data class HistoryItem(val itemId: Long) : NavKey
+
+/** Setting up and changing the monthly fun money (brief §4.5). */
+@Serializable
+data object FunMoney : NavKey
 
 /**
  * The app's screens. [notificationTap], if set, replaces the back stack with the screens it leads to
@@ -103,8 +108,13 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                         onOpenDecision = { backStack.open(ItemDecision(it.value)) },
                         onOpenWishlist = { backStack.open(Wishlist) },
                         onOpenHistory = { backStack.open(History) },
+                        onOpenFunMoney = { backStack.open(FunMoney) },
                         snackbarHostState = snackbarHostState
                     )
+                }
+                entry<FunMoney> {
+                    // As for edit: only the screen itself closes, even if the save lands after another tap.
+                    FunMoneyScreen(onDone = { if (backStack.lastOrNull() == FunMoney) backStack.removeLastOrNull() })
                 }
                 entry<Wishlist> {
                     WishlistScreen(

@@ -36,7 +36,7 @@ interface PolicyRepository {
 
     /**
      * Makes [currency] the app's currency and relabels every stored amount to it in one transaction (ADR-0033):
-     * item prices, actual prices in history and the tiers keep their numbers ("100 €" becomes "100 $"; see
+     * item prices, actual prices in history, the tiers, the monthly allowance and every pool entry keep their numbers ("100 €" becomes "100 $"; see
      * [io.github.locngu.beforeyoubuy.core.domain.money.relabeled]). Cooling-off ends don't change. Anything not
      * [usable][isUsableCurrency] throws; the current currency changes nothing.
      */

@@ -3,6 +3,7 @@ package io.github.locngu.beforeyoubuy
 import android.app.Application
 import androidx.work.Configuration
 import dagger.hilt.android.HiltAndroidApp
+import io.github.locngu.beforeyoubuy.feature.money.PoolAccrual
 import io.github.locngu.beforeyoubuy.notifications.NotificationWorker
 import io.github.locngu.beforeyoubuy.notifications.Notifier
 import java.time.Clock
@@ -25,6 +26,9 @@ open class BeforeYouBuyApplication :
     @Inject
     lateinit var clock: Clock
 
+    @Inject
+    lateinit var poolAccrual: PoolAccrual
+
     // Work that outlives every screen; it ends with the process.
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -40,9 +44,21 @@ open class BeforeYouBuyApplication :
     protected open fun onAppStart() {
         // Housekeeping only: a failure (e.g. storage unavailable) leaves files for the next start, never crashes.
         appScope.launch { runCatching { imageCleanup.run() } }
+        // Months since the last start; the daily worker catches up too if the app isn't opened. A failure is retried
+        // by the next start or worker run, which credit the same months.
+        appScope.launch { runCatching { poolAccrual.run() } }
         // Channels exist before anything is posted, named in the current language (brief §8).
         notifier.createChannels()
         NotificationWorker.schedule(this, clock.instant(), clock.zone)
+    }
+
+    /**
+     * Work each time the app comes to the front ([MainActivity.onStart]): a process that lived past the accrual day
+     * credits it now, not only at the next process start or daily worker run (ADR-0045). Idempotent, so extra runs
+     * cost nothing. Like [onAppStart], a no-op in Robolectric tests.
+     */
+    open fun onAppForeground() {
+        appScope.launch { runCatching { poolAccrual.run() } }
     }
 
     // WorkManager initializes on first use with this (its start-up initializer is removed in the
