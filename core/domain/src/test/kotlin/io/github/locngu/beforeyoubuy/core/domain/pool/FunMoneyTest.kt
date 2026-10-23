@@ -34,8 +34,10 @@ class FunMoneyTest {
     }
 
     @Test
-    fun `a half-read currency change shows nothing new instead of throwing`() {
-        val relabeled = allowance.copy(monthlyAmount = Money(30_000, "USD"))
-        assertNull(funMoneyOf(relabeled, listOf(PoolEntry.StartingBalance(Money(1, "EUR"), at))))
+    fun `entries in another currency are relabeled instead of hiding the fun money`() {
+        // A half-read currency change, or a stray row: the numbers stay, as a currency change keeps them.
+        val inYen = allowance.copy(monthlyAmount = Money(300, "JPY"))
+        val money = funMoneyOf(inYen, listOf(PoolEntry.StartingBalance(Money(5_050, "EUR"), at))) as FunMoney.SetUp
+        assertEquals(Money(51, "JPY"), money.balance.pool)
     }
 }

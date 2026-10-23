@@ -32,8 +32,8 @@ interface PoolRepository {
 
     /**
      * Changes the amount and accrual day. In one transaction it first credits every month due under the old
-     * settings, so the new amount applies from the next accrual on (issue #22). The start date stays. Throws if the
-     * allowance isn't set up.
+     * settings, so the new amount applies from the next accrual on (issue #22). The first credited month stays
+     * ([AllowanceSettings.changed]). Throws if the allowance isn't set up.
      */
     suspend fun change(monthlyAmount: Money, accrualDay: Int, now: Instant, zone: ZoneId)
 

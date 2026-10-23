@@ -16,7 +16,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
@@ -45,8 +44,7 @@ class HomeViewModel @Inject constructor(items: ItemRepository, pool: PoolReposit
                 }
             }
 
-    // A half-read currency change (null) keeps the amounts shown before.
-    private val money = combine(pool.allowance, pool.entries, ::funMoneyOf).filterNotNull()
+    private val money = combine(pool.allowance, pool.entries, ::funMoneyOf)
 
     val uiState: StateFlow<HomeUiState> =
         combine(overview.onStart<HomeOverview?> { emit(null) }, money.onStart<FunMoney?> { emit(null) }, ::HomeUiState)

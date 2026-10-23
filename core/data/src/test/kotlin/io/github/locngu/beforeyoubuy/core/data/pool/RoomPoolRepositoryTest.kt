@@ -233,6 +233,19 @@ internal class RoomPoolRepositoryTest : DatabaseTest() {
         assertEquals(28, pool.allowance.first()?.accrualDay)
         execSql("UPDATE allowance SET start_date = 'soon'")
         assertNull(pool.allowance.first())
+
+        // It shows as not set up, so setting up again must work and replace the row.
+        assertTrue(pool.setUp(monthly, 5, eur(0), on("2026-10-23"), zone))
+        assertEquals(AllowanceSettings(monthly, 5, LocalDate.parse("2026-10-23")), pool.allowance.first())
+    }
+
+    @Test
+    fun `changing the day before the first credit neither skips nor adds a month`() = runTest {
+        pool.setUp(monthly, 10, eur(0), on("2026-10-12"), zone)
+        pool.change(monthly, 20, on("2026-10-15"), zone)
+
+        assertEquals(0, pool.accrue(on("2026-10-20"), zone))
+        assertEquals(1, pool.accrue(on("2026-11-20"), zone))
     }
 
     @Test

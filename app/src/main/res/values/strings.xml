@@ -37,7 +37,7 @@
     <string name="fun_money_first_accrual">First added on %1$s</string>
     <string name="fun_money_starting_balance">Starting amount (optional)</string>
     <string name="fun_money_starting_balance_explained">What you have for wants today, before the first monthly amount.</string>
-    <string name="fun_money_changes_apply">A new amount or day applies from the next month on.</string>
+    <string name="fun_money_changes_apply">Changes apply from the next monthly amount on.</string>
     <string name="fun_money_adjust_title">Adjust the amount</string>
     <string name="fun_money_adjust_explained">If the number here and your real money drift apart, correct it.</string>
     <string name="fun_money_adjust_amount">Amount</string>

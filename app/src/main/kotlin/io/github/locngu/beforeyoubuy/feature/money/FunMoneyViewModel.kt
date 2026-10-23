@@ -106,8 +106,7 @@ class FunMoneyViewModel @Inject constructor(
     private val editor = MutableStateFlow(Editor())
     private val locale = MutableStateFlow<Locale?>(null)
     private val money: StateFlow<FunMoney?> =
-        combine(pool.allowance, pool.entries, ::funMoneyOf).filterNotNull()
-            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        combine(pool.allowance, pool.entries, ::funMoneyOf).stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val currency: StateFlow<String?> =
         policies.policy.map { it.currency }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val savedEvents = Channel<Unit>(Channel.BUFFERED)
@@ -160,7 +159,8 @@ class FunMoneyViewModel @Inject constructor(
     override fun save() {
         val state = uiState.value
         val form = state.form ?: return
-        if (!state.canSave) return
+        // Busy is checked on the editor itself: uiState may not have caught up with a tap a moment ago.
+        if (!state.canSave || editor.value.busy) return
         val monthly = (parse(form.monthly) as MoneyParseResult.Success).money
         val starting = startingBalanceOf(form) ?: return
         val setUp = state.money is FunMoney.SetUp
@@ -222,7 +222,7 @@ class FunMoneyViewModel @Inject constructor(
     /** The typed adjustment if it can be applied now: above zero, the screen set up and idle. */
     private fun adjustmentAmount(): Money? {
         val state = uiState.value
-        if (!state.canAdjust) return null
+        if (!state.canAdjust || editor.value.busy) return null
         return (parse(state.form?.adjustment ?: return null) as? MoneyParseResult.Success)?.money
     }
 

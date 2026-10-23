@@ -110,6 +110,26 @@ class AllowanceTest {
     }
 
     @Test
+    fun `changing the day before the first credit keeps the first month`() {
+        // Set up 12 Oct with the 20th: October is first. Moving to the 10th must not skip October.
+        val earlier = settings(day = 20, start = "2026-10-12").changed(monthly, 10)
+        assertEquals(YearMonth.parse("2026-10"), earlier.firstMonth)
+        assertEquals(listOf("2026-10"), due(earlier, null, on("2026-10-15")))
+
+        // Set up 12 Oct with the 10th: November is first. Moving to the 20th must not add October.
+        val later = settings(day = 10, start = "2026-10-12").changed(monthly, 20)
+        assertEquals(YearMonth.parse("2026-11"), later.firstMonth)
+        assertEquals(emptyList<String>(), due(later, null, on("2026-10-20")))
+        assertEquals(listOf("2026-11"), due(later, null, on("2026-11-20")))
+    }
+
+    @Test
+    fun `a change that keeps the first month keeps the start date`() {
+        val changed = settings(day = 1).changed(Money(50_000, "EUR"), 5)
+        assertEquals(AllowanceSettings(Money(50_000, "EUR"), 5, LocalDate.parse("2026-10-23")), changed)
+    }
+
+    @Test
     fun `a negative monthly amount is a programming error`() {
         assertThrows(IllegalArgumentException::class.java) { settings(amount = Money(-1, "EUR")) }
         settings(amount = Money(0, "EUR"))

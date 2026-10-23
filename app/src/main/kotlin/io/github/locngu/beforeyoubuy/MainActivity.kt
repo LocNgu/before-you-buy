@@ -8,15 +8,22 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import io.github.locngu.beforeyoubuy.feature.money.PoolAccrual
 import io.github.locngu.beforeyoubuy.navigation.AppNavigation
 import io.github.locngu.beforeyoubuy.notifications.NotificationIntents
 import io.github.locngu.beforeyoubuy.notifications.NotificationTap
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var poolAccrual: PoolAccrual
+
     // A notification tap waiting for the navigation to show it.
     private val notificationTap = MutableStateFlow<NotificationTap?>(null)
 
@@ -31,6 +38,13 @@ class MainActivity : ComponentActivity() {
                 AppNavigation(notificationTap = tap, onNotificationTapShown = { notificationTap.value = null })
             }
         }
+    }
+
+    // Each time the app comes to the front: a process that lived past the accrual day credits it now, not only at
+    // the next process start or daily worker run (ADR-0045). Idempotent, so the extra runs cost nothing.
+    override fun onStart() {
+        super.onStart()
+        lifecycleScope.launch { runCatching { poolAccrual.run() } }
     }
 
     // The app was open already: a tap brings it forward with a new intent (FLAG_ACTIVITY_SINGLE_TOP).

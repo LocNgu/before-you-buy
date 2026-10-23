@@ -42,7 +42,10 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
     ): Boolean = database.withTransaction {
         requireAppCurrency(monthlyAmount, startingBalance)
         val settings = AllowanceSettings(monthlyAmount, accrualDay, now.atZone(zone).toLocalDate())
-        if (pool.insertAllowance(settings.toEntity()) == -1L) return@withTransaction false
+        val existing = pool.getAllowance()
+        if (existing?.toDomain() != null) return@withTransaction false
+        // A row this version can't read shows as not set up (ADR-0032); setting up again replaces it.
+        if (existing == null) pool.insertAllowance(settings.toEntity()) else pool.updateAllowance(settings.toEntity())
         if (startingBalance.minorUnits > 0) pool.insertEntry(PoolEntry.StartingBalance(startingBalance, now).toEntity())
         accrueWith(settings, now, zone)
         true
@@ -54,7 +57,7 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
             val old = checkNotNull(pool.getAllowance()?.toDomain()) { "The allowance isn't set up" }
             // Months already due get the old amount; the new one applies from the next accrual on.
             accrueWith(old, now, zone)
-            val new = old.copy(monthlyAmount = monthlyAmount, accrualDay = accrualDay)
+            val new = old.changed(monthlyAmount, accrualDay)
             pool.updateAllowance(new.toEntity())
             // An earlier accrual day may make this month due right away.
             accrueWith(new, now, zone)

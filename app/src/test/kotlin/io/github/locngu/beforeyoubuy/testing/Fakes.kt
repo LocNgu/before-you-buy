@@ -209,7 +209,7 @@ class FakePoolRepository : PoolRepository {
 
     override suspend fun change(monthlyAmount: Money, accrualDay: Int, now: Instant, zone: ZoneId) {
         accrue(now, zone)
-        allowance.value = checkNotNull(allowance.value).copy(monthlyAmount = monthlyAmount, accrualDay = accrualDay)
+        allowance.value = checkNotNull(allowance.value).changed(monthlyAmount, accrualDay)
         accrue(now, zone)
     }
 

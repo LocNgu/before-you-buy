@@ -23,6 +23,24 @@ data class AllowanceSettings(val monthlyAmount: Money, val accrualDay: Int, val 
     /** The day [month]'s amount is due. */
     fun accrualDateIn(month: YearMonth): LocalDate = month.atDay(accrualDay)
 
+    /** The first month credited: the start date's month if its accrual day isn't before the start, else the next. */
+    val firstMonth: YearMonth
+        get() {
+            val startMonth = YearMonth.from(startDate)
+            return if (accrualDateIn(startMonth) >= startDate) startMonth else startMonth.plusMonths(1)
+        }
+
+    /**
+     * These settings with [monthlyAmount] and [accrualDay], for a change (ADR-0045). The first credited month stays the
+     * same, so moving the day before the first credit neither skips nor adds a month: the start date moves to that
+     * month's 1st if needed.
+     */
+    fun changed(monthlyAmount: Money, accrualDay: Int): AllowanceSettings {
+        val first = firstMonth
+        val moved = copy(monthlyAmount = monthlyAmount, accrualDay = accrualDay)
+        return if (moved.firstMonth == first) moved else moved.copy(startDate = first.atDay(1))
+    }
+
     companion object {
         /** The last day every month has; the 29th–31st aren't offered. */
         const val MAX_ACCRUAL_DAY = 28
@@ -67,8 +85,6 @@ fun nextAccrualDate(settings: AllowanceSettings, lastAccruedMonth: YearMonth?): 
     settings.accrualDateIn(firstUncredited(settings, lastAccruedMonth))
 
 private fun firstUncredited(settings: AllowanceSettings, lastAccruedMonth: YearMonth?): YearMonth {
-    val startMonth = YearMonth.from(settings.startDate)
-    val startMonthDue = settings.accrualDateIn(startMonth) >= settings.startDate
-    val firstMonth = if (startMonthDue) startMonth else startMonth.plusMonths(1)
-    return if (lastAccruedMonth == null || lastAccruedMonth < firstMonth) firstMonth else lastAccruedMonth.plusMonths(1)
+    val first = settings.firstMonth
+    return if (lastAccruedMonth == null || lastAccruedMonth < first) first else lastAccruedMonth.plusMonths(1)
 }

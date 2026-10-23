@@ -16,6 +16,7 @@ import io.github.locngu.beforeyoubuy.feature.money.PoolAccrual
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Runs [NotificationCheck] once a day (brief §8). WorkManager, never exact alarms. It also credits the monthly fun
@@ -24,8 +25,14 @@ import java.time.ZoneId
 class NotificationWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val entryPoint = EntryPointAccessors.fromApplication(applicationContext, NotificationsEntryPoint::class.java)
-        // Retried by the next run or app start; it never keeps the notifications from going out.
-        runCatching { entryPoint.poolAccrual().run() }
+        // Retried by the next run or app start; it never keeps the notifications from going out. Cancellation isn't
+        // a failure: it stops the work.
+        try {
+            entryPoint.poolAccrual().run()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+        }
         entryPoint.notificationCheck().run()
         return Result.success()
     }

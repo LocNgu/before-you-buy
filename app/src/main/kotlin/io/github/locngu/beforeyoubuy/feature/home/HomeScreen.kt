@@ -32,10 +32,10 @@ import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.home.HomeOverview
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
-import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
+import io.github.locngu.beforeyoubuy.feature.money.FunMoneyAmounts
 import io.github.locngu.beforeyoubuy.feature.wishlist.StageChip
 import io.github.locngu.beforeyoubuy.feature.wishlist.StageStatus
 import io.github.locngu.beforeyoubuy.ui.components.CountdownText
@@ -234,15 +234,7 @@ private fun FunMoneySection(money: FunMoney, onOpenFunMoney: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-            is FunMoney.SetUp ->
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    AmountRow(stringResource(R.string.home_money_pool), money.balance.pool)
-                    AmountRow(stringResource(R.string.home_money_committed), money.balance.committed)
-                    AmountRow(stringResource(R.string.home_money_unallocated), money.balance.unallocated)
-                }
+            is FunMoney.SetUp -> FunMoneyAmounts(money.balance, Modifier.padding(horizontal = 16.dp))
         }
         // Lined up with the text above, like "Open wishlist".
         TextButton(onClick = onOpenFunMoney, modifier = Modifier.padding(horizontal = 16.dp).offset(x = (-12).dp)) {
@@ -252,19 +244,6 @@ private fun FunMoneySection(money: FunMoney, onOpenFunMoney: () -> Unit) {
                 )
             )
         }
-    }
-}
-
-@Composable
-private fun AmountRow(label: String, amount: Money) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f).padding(end = 16.dp),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        MoneyText(amount, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

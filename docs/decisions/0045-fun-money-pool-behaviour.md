@@ -21,15 +21,15 @@ Alternatives considered:
 - **Setup** is its own screen, opened from Home's "Fun money" section ("Set up", then "Change or adjust"). #26 links to the same screen; Home still gets no Settings entry until then. The section replaces ADR-0043's placeholder and is the only tappable part of it.
 - **First credit:** the first accrual day on or after the setup date. Setting up on the accrual day itself credits that day; otherwise the next accrual day is the first (23 Oct with the 1st → 1 Nov). The starting balance covers the time before. The form shows the date ("First added on 1 Nov 2026").
 - **Accrual days** are 1–28, so every month has one; nothing is shifted to month ends. A stored value outside that range is clamped to it on read.
-- **Catching up:** every month due since the last credited one is credited at once, at app start and in the daily worker, oldest first, each at most once. "Today" is the device's calendar date (ADR-0018).
-- **Changes** to the amount or day first credit every month already due under the old settings, then apply from the next accrual on. The start date stays. An earlier day can make the current month due right away; a later one waits for it.
+- **Catching up:** every month due since the last credited one is credited at once, at app start, whenever the app comes to the front, and in the daily worker, oldest first, each at most once. "Today" is the device's calendar date (ADR-0018).
+- **Changes** to the amount or day first credit every month already due under the old settings, then apply from the next accrual on. The first credited month stays, so moving the day before the first credit neither skips nor adds a month. Later, an earlier day can make the current month due right away; a later one waits for it. The screen says "Changes apply from the next monthly amount on."
 - **Ledger:** append-only entries (starting balance, accrual per month, adjustment ± with an optional note, purchase from #23). The last credited month is derived from the ledger; a unique month index makes a second credit impossible, whoever writes it.
 - **Labels:** "Fun money for wants", "Set aside for wants", "Not yet set aside" (German: "Taschengeld für Wünsche", "Für Wünsche zurückgelegt", "Noch nicht zurückgelegt"). These replace the issue's "available for wants"; nothing says "available" or "spend".
 - **Adjustments:** "Add" and "Take out", equal buttons. Taking out more than is not yet set aside asks first ("Go below zero?"); adding never asks. A confirmed take-out may leave the balance below zero.
 
 ## Consequences
 
-- A process that stays alive across the accrual day shows the old balance until the next app start or daily worker run: at most about a day late.
+- An app left open on screen across midnight of the accrual day shows the old balance until it next comes to the front or the daily worker runs.
 - #23 passes the real committed amount where #22 passes zero; the labels and screen stay.
 - A currency change relabels the monthly amount and every ledger entry with the items (ADR-0033).
 - Pausing the allowance isn't possible yet; an amount of 0 has the same effect.

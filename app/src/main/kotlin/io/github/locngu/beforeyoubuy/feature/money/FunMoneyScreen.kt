@@ -170,13 +170,11 @@ fun FunMoneyContent(state: FunMoneyUiState, actions: FunMoneyActions, modifier: 
 @Composable
 private fun Balance(money: FunMoney.SetUp) {
     SectionHeader(stringResource(R.string.fun_money_balance_title))
-    Column(modifier = Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        AmountRow(stringResource(R.string.home_money_pool), money.balance.pool)
-        AmountRow(stringResource(R.string.home_money_committed), money.balance.committed)
-        AmountRow(stringResource(R.string.home_money_unallocated), money.balance.unallocated)
+    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+        FunMoneyAmounts(money.balance)
         Text(
             text = stringResource(R.string.fun_money_next_accrual, formattedDate(money.nextAccrual)),
-            modifier = Modifier.padding(top = 4.dp),
+            modifier = Modifier.padding(top = 8.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -215,19 +213,6 @@ private fun Adjust(state: FunMoneyUiState, form: FunMoneyForm, actions: FunMoney
                 Text(stringResource(R.string.fun_money_take_out))
             }
         }
-    }
-}
-
-@Composable
-private fun AmountRow(label: String, amount: Money) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = label,
-            modifier = Modifier.weight(1f).padding(end = 16.dp),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        MoneyText(amount, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
