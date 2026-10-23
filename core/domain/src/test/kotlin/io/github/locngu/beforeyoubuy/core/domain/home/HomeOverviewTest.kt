@@ -12,8 +12,13 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.PRICE
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isDueForDecision
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.Allocation
+import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.savingsOf
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
@@ -121,5 +126,38 @@ class HomeOverviewTest {
         val home = homeOverviewOf(listOf(wish(1)), emptyMap(), Savings.NONE, AFTER_COOLING, zone)
 
         assertNull(home.nextCoolingEnd)
+    }
+
+    @Test
+    fun `saving for lists up to three wants, priorities first, then most set aside, never needs`() {
+        val allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 10, 1))
+        val wants = (1L..5L).map { wish(it) }
+        val priority = wants[4].copy(prioritySlot = 1)
+        val need = wish(9, kind = ItemKind.NEED)
+        val active = wants.take(4) + priority + need
+        fun put(item: Item, minor: Long) = Allocation(item.id, Money(minor, "EUR"), COOLING_ENDS)
+        val savings = savingsOf(allowance, listOf(put(wants[1], 6_000), put(wants[2], 9_000)), active)
+
+        val savingFor = homeOverviewOf(active, emptyMap(), savings, AFTER_COOLING, zone).savingFor
+
+        assertEquals(listOf(5L, 3L, 2L), savingFor.map { it.item.id.value })
+        assertEquals(Money(9_000, "EUR"), savingFor[1].progress.allocated)
+        assertEquals(
+            emptyList<SavingFor>(),
+            homeOverviewOf(active, emptyMap(), Savings.NONE, AFTER_COOLING, zone).savingFor
+        )
+    }
+
+    @Test
+    fun `a want without its price set aside is saving, not to decide`() {
+        val allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 10, 1))
+        val camera = wish(1)
+        val savings = savingsOf(allowance, emptyList(), listOf(camera))
+
+        val overview =
+            homeOverviewOf(listOf(camera), mapOf(camera.id to COMPLETE_REFLECTION), savings, AFTER_COOLING, zone)
+
+        assertEquals(emptyList<Any>(), overview.toDecide)
+        assertEquals(1, overview.activeCount)
     }
 }

@@ -6,6 +6,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolEntry
+import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -32,7 +33,8 @@ import org.junit.Test
 class FunMoneyViewModelTest {
     private val now = Instant.parse("2026-10-23T10:00:00Z")
     private val clock = MutableClock(now)
-    private val pool = FakePoolRepository()
+    private val items = FakeItemRepository()
+    private val pool = FakePoolRepository(items)
     private val german = Locale.GERMANY
 
     @Before
@@ -41,7 +43,7 @@ class FunMoneyViewModelTest {
     @After
     fun resetMain() = Dispatchers.resetMain()
 
-    private fun viewModel() = FunMoneyViewModel(pool, FakePolicyRepository(), clock).apply { setLocale(german) }
+    private fun viewModel() = FunMoneyViewModel(pool, items, FakePolicyRepository(), clock).apply { setLocale(german) }
 
     private fun eur(minor: Long) = Money(minor, "EUR")
 
@@ -211,5 +213,27 @@ class FunMoneyViewModelTest {
         viewModel.add()
         viewModel.takeOut()
         assertEquals(emptyList<PoolEntry.Adjustment>(), pool.adjustments)
+    }
+
+    @Test
+    fun `the funding switch starts on, is stored, and stays as stored`() = runTest {
+        val viewModel = viewModel()
+        assertTrue(viewModel.uiState.value.form!!.wantsNeedFunding)
+        viewModel.saved.test {
+            viewModel.onMonthlyChange("300")
+            viewModel.onWantsNeedFundingChange(false)
+            viewModel.save()
+            awaitItem()
+        }
+        assertFalse(pool.allowance.value!!.wantsNeedFunding)
+
+        val again = viewModel()
+        assertFalse(again.uiState.value.form!!.wantsNeedFunding)
+        again.saved.test {
+            again.onWantsNeedFundingChange(true)
+            again.save()
+            awaitItem()
+        }
+        assertTrue(pool.allowance.value!!.wantsNeedFunding)
     }
 }

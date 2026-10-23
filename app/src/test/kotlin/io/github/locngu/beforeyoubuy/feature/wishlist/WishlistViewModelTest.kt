@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
+import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
@@ -40,7 +41,7 @@ class WishlistViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        viewModel = WishlistViewModel(items, images, clock)
+        viewModel = WishlistViewModel(items, FakePoolRepository(items), images, clock)
     }
 
     @After

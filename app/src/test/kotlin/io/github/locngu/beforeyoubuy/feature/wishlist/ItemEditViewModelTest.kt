@@ -10,6 +10,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
+import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
@@ -37,6 +38,7 @@ class ItemEditViewModelTest {
     private val clock = MutableClock(Instant.parse("2026-10-16T10:00:00Z"))
     private val items = FakeItemRepository()
     private val policies = FakePolicyRepository()
+    private val pool = FakePoolRepository(items)
     private val images = FakeItemImageStore()
     private lateinit var item: Item
     private lateinit var viewModel: ItemEditViewModel
@@ -55,7 +57,7 @@ class ItemEditViewModelTest {
             )
         )
         item = items.stored.single { it.id == id }
-        viewModel = ItemEditViewModel(id.value, items, policies, images, clock)
+        viewModel = ItemEditViewModel(id.value, items, pool, policies, images, clock)
         viewModel.setLocale(Locale.GERMANY)
     }
 
@@ -120,7 +122,7 @@ class ItemEditViewModelTest {
         assertNull(state.waitNote)
 
         items.replace(item.copy(kind = ItemKind.NEED, coolingEndsAt = added))
-        val needEditor = ItemEditViewModel(item.id.value, items, policies, images, clock).apply {
+        val needEditor = ItemEditViewModel(item.id.value, items, pool, policies, images, clock).apply {
             setLocale(Locale.GERMANY)
         }
         needEditor.onNeedChange(false)
@@ -239,7 +241,7 @@ class ItemEditViewModelTest {
     fun `a removed photo is gone once saved, and leaving without saving keeps it`() =
         runTest(UnconfinedTestDispatcher()) {
             items.replace(item.copy(imageRef = "old.jpg"))
-            val editor = ItemEditViewModel(item.id.value, items, policies, images, clock).apply {
+            val editor = ItemEditViewModel(item.id.value, items, pool, policies, images, clock).apply {
                 setLocale(Locale.GERMANY)
             }
             assertEquals(images.fileFor("old.jpg"), editor.uiState.value.photo)
@@ -261,5 +263,40 @@ class ItemEditViewModelTest {
 
         assertTrue(state.gone)
         assertFalse(state.canSave)
+    }
+
+    @Test
+    fun `making a want with savings a need asks first, then saves`() = runTest(UnconfinedTestDispatcher()) {
+        pool.setUp(Money(30_000, "EUR"), 1, Money(20_000, "EUR"), true, clock.instant(), clock.zone)
+        pool.setAside(item.id, Money(6_000, "EUR"), clock.instant())
+        viewModel.onNeedChange(true)
+
+        viewModel.save()
+        assertEquals(Money(6_000, "EUR"), state.confirmRelease)
+        assertEquals(ItemKind.WANT, items.stored.single().kind)
+
+        viewModel.dismissRelease()
+        assertNull(state.confirmRelease)
+        assertEquals(ItemKind.WANT, items.stored.single().kind)
+
+        viewModel.saved.test {
+            viewModel.save()
+            viewModel.confirmRelease()
+            awaitItem()
+        }
+        assertEquals(ItemKind.NEED, items.stored.single().kind)
+    }
+
+    @Test
+    fun `making a want without savings a need saves at once`() = runTest(UnconfinedTestDispatcher()) {
+        pool.setUp(Money(30_000, "EUR"), 1, Money(20_000, "EUR"), true, clock.instant(), clock.zone)
+        viewModel.onNeedChange(true)
+
+        viewModel.saved.test {
+            viewModel.save()
+            awaitItem()
+        }
+        assertNull(state.confirmRelease)
+        assertEquals(ItemKind.NEED, items.stored.single().kind)
     }
 }

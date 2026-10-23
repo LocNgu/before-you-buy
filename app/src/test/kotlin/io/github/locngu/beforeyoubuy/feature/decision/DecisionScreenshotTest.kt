@@ -168,6 +168,10 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
         override fun onNoteChange(note: String) = Unit
 
         override fun confirm() = Unit
+
+        override fun confirmBelowZero() = Unit
+
+        override fun dismissBelowZero() = Unit
     }
 }
 

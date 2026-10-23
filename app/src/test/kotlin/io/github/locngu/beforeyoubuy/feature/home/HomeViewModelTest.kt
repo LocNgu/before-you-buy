@@ -36,7 +36,7 @@ class HomeViewModelTest {
     private val start = Instant.parse("2026-10-16T10:00:00Z")
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
-    private val pool = FakePoolRepository()
+    private val pool = FakePoolRepository(items)
     private lateinit var viewModel: HomeViewModel
 
     private val reflection =
@@ -184,5 +184,28 @@ class HomeViewModelTest {
 
         assertEquals(emptyList<Pair<String, Stage>>(), toDecide)
         assertEquals(0, overview!!.activeCount)
+    }
+
+    @Test
+    fun `saving for lists wants by progress and fun money counts what is set aside`() =
+        runTest(UnconfinedTestDispatcher()) {
+            viewModel.uiState.launchIn(backgroundScope)
+            pool.setUp(Money(30_000, "EUR"), 1, Money(20_000, "EUR"), true, start, clock.zone)
+            val camera = add("Camera", endsInHours = 24)
+            val bike = add("Bike", endsInHours = 48)
+            add("Fridge", endsInHours = 0, kind = ItemKind.NEED)
+            pool.setAside(bike.id, Money(9_000, "EUR"), start)
+            pool.setAside(camera.id, Money(3_000, "EUR"), start)
+
+            assertEquals(listOf("Bike", "Camera"), overview!!.savingFor.map { it.item.name })
+            val money = viewModel.uiState.value.money as FunMoney.SetUp
+            assertEquals(PoolBalance(Money(20_000, "EUR"), Money(12_000, "EUR")), money.balance)
+        }
+
+    @Test
+    fun `without fun money nothing is listed as saved for`() = runTest(UnconfinedTestDispatcher()) {
+        viewModel.uiState.launchIn(backgroundScope)
+        add("Camera", endsInHours = 24)
+        assertEquals(emptyList<Any>(), overview!!.savingFor)
     }
 }

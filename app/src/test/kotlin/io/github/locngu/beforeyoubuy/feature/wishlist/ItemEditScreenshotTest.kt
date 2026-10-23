@@ -75,6 +75,10 @@ abstract class ItemEditScreenshotTest(private val german: Boolean) {
     private object NoActions : ItemEditActions {
         override fun onNameChange(name: String) = Unit
 
+        override fun confirmRelease() = Unit
+
+        override fun dismissRelease() = Unit
+
         override fun onPriceChange(price: String) = Unit
 
         override fun onLinkChange(link: String) = Unit

@@ -173,7 +173,12 @@ class DecisionViewModel @AssistedInject constructor(
     private val messages = Channel<DecisionMessage>(Channel.BUFFERED)
     private val savings = observeSavings(items, pool)
     private val funMoney: StateFlow<FunMoney?> =
-        combine(pool.allowance, pool.entries, savings, ::funMoneyOf).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        combine(
+            pool.allowance,
+            pool.entries,
+            savings,
+            ::funMoneyOf
+        ).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val loaded: Flow<Loaded> =
         combine(items.observeById(id), items.observeReflection(id), items.observeActive(), savings, ::Inputs)

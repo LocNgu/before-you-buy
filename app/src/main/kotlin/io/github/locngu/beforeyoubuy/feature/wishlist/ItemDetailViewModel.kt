@@ -137,7 +137,12 @@ class ItemDetailViewModel @AssistedInject constructor(
     private val locale = MutableStateFlow<Locale?>(null)
     private val savings = observeSavings(items, pool)
     private val funMoney: StateFlow<FunMoney?> =
-        combine(pool.allowance, pool.entries, savings, ::funMoneyOf).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        combine(
+            pool.allowance,
+            pool.entries,
+            savings,
+            ::funMoneyOf
+        ).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val details: Flow<ItemDetailUiState> =
         combine(items.observeById(id), items.observeReflection(id), savings, ::Triple)
@@ -248,6 +253,7 @@ class ItemDetailViewModel @AssistedInject constructor(
         val limit = when (editor.mode) {
             // Nothing can be set aside while less than nothing is left.
             SavingsMode.SET_ASIDE -> balance.unallocated.relabeled(currency).let { maxOf(it, Money(0, currency)) }
+
             SavingsMode.TAKE_BACK -> progress.allocated
         }
         val rest = when (editor.mode) {
@@ -266,7 +272,10 @@ class ItemDetailViewModel @AssistedInject constructor(
             amount = editor.amount,
             limit = limit,
             rest = rest,
-            error = error.takeIf { editor.typed && !(it is SavingsError.Unreadable && it.result == MoneyParseResult.Empty) },
+            error = error.takeIf {
+                editor.typed &&
+                    !(it is SavingsError.Unreadable && it.result == MoneyParseResult.Empty)
+            },
             canConfirm = error == null && !editor.busy
         )
     }

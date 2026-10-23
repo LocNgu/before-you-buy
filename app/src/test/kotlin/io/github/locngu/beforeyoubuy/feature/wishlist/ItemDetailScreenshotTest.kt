@@ -125,6 +125,8 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
                     onReflect = {},
                     onDecide = {},
                     onMarkAsNeed = {},
+                    onOpenFunMoney = {},
+                    savingsActions = NoSavingsActions,
                     onCopyLink = {},
                     onOpenLink = {},
                     snackbarHostState = SnackbarHostState()

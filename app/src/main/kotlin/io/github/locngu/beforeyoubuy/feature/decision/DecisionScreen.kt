@@ -15,6 +15,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,7 +27,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -62,6 +62,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.feature.capture.DayPicker
 import io.github.locngu.beforeyoubuy.feature.capture.priceErrorMessage
+import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
 import io.github.locngu.beforeyoubuy.feature.reflection.usageLabel
 import io.github.locngu.beforeyoubuy.ui.components.ButtonPair
 import io.github.locngu.beforeyoubuy.ui.components.CountdownText
@@ -71,7 +72,6 @@ import io.github.locngu.beforeyoubuy.ui.components.PrimaryButton
 import io.github.locngu.beforeyoubuy.ui.components.SecondaryButton
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 import io.github.locngu.beforeyoubuy.ui.format.currencySymbol
-import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
 import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 import io.github.locngu.beforeyoubuy.ui.format.formattedDate
 import java.time.LocalDate
@@ -180,7 +180,11 @@ private fun BelowZeroDialog(belowZero: BelowZero, actions: DecisionActions) {
         title = { Text(stringResource(R.string.fun_money_below_zero_title)) },
         text = {
             Text(
-                stringResource(R.string.decision_below_zero_body, belowZero.paid.format(locale), belowZero.leaves.format(locale))
+                stringResource(
+                    R.string.decision_below_zero_body,
+                    belowZero.paid.format(locale),
+                    belowZero.leaves.format(locale)
+                )
             )
         },
         confirmButton = {

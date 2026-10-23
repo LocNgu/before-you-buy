@@ -123,11 +123,14 @@ Example: *Fun money for wants 300 € · Set aside for wants 200 € · Not yet 
 
 ### 4.6 Savings per item (earmarks)
 
-Any active item can receive allocations from the unallocated pool ("put 100 € toward the camera"). Saving can start **on day 1, in parallel with cooling off.**
+Any active want can receive allocations from the unallocated pool ("put 100 € toward the camera"). Saving can start **on day 1, in parallel with cooling off.** Needs never receive any (ADR-0044).
 
-- Allocation is limited by `unallocated`.
+- Allocation is limited by `unallocated`; "Take back" returns money from an item.
 - Reject → allocations return to unallocated.
-- Buy → allocations are consumed; if the actual price differs, the difference is taken from / returned to unallocated (user confirms).
+- Buy → allocations are consumed; if the actual price differs, the difference is taken from / returned to unallocated. Going below zero asks first; the purchase is the one ledger entry (ADR-0046).
+- A want turned into a need gives its allocations back (the user confirms).
+- "Wants need their price set aside" (on the fun money screen, on by default): when off, or while fun money isn't set up, funding isn't required for Ready (ADR-0046).
+- Shown as "650 € of 1,600 € set aside · 950 € to go"; never "saved".
 
 ### 4.7 Priorities
 
@@ -144,7 +147,7 @@ An active item has three independent conditions:
 
 - `cooledOff` — now ≥ `coolingEndsAt` (always true for `NEED`)
 - `reflected` — required reflection answers present (always true for `NEED`)
-- `funded` — allocations ≥ price (always true for `NEED`, ADR-0044)
+- `funded` — allocations ≥ price (always true for `NEED`, ADR-0044, and while funding isn't required, ADR-0046)
 
 The **displayed stage** is derived, never stored:
 
@@ -187,7 +190,7 @@ Decisions:
 
 1. **What am I considering?** — priorities + wishlist count
 2. **What can I decide on?** — Ready items (and items whose cooling-off just ended)
-3. **What am I saving for?** — priority goals with progress
+3. **What am I saving for?** — priority goals with progress (until priorities exist: up to 3 wants by progress, ADR-0046)
 4. **How much discretionary money do I have?** — available / committed / unallocated
 
 The "decided against" total is **not** shown next to Ready items (moral licensing — see `research.md`).
