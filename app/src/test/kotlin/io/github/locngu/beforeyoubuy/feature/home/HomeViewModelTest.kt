@@ -160,7 +160,7 @@ class HomeViewModelTest {
     fun `fun money shows the balance with nothing set aside yet`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.uiState.launchIn(backgroundScope)
 
-        pool.setUp(Money(30_000, "EUR"), 1, Money(5_000, "EUR"), start, clock.zone)
+        pool.setUp(Money(30_000, "EUR"), 1, Money(5_000, "EUR"), true, start, clock.zone)
         pool.adjust(Money(-1_000, "EUR"), null, start)
 
         val money = viewModel.uiState.value.money as FunMoney.SetUp

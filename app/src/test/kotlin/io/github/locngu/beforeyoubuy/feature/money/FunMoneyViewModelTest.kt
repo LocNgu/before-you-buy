@@ -46,7 +46,7 @@ class FunMoneyViewModelTest {
     private fun eur(minor: Long) = Money(minor, "EUR")
 
     private suspend fun setUpPool(startingBalance: Long = 10_000) =
-        pool.setUp(eur(30_000), 1, eur(startingBalance), now, clock.zone)
+        pool.setUp(eur(30_000), 1, eur(startingBalance), true, now, clock.zone)
 
     @Test
     fun `setting up starts empty on the 1st and shows when the first amount comes`() {

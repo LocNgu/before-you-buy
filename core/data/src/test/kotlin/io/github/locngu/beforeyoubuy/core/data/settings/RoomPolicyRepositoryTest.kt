@@ -25,6 +25,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.AllocationResult
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import java.time.Instant
 import java.time.Period
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -166,7 +168,7 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
     fun `a currency change relabels the fun money too`() = runTest {
         val pool = RoomPoolRepository(database)
         val setUpAt = Instant.parse("2026-10-01T10:00:00Z")
-        pool.setUp(Money(30_000, "EUR"), 1, Money(5_050, "EUR"), setUpAt, zone)
+        pool.setUp(Money(30_000, "EUR"), 1, Money(5_050, "EUR"), true, setUpAt, zone)
         pool.adjust(Money(-1_025, "EUR"), "Cash", setUpAt)
 
         policies.changeCurrency("JPY")
@@ -178,7 +180,22 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
             pool.entries.first().map { it.change }
         )
         // Accruals keep working in the new currency.
-        pool.change(Money(500, "JPY"), 1, Money(51, "JPY"), setUpAt, zone)
+        pool.change(Money(500, "JPY"), 1, Money(51, "JPY"), true, setUpAt, zone)
+    }
+
+    @Test
+    fun `a currency change relabels what is set aside`() = runTest {
+        val pool = RoomPoolRepository(database)
+        val setUpAt = Instant.parse("2026-10-01T10:00:00Z")
+        pool.setUp(Money(30_000, "EUR"), 1, Money(30_000, "EUR"), true, setUpAt, zone)
+        val camera = add("Camera", "2026-10-01T10:00:00Z")
+        pool.setAside(camera.id, Money(6_050, "EUR"), setUpAt)
+
+        policies.changeCurrency("JPY")
+
+        // 60,50 € → 61 ¥ (half up); setting aside goes on in the new currency.
+        assertEquals(listOf(Money(61, "JPY")), pool.allocations.first().map { it.amount })
+        assertTrue(pool.setAside(camera.id, Money(39, "JPY"), setUpAt) is AllocationResult.Allowed)
     }
 
     @Test

@@ -20,9 +20,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DecisionEntity::class,
         ItemNotificationsEntity::class,
         AllowanceEntity::class,
-        PoolEntryEntity::class
+        PoolEntryEntity::class,
+        AllocationEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
@@ -97,8 +98,25 @@ internal val MIGRATION_3_4: Migration = object : Migration(3, 4) {
     }
 }
 
+/**
+ * 4 → 5 (issue #23): `allocations`, money set aside per item, and the allowance's "Wants need their price set aside"
+ * switch, on (ADR-0046). Nothing was set aside before, so the table starts empty.
+ */
+internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE allowance ADD COLUMN `wants_need_funding` INTEGER NOT NULL DEFAULT 1")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `allocations` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`item_id` INTEGER NOT NULL, `amount_minor` INTEGER NOT NULL, `currency` TEXT NOT NULL, " +
+                "`at` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`item_id`) REFERENCES `items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_allocations_item_id` ON `allocations` (`item_id`)")
+    }
+}
+
 /** Every migration, oldest first. A new schema version adds its own here, with a test in `MigrationTest`. */
-internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 
 /**
  * Makes sure the policy row exists whenever the database opens, before anything reads it: the currency is fixed

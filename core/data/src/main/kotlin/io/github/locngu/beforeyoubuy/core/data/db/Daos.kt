@@ -133,8 +133,8 @@ internal interface PolicyDao {
 }
 
 /**
- * The allowance row and the pool's ledger (`PoolRepository`). Ledger rows are only ever inserted, except the starting
- * amount, which is a setting and replaced when edited.
+ * The allowance row, the pool's ledger and the allocations (`PoolRepository`). Ledger and allocation rows are only
+ * ever inserted, except the starting amount, which is a setting and replaced when edited.
  */
 @Dao
 internal interface PoolDao {
@@ -176,6 +176,22 @@ internal interface PoolDao {
     /** Changes only the amount, for a currency relabel (ADR-0033); what happened never changes. */
     @Query("UPDATE pool_entries SET amount_minor = :minor, currency = :currency WHERE id = :id")
     suspend fun setEntryAmount(id: Long, minor: Long, currency: String)
+
+    @Query("SELECT * FROM allocations ORDER BY at, id")
+    fun observeAllocations(): Flow<List<AllocationEntity>>
+
+    @Query("SELECT * FROM allocations")
+    suspend fun getAllocations(): List<AllocationEntity>
+
+    @Query("SELECT * FROM allocations WHERE item_id = :itemId")
+    suspend fun getAllocationsFor(itemId: Long): List<AllocationEntity>
+
+    @Insert
+    suspend fun insertAllocation(allocation: AllocationEntity): Long
+
+    /** Changes only the amount, for a currency relabel (ADR-0033). */
+    @Query("UPDATE allocations SET amount_minor = :minor, currency = :currency WHERE id = :id")
+    suspend fun setAllocationAmount(id: Long, minor: Long, currency: String)
 }
 
 internal data class HistoryRow(
