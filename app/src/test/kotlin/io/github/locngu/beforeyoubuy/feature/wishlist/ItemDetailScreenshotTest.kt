@@ -2,6 +2,7 @@ package io.github.locngu.beforeyoubuy.feature.wishlist
 
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.RoborazziRule
@@ -29,8 +30,9 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Item detail while cooling off (no reasons yet, and with some), when Ready, waiting after "Wait", for a need, with a
- * photo (small while cooling off, larger when Ready) and once gone, in English and German. Record:
- * `./gradlew :app:recordRoborazziDebug`.
+ * photo (small while cooling off, larger when Ready), with money set aside (while cooling off, saving, all of it) and
+ * once gone, plus the "Set aside" / "Take back" sheet, in English and German. Without fun money (the other states),
+ * the savings section offers to set it up. Record: `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -113,8 +115,59 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
     @Test
     fun gone() = capture(ItemDetailUiState(gone = true))
 
-    private fun capture(item: Item, reflection: Reflection?, photo: File? = null) =
-        capture(ItemDetailUiState(itemDetailOf(item, reflection, Savings.NONE, now, ZoneOffset.UTC), photo = photo))
+    @Test
+    fun savingWhileCoolingOff() = capture(camera, Reflection(why = reasons.why), savings = setAside(65_000))
+
+    @Test
+    fun saving() =
+        capture(camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600)), reasons, savings = setAside(65_000))
+
+    @Test
+    fun allSetAside() =
+        capture(camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600)), reasons, savings = setAside(119_900))
+
+    @Test
+    fun setAsideSheet() = captureSheet(
+        SavingsSheet(SavingsMode.SET_ASIDE, amount = "", limit = Money(35_000, "EUR"), rest = Money(35_000, "EUR"))
+    )
+
+    @Test
+    fun setAsideSheetTooMuch() = captureSheet(
+        SavingsSheet(
+            SavingsMode.SET_ASIDE,
+            amount = "400",
+            limit = Money(35_000, "EUR"),
+            rest = Money(35_000, "EUR"),
+            error = SavingsError.MoreThanLimit
+        )
+    )
+
+    @Test
+    fun takeBackSheet() = captureSheet(
+        SavingsSheet(
+            SavingsMode.TAKE_BACK,
+            amount = "100",
+            limit = Money(65_000, "EUR"),
+            rest = Money(65_000, "EUR"),
+            canConfirm = true
+        )
+    )
+
+    /** Fun money set up, wants need their price, and [minor] set aside for the camera. */
+    private fun setAside(minor: Long) =
+        Savings(setUp = true, required = true, byItem = mapOf(camera.id to Money(minor, "EUR")))
+
+    private fun capture(item: Item, reflection: Reflection?, photo: File? = null, savings: Savings = Savings.NONE) =
+        capture(ItemDetailUiState(itemDetailOf(item, reflection, savings, now, ZoneOffset.UTC), photo = photo))
+
+    private fun captureSheet(sheet: SavingsSheet) {
+        composeRule.setContent {
+            BeforeYouBuyTheme {
+                Surface { SavingsSheetContent(sheet, camera.name, NoSavingsActions) }
+            }
+        }
+        composeRule.captureContent()
+    }
 
     private fun capture(state: ItemDetailUiState) {
         composeRule.setContent {

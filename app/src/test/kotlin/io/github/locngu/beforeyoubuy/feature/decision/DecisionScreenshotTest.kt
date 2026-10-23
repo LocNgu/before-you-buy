@@ -116,14 +116,24 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
     @Test
     fun gone() = capture(DecisionUiState(gone = true))
 
+    /** Fun money set up and wants need their price: 800 € of 1,200 € set aside, so it's saving. */
+    @Test
+    fun saving() = capture(camera, reasons, others, savings = setAside)
+
+    @Test
+    fun savingEarlyBuy() = capture(camera, reasons, step = DecisionStep.BUY, savings = setAside)
+
+    private val setAside = Savings(setUp = true, required = true, byItem = mapOf(camera.id to Money(80_000, "EUR")))
+
     private fun capture(
         item: Item,
         reflection: Reflection?,
         others: List<Item> = emptyList(),
         step: DecisionStep = DecisionStep.OVERVIEW,
-        earlyReason: String = ""
+        earlyReason: String = "",
+        savings: Savings = Savings.NONE
     ) {
-        val overview = decisionOverviewOf(item, reflection, listOf(item) + others, Savings.NONE, now, zone)
+        val overview = decisionOverviewOf(item, reflection, listOf(item) + others, savings, now, zone)
         val form = decisionFormOf(item, today, locale).copy(earlyReason = earlyReason)
         capture(
             DecisionUiState(

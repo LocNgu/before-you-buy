@@ -78,6 +78,24 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
         )
     )
 
+    /** Fun money set up and wants need their price: the camera saves, the bike has some set aside. */
+    @Test
+    fun withSavings() = capture(
+        WishlistUiState(
+            wishlistOf(
+                listOf(coolingLater, unreflected, coolingSoon, ready),
+                mapOf(ready.id to reflection),
+                Savings(
+                    setUp = true,
+                    required = true,
+                    byItem = mapOf(ready.id to Money(65_000, "EUR"), coolingLater.id to Money(40_000, "EUR"))
+                ),
+                now,
+                ZoneOffset.UTC
+            )
+        )
+    )
+
     @Test
     fun withPhotos() = capture(
         WishlistUiState(
