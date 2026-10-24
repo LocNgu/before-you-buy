@@ -227,7 +227,9 @@ class SavingsTest {
         val before = balance(pool = 15_000, committed = 12_000) // 30 € not set aside
         assertFalse(purchaseNeedsConfirmation(before, allocated = eur(12_000), paid = eur(10_000)))
         assertFalse(purchaseNeedsConfirmation(before, allocated = eur(12_000), paid = eur(15_000)))
-        assertTrue(purchaseNeedsConfirmation(before, allocated = eur(12_000), paid = eur(15_001)))
+        // 0,50 € below zero reads −1 €: asks. One cent below reads 0 €: doesn't.
+        assertTrue(purchaseNeedsConfirmation(before, allocated = eur(12_000), paid = eur(15_050)))
+        assertFalse(purchaseNeedsConfirmation(before, allocated = eur(12_000), paid = eur(15_001)))
         // Paying less than set aside never asks, even below zero already.
         assertFalse(purchaseNeedsConfirmation(balance(pool = -1_000), allocated = eur(5_000), paid = eur(4_000)))
     }
@@ -317,5 +319,30 @@ class SavingsTest {
         assertNull(checkAmount(eur(5_000), eur(5_000)))
         assertEquals(AmountProblem.ZERO, checkAmount(eur(0), eur(5_000)))
         assertEquals(AmountProblem.MORE_THAN_LIMIT, checkAmount(eur(5_001), eur(5_000)))
+    }
+
+    @Test
+    fun `a price with cents is funded once the shown amounts match, less than one whole unit short`() {
+        // 1.600,49 € shows as 1.600 €; 1.599,50 € set aside shows as 1.600 €: funded, 0,99 € short.
+        val price = Money(160_049, "EUR")
+        assertTrue(coversPrice(Money(159_950, "EUR"), price))
+        assertFalse(coversPrice(Money(159_949, "EUR"), price))
+        val progress = SavingsProgress(Money(159_950, "EUR"), price)
+        assertTrue(progress.complete)
+        assertEquals(eur(0), progress.shownToGo)
+        // 1.600,50 € shows as 1.601 €: 1.600,49 € set aside (1.600 €) is still 1 € to go.
+        val above = SavingsProgress(Money(160_049, "EUR"), Money(160_050, "EUR"))
+        assertFalse(above.complete)
+        assertEquals(eur(100), above.shownToGo)
+    }
+
+    @Test
+    fun `a purchase a few cents below zero, which reads 0 €, doesn't ask`() {
+        // 1.599,60 € set aside, 0,10 € not set aside, paid 1.600 €: −0,30 € left, shown as 0 €.
+        val before = balance(pool = 159_970, committed = 159_960)
+        assertEquals(eur(-30), leftAfterPurchase(before, allocated = eur(159_960), paid = eur(160_000)))
+        assertFalse(purchaseNeedsConfirmation(before, allocated = eur(159_960), paid = eur(160_000)))
+        // −0,50 € reads −1 €: asks.
+        assertTrue(purchaseNeedsConfirmation(before, allocated = eur(159_960), paid = eur(160_020)))
     }
 }

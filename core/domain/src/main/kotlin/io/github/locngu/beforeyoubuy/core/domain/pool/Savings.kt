@@ -114,7 +114,7 @@ sealed interface AllocationResult {
     /** Setting aside more than isn't set aside yet: allocation never takes the balance below zero (brief §4.5). */
     data object MoreThanNotSetAside : Refused
 
-    /** Setting aside more than is still to go: an item never holds more than its price (ADR-0046). */
+    /** Setting aside more than is still to go: setting aside never takes an item past its price (ADR-0046). */
     data object MoreThanToGo : Refused
 
     /** Taking back more than the item holds. */
@@ -174,11 +174,13 @@ fun leftAfterPurchase(balance: PoolBalance, allocated: Money, paid: Money): Mone
     balance.unallocated.relabeled(paid.currency) + allocated.relabeled(paid.currency) - paid
 
 /**
- * Whether buying a want for [paid] takes more than it held and leaves less than nothing not set aside
- * ([leftAfterPurchase]), so the user confirms first (issue #23). Paying no more than was set aside never asks.
+ * Whether buying a want for [paid] takes more than it held and leaves less than nothing not set aside **as shown**
+ * ([leftAfterPurchase] in whole units, −1 € or less), so the user confirms first (issue #23). A few cents below zero,
+ * which reads "0 €", is recorded without asking, like an item a few cents short counts as funded (ADR-0046); the
+ * balance itself stays exact. Paying no more than was set aside never asks.
  */
 fun purchaseNeedsConfirmation(balance: PoolBalance, allocated: Money, paid: Money): Boolean =
-    paid > allocated.relabeled(paid.currency) && leftAfterPurchase(balance, allocated, paid).minorUnits < 0
+    paid > allocated.relabeled(paid.currency) && leftAfterPurchase(balance, allocated, paid).shownWholeUnits() < 0
 
 /**
  * The most that can be set aside for an item with [progress] now ([setAside]): what [balance] hasn't set aside
