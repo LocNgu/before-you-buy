@@ -92,6 +92,8 @@ abstract class FunMoneyScreenshotTest(private val german: Boolean) {
 
         override fun onAccrualDayChange(day: Int) = Unit
 
+        override fun onWantsNeedFundingChange(on: Boolean) = Unit
+
         override fun onStartingBalanceChange(text: String) = Unit
 
         override fun save() = Unit

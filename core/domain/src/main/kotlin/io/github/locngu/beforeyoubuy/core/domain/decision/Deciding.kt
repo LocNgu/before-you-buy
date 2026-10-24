@@ -6,12 +6,16 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isReflected
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
 import io.github.locngu.beforeyoubuy.core.domain.money.parseMoney
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.SavingsProgress
+import io.github.locngu.beforeyoubuy.core.domain.pool.progressOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.daysLeft
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.recheckOnOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wantedForDays
@@ -54,6 +58,9 @@ enum class BuyPath(val type: DecisionType) {
  *   at most [OTHER_ITEMS_SHOWN], priorities first, then the longest wanted.
  * @property moreOthers how many other active items didn't fit into [others].
  * @property recheckOn the re-check date of an earlier "Wait", while it's still ahead.
+ * @property savings what is set aside for a want while fun money is set up (brief §6.5 "amount saved"); null for a
+ *   need and without fun money.
+ * @property funding Ready's money condition, to check the decision against with `applyDecision`.
  */
 data class DecisionOverview(
     val item: Item,
@@ -65,25 +72,29 @@ data class DecisionOverview(
     val reflected: Boolean,
     val others: List<Item>,
     val moreOthers: Int,
-    val recheckOn: LocalDate?
+    val recheckOn: LocalDate?,
+    val savings: SavingsProgress?,
+    val funding: Funding
 )
 
 /** How many other items "What else this money could do" lists before "and N more". */
 const val OTHER_ITEMS_SHOWN = 3
 
 /**
- * The decision screen for an active [item] at [now] in [zone], with its reflection answers and the user's [active]
- * items (the item itself may be among them). Like the wishlist, every item counts as funded until savings exist
- * (M2). Purchased and rejected items have nothing to decide and throw.
+ * The decision screen for an active [item] at [now] in [zone], with its reflection answers, the user's [active]
+ * items (the item itself may be among them) and the [savings] (as in the wishlist). Purchased and rejected items have
+ * nothing to decide and throw.
  */
 fun decisionOverviewOf(
     item: Item,
     reflection: Reflection?,
     active: List<Item>,
+    savings: Savings,
     now: Instant,
     zone: ZoneId
 ): DecisionOverview {
-    val stage = stageOf(item, reflection, item.price, now)
+    val funding = savings.fundingOf(item)
+    val stage = stageOf(item, reflection, funding, now)
     val others = active
         .filter { it.status == ItemStatus.ACTIVE && it.id != item.id }
         .sortedWith(compareBy(nullsLast()) { it: Item -> it.prioritySlot }.thenBy { it.addedAt }.thenBy { it.id.value })
@@ -97,7 +108,9 @@ fun decisionOverviewOf(
         reflected = isReflected(item, reflection),
         others = others.take(OTHER_ITEMS_SHOWN),
         moreOthers = (others.size - OTHER_ITEMS_SHOWN).coerceAtLeast(0),
-        recheckOn = recheckOnOf(item, stage, now, zone)
+        recheckOn = recheckOnOf(item, stage, now, zone),
+        savings = savings.progressOf(item).takeIf { savings.setUp },
+        funding = funding
     )
 }
 

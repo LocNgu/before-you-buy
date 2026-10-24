@@ -7,7 +7,9 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import java.time.Clock
 import javax.inject.Inject
 import kotlinx.coroutines.flow.first
@@ -27,8 +29,9 @@ class LetItGo @Inject constructor(private val items: ItemRepository, private val
             val item = items.observeById(id).first() ?: return false
             if (item.status != ItemStatus.ACTIVE) return false
             val decision = Decision(DecisionType.REJECT, clock.instant(), DecisionSource.NOTIFICATION)
-            // Every item counts as funded until savings exist (M2).
-            val result = applyDecision(item, items.observeReflection(id).first(), item.price, decision)
+            // Not buying is allowed whatever is set aside; rejecting releases it (brief §4.6).
+            val funding = Funding(Money(0, item.price.currency), required = false)
+            val result = applyDecision(item, items.observeReflection(id).first(), funding, decision)
             if (result !is DecisionResult.Applied) return false
             if (items.recordDecision(item, decision, result.item)) return true
         }

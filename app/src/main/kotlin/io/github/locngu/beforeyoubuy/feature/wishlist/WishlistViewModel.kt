@@ -6,9 +6,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistGroup
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
+import io.github.locngu.beforeyoubuy.feature.money.observeSavings
 import java.io.File
 import java.time.Clock
 import javax.inject.Inject
@@ -34,19 +36,20 @@ data class WishlistUiState(val groups: List<WishlistGroup>? = null, val photos: 
 @HiltViewModel
 class WishlistViewModel @Inject constructor(
     items: ItemRepository,
+    pool: PoolRepository,
     private val images: ItemImageStore,
     private val clock: Clock
 ) : ViewModel() {
     val uiState: StateFlow<WishlistUiState> =
-        combine(items.observeActive(), items.observeReflections(), ::Pair)
-            .flatMapLatest { (active, reflections) ->
+        combine(items.observeActive(), items.observeReflections(), observeSavings(items, pool), ::Triple)
+            .flatMapLatest { (active, reflections, savings) ->
                 val photos = active.mapNotNull { item ->
                     item.imageRef?.let(images::fileFor)?.let { item.id to it }
                 }.toMap()
                 flow {
                     while (true) {
                         val now = clock.instant()
-                        emit(WishlistUiState(wishlistOf(active, reflections, now, clock.zone), photos))
+                        emit(WishlistUiState(wishlistOf(active, reflections, savings, now, clock.zone), photos))
                         delay(untilWishlistChanges(active, now, clock.zone).toMillis().coerceAtLeast(1))
                     }
                 }

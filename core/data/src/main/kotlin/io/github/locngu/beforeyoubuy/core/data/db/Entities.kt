@@ -121,7 +121,8 @@ internal data class ItemNotificationsEntity(
 
 /**
  * The monthly allowance (`AllowanceSettings`, brief §4.5): one row, id [ID], absent until it is set up; added in
- * version 4 ([MIGRATION_3_4]). [startDate] is ISO-8601 text.
+ * version 4 ([MIGRATION_3_4]). [startDate] is ISO-8601 text. [wantsNeedFunding] (version 5, [MIGRATION_4_5]) is the
+ * "Wants need their price set aside" switch, on unless turned off (ADR-0046).
  */
 @Entity(tableName = "allowance")
 internal data class AllowanceEntity(
@@ -129,7 +130,8 @@ internal data class AllowanceEntity(
     @ColumnInfo(name = "monthly_minor") val monthlyMinor: Long,
     val currency: String,
     @ColumnInfo(name = "accrual_day") val accrualDay: Int,
-    @ColumnInfo(name = "start_date") val startDate: String
+    @ColumnInfo(name = "start_date") val startDate: String,
+    @ColumnInfo(name = "wants_need_funding", defaultValue = "1") val wantsNeedFunding: Boolean = true
 ) {
     companion object {
         const val ID = 1
@@ -163,4 +165,29 @@ internal data class PoolEntryEntity(
     @ColumnInfo(name = "accrual_month") val accrualMonth: String? = null,
     @ColumnInfo(name = "item_id") val itemId: Long? = null,
     val note: String? = null
+)
+
+/**
+ * Money set aside for an item (`Allocation`, brief §4.6), append-only; added in version 5 ([MIGRATION_4_5]).
+ * [amountMinor] is positive to set aside, negative to take back. Rows go with their item when it is deleted from
+ * history: a decided item no longer holds money anyway.
+ */
+@Entity(
+    tableName = "allocations",
+    foreignKeys = [
+        ForeignKey(
+            entity = ItemEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["item_id"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ],
+    indices = [Index("item_id")]
+)
+internal data class AllocationEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "item_id") val itemId: Long,
+    @ColumnInfo(name = "amount_minor") val amountMinor: Long,
+    val currency: String,
+    val at: Long
 )

@@ -10,6 +10,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COOLING_ENDS
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -34,7 +35,13 @@ class WishlistTest {
         val cooling = wish(3, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
 
         val groups =
-            wishlistOf(listOf(cooling, unreflected, ready), mapOf(ready.id to COMPLETE_REFLECTION), AFTER_COOLING, zone)
+            wishlistOf(
+                listOf(cooling, unreflected, ready),
+                mapOf(ready.id to COMPLETE_REFLECTION),
+                Savings.NONE,
+                AFTER_COOLING,
+                zone
+            )
 
         assertEquals(listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), groups.map { it.stage })
         assertEquals(
@@ -49,17 +56,20 @@ class WishlistTest {
     fun `every entry carries the stage stageOf gives it`() {
         val items = listOf(wish(1), wish(2, endsAt = Instant.parse("2026-12-01T10:00:00Z")))
 
-        val entries = wishlistOf(items, emptyMap(), AFTER_COOLING, zone).flatMap { it.entries }
+        val entries = wishlistOf(items, emptyMap(), Savings.NONE, AFTER_COOLING, zone).flatMap { it.entries }
 
         assertEquals(listOf(Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), entries.map { it.stage })
     }
 
     @Test
     fun `empty groups are left out`() {
-        assertEquals(emptyList<WishlistGroup>(), wishlistOf(emptyList(), emptyMap(), DURING_COOLING, zone))
+        assertEquals(
+            emptyList<WishlistGroup>(),
+            wishlistOf(emptyList(), emptyMap(), Savings.NONE, DURING_COOLING, zone)
+        )
         assertEquals(
             listOf(Stage.COOLING_OFF),
-            wishlistOf(listOf(wish(1)), emptyMap(), DURING_COOLING, zone).map {
+            wishlistOf(listOf(wish(1)), emptyMap(), Savings.NONE, DURING_COOLING, zone).map {
                 it.stage
             }
         )
@@ -76,7 +86,7 @@ class WishlistTest {
         val tieHigherId = wish(3, endsAt = Instant.parse("2026-11-01T10:00:00Z"))
 
         val order =
-            wishlistOf(listOf(later, tieHigherId, sooner, tieOlder), emptyMap(), DURING_COOLING, zone)
+            wishlistOf(listOf(later, tieHigherId, sooner, tieOlder), emptyMap(), Savings.NONE, DURING_COOLING, zone)
                 .single()
                 .entries
                 .map { it.item.id.value }
@@ -91,7 +101,7 @@ class WishlistTest {
 
         assertEquals(
             listOf(ItemId(1)),
-            wishlistOf(items, emptyMap(), DURING_COOLING, zone).flatMap {
+            wishlistOf(items, emptyMap(), Savings.NONE, DURING_COOLING, zone).flatMap {
                 it.entries
             }.map { it.item.id }
         )
@@ -101,15 +111,24 @@ class WishlistTest {
     fun `a need is never cooling off and needs no reflection`() {
         val need = wish(1, kind = ItemKind.NEED)
 
-        assertEquals(Stage.READY, wishlistOf(listOf(need), emptyMap(), DURING_COOLING, zone).single().stage)
+        assertEquals(
+            Stage.READY,
+            wishlistOf(listOf(need), emptyMap(), Savings.NONE, DURING_COOLING, zone).single().stage
+        )
     }
 
     @Test
     fun `an item changes group when its cooling off ends`() {
         val items = listOf(wish(1))
 
-        assertEquals(Stage.COOLING_OFF, wishlistOf(items, emptyMap(), COOLING_ENDS.minusMillis(1), zone).single().stage)
-        assertEquals(Stage.NEEDS_REFLECTION, wishlistOf(items, emptyMap(), COOLING_ENDS, zone).single().stage)
+        assertEquals(
+            Stage.COOLING_OFF,
+            wishlistOf(items, emptyMap(), Savings.NONE, COOLING_ENDS.minusMillis(1), zone).single().stage
+        )
+        assertEquals(
+            Stage.NEEDS_REFLECTION,
+            wishlistOf(items, emptyMap(), Savings.NONE, COOLING_ENDS, zone).single().stage
+        )
     }
 
     @Test
@@ -185,7 +204,7 @@ class WishlistTest {
         val cooling = wish(3, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
         val reflections = mapOf(waited.id to COMPLETE_REFLECTION, ready.id to COMPLETE_REFLECTION)
 
-        val groups = wishlistOf(listOf(waited, ready, cooling), reflections, AFTER_COOLING, zone)
+        val groups = wishlistOf(listOf(waited, ready, cooling), reflections, Savings.NONE, AFTER_COOLING, zone)
 
         assertEquals(listOf(false, false, true), groups.map { it.waiting })
         assertEquals(listOf(Stage.READY, Stage.COOLING_OFF, Stage.READY), groups.map { it.stage })
@@ -194,7 +213,7 @@ class WishlistTest {
         assertEquals(waited.id, waiting.item.id)
         assertEquals(LocalDate.of(2026, 11, 9), waiting.recheckOn)
 
-        val due = wishlistOf(listOf(waited), reflections, recheck, zone).single()
+        val due = wishlistOf(listOf(waited), reflections, Savings.NONE, recheck, zone).single()
         assertFalse(due.waiting)
         assertNull(due.entries.single().recheckOn)
     }
@@ -205,7 +224,7 @@ class WishlistTest {
         val sooner = wish(2).copy(recheckAt = Instant.parse("2026-11-10T00:00:00Z"))
         val reflections = mapOf(later.id to COMPLETE_REFLECTION, sooner.id to COMPLETE_REFLECTION)
 
-        val group = wishlistOf(listOf(later, sooner), reflections, AFTER_COOLING, zone).single()
+        val group = wishlistOf(listOf(later, sooner), reflections, Savings.NONE, AFTER_COOLING, zone).single()
 
         assertEquals(listOf(sooner.id, later.id), group.entries.map { it.item.id })
     }
@@ -214,7 +233,7 @@ class WishlistTest {
     fun `a re-check date only matters once the item is ready`() {
         val waited = wish(1).copy(recheckAt = Instant.parse("2026-11-20T00:00:00Z"))
 
-        val group = wishlistOf(listOf(waited), emptyMap(), AFTER_COOLING, zone).single()
+        val group = wishlistOf(listOf(waited), emptyMap(), Savings.NONE, AFTER_COOLING, zone).single()
 
         assertEquals(Stage.NEEDS_REFLECTION, group.stage)
         assertFalse(group.waiting)

@@ -11,8 +11,10 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
+import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
@@ -43,6 +45,7 @@ class DecisionViewModelTest {
     private val today = LocalDate.of(2026, 11, 2)
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
+    private val pool = FakePoolRepository(items)
 
     private val reflection =
         Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))
@@ -74,7 +77,7 @@ class DecisionViewModelTest {
         return items.stored.single { it.id == id }
     }
 
-    private fun TestScope.viewModelFor(item: Item) = DecisionViewModel(item.id.value, items, clock).also {
+    private fun TestScope.viewModelFor(item: Item) = DecisionViewModel(item.id.value, items, pool, clock).also {
         it.uiState.launchIn(backgroundScope)
         it.setLocale(Locale.GERMANY)
     }
@@ -217,9 +220,9 @@ class DecisionViewModelTest {
         assertEquals(ItemStatus.ACTIVE, waited.status)
         assertEquals(Instant.parse("2026-11-16T00:00:00Z"), waited.recheckAt)
         val reflections = items.observeReflections().first()
-        val groups = wishlistOf(listOf(waited), reflections, clock.instant(), ZoneOffset.UTC)
+        val groups = wishlistOf(listOf(waited), reflections, Savings.NONE, clock.instant(), ZoneOffset.UTC)
         assertTrue(groups.single().waiting)
-        val due = wishlistOf(listOf(waited), reflections, waited.recheckAt!!, ZoneOffset.UTC)
+        val due = wishlistOf(listOf(waited), reflections, Savings.NONE, waited.recheckAt!!, ZoneOffset.UTC)
         assertFalse(due.single().waiting)
     }
 
@@ -247,5 +250,86 @@ class DecisionViewModelTest {
 
         assertTrue(viewModel.uiState.value.gone)
         assertNull(viewModel.uiState.value.overview)
+    }
+
+    private suspend fun setUpFunMoney(starting: Long) {
+        pool.setUp(Money(30_000, "EUR"), 1, Money(starting, "EUR"), true, start, clock.zone)
+    }
+
+    @Test
+    fun `once fun money is set up, a want is Ready only when its price is set aside`() =
+        runTest(UnconfinedTestDispatcher()) {
+            setUpFunMoney(starting = 200_000)
+            val item = add()
+            val viewModel = viewModelFor(item)
+
+            assertEquals(Stage.SAVING, viewModel.uiState.value.overview!!.stage)
+            assertEquals(BuyPath.EARLY, viewModel.uiState.value.overview!!.buyPath)
+            assertEquals(Money(120_000, "EUR"), viewModel.uiState.value.overview!!.savings!!.toGo)
+
+            pool.setAside(item.id, Money(120_000, "EUR"), start)
+
+            assertEquals(Stage.READY, viewModel.uiState.value.overview!!.stage)
+            assertEquals(BuyPath.BUY, viewModel.uiState.value.overview!!.buyPath)
+        }
+
+    @Test
+    fun `buying for more than is set aside and not set aside asks first`() = runTest(UnconfinedTestDispatcher()) {
+        // 1.500 € in the fun money, the camera's 1.200 € set aside: 300 € not set aside.
+        setUpFunMoney(starting = 150_000)
+        val item = add()
+        pool.setAside(item.id, Money(120_000, "EUR"), start)
+        val viewModel = viewModelFor(item)
+
+        viewModel.onBuy()
+        viewModel.onPriceChange("1600")
+        viewModel.confirm()
+
+        assertEquals(
+            BelowZero(paid = Money(160_000, "EUR"), leaves = Money(-10_000, "EUR")),
+            viewModel.uiState.value.confirmBelowZero
+        )
+        assertEquals(emptyList<Any>(), items.decisions)
+
+        viewModel.dismissBelowZero()
+        assertNull(viewModel.uiState.value.confirmBelowZero)
+        assertEquals(emptyList<Any>(), items.decisions)
+
+        viewModel.outcome.test {
+            viewModel.confirm()
+            viewModel.confirmBelowZero()
+            assertEquals(DecisionOutcome.Bought, awaitItem())
+        }
+        assertEquals(Money(160_000, "EUR"), items.decisions.single().actualPrice)
+    }
+
+    @Test
+    fun `buying within what is set aside and not set aside doesn't ask`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 150_000)
+        val item = add()
+        pool.setAside(item.id, Money(120_000, "EUR"), start)
+        val viewModel = viewModelFor(item)
+
+        viewModel.outcome.test {
+            viewModel.onBuy()
+            viewModel.onPriceChange("1500")
+            viewModel.confirm()
+            assertEquals(DecisionOutcome.Bought, awaitItem())
+        }
+        assertNull(viewModel.uiState.value.confirmBelowZero)
+    }
+
+    @Test
+    fun `buying a need never asks about the fun money`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 0)
+        val item = add(kind = ItemKind.NEED, reflected = false)
+        val viewModel = viewModelFor(item)
+
+        viewModel.outcome.test {
+            viewModel.onBuy()
+            viewModel.confirm()
+            assertEquals(DecisionOutcome.Bought, awaitItem())
+        }
+        assertEquals(DecisionType.BUY_NEED, items.decisions.single().type)
     }
 }

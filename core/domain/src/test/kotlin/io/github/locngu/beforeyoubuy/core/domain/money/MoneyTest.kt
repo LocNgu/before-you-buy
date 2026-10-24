@@ -31,4 +31,11 @@ class MoneyTest {
         assertThrows(ArithmeticException::class.java) { Money(Long.MAX_VALUE, "EUR") + Money(1, "EUR") }
         assertThrows(ArithmeticException::class.java) { Money(Long.MIN_VALUE, "EUR") - Money(1, "EUR") }
     }
+
+    @Test
+    fun `whole units scale exactly to the currency's minor units`() {
+        assertEquals(Money(5_000, "EUR"), Money.ofWholeUnits(50, "EUR"))
+        assertEquals(Money(50, "JPY"), Money.ofWholeUnits(50, "JPY"))
+        assertEquals(Money(50_000, "BHD"), Money.ofWholeUnits(50, "BHD"))
+    }
 }

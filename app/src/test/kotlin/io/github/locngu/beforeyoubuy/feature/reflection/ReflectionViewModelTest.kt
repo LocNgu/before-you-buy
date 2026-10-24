@@ -20,6 +20,7 @@ import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailViewModel
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
+import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
@@ -70,8 +71,14 @@ class ReflectionViewModelTest {
 
     private fun reflectionFor(item: Item) = ReflectionViewModel(item.id.value, items)
 
-    private fun detailFor(item: Item) =
-        ItemDetailViewModel(item.id.value, items, FakePolicyRepository(), FakeItemImageStore(), clock)
+    private fun detailFor(item: Item) = ItemDetailViewModel(
+        item.id.value,
+        items,
+        FakePoolRepository(items),
+        FakePolicyRepository(),
+        FakeItemImageStore(),
+        clock
+    )
 
     private suspend fun storedAnswers(item: Item): Reflection? = items.observeReflection(item.id).first()
 

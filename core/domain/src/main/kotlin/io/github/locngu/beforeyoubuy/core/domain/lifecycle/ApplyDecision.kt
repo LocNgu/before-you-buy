@@ -6,7 +6,6 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
-import io.github.locngu.beforeyoubuy.core.domain.money.Money
 
 /**
  * Checks [decision] against the item's kind and stage at [Decision.decidedAt] and, if it's allowed, returns the
@@ -19,12 +18,13 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
  * - `WAIT`: any active item, with a re-check date in the future. The item stays active.
  * - `REJECT`: any active item.
  *
- * Purchased and rejected items refuse every decision. Never throws for a refused decision. [allocated] and the
- * decision's actual price must be in the item's currency; anything else is a programming error and throws, whatever
- * the decision.
+ * Purchased and rejected items refuse every decision. Never throws for a refused decision. [Funding.allocated] and
+ * the decision's actual price must be in the item's currency; anything else is a programming error and throws,
+ * whatever the decision. What a purchase does to the fun money is
+ * [io.github.locngu.beforeyoubuy.core.domain.pool.poolPurchaseOf].
  */
-fun applyDecision(item: Item, reflection: Reflection?, allocated: Money, decision: Decision): DecisionResult {
-    requireSameCurrency(item, allocated)
+fun applyDecision(item: Item, reflection: Reflection?, funding: Funding, decision: Decision): DecisionResult {
+    requireSameCurrency(item, funding.allocated)
     require(decision.actualPrice == null || decision.actualPrice.currency == item.price.currency) {
         "Actual price must be in the item's currency ${item.price.currency}"
     }
@@ -34,7 +34,7 @@ fun applyDecision(item: Item, reflection: Reflection?, allocated: Money, decisio
     val refusal = when (decision.type) {
         DecisionType.BUY -> when {
             isNeed -> DecisionResult.IsNeed
-            stageOf(item, reflection, allocated, now) != Stage.READY -> DecisionResult.NotReady
+            stageOf(item, reflection, funding, now) != Stage.READY -> DecisionResult.NotReady
             else -> null
         }
 

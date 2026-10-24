@@ -1,6 +1,6 @@
 # ADR-0034: Amounts are shown in whole units, rounded; storage and input stay exact
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0046 (funded, the purchase "Go below zero?" question and amounts typed in the savings sheet compare whole units as shown)
 **Type**: product
 **Date**: 2026-10-16
 

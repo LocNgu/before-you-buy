@@ -1,15 +1,27 @@
 package io.github.locngu.beforeyoubuy.core.data.pool
 
 import androidx.room.withTransaction
+import io.github.locngu.beforeyoubuy.core.data.db.AllocationEntity
 import io.github.locngu.beforeyoubuy.core.data.db.AllowanceEntity
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
 import io.github.locngu.beforeyoubuy.core.data.db.PoolEntryEntity
+import io.github.locngu.beforeyoubuy.core.data.item.toDomain
+import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.Allocation
+import io.github.locngu.beforeyoubuy.core.domain.pool.AllocationResult
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolEntry
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
+import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.accrualsDue
+import io.github.locngu.beforeyoubuy.core.domain.pool.poolBalanceOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.savingsOf
+import io.github.locngu.beforeyoubuy.core.domain.pool.setAside as checkSetAside
+import io.github.locngu.beforeyoubuy.core.domain.pool.takeBack as checkTakeBack
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -19,13 +31,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 /**
- * [PoolRepository] on the `allowance` row and the `pool_entries` ledger, in the items' database so a currency change
- * relabels them in one transaction (ADR-0033). Accruals are idempotent twice over: each run reads the last credited
+ * [PoolRepository] on the `allowance` row, the `pool_entries` ledger and `allocations`, in the items' database so a
+ * currency change relabels them in one transaction (ADR-0033) and allocations are checked against the stored items. Accruals are idempotent twice over: each run reads the last credited
  * month inside its transaction, and the unique `accrual_month` index ignores a month that is already there.
  */
 internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : PoolRepository {
     private val pool = database.poolDao()
     private val policies = database.policyDao()
+    private val items = database.itemDao()
 
     override val allowance: Flow<AllowanceSettings?> =
         pool.observeAllowance().map { it?.toDomain() }.distinctUntilChanged()
@@ -33,15 +46,19 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
     override val entries: Flow<List<PoolEntry>> =
         pool.observeEntries().map { rows -> rows.mapNotNull { it.toDomain() } }.distinctUntilChanged()
 
+    override val allocations: Flow<List<Allocation>> =
+        pool.observeAllocations().map { rows -> rows.mapNotNull { it.toDomain() } }.distinctUntilChanged()
+
     override suspend fun setUp(
         monthlyAmount: Money,
         accrualDay: Int,
         startingBalance: Money,
+        wantsNeedFunding: Boolean,
         now: Instant,
         zone: ZoneId
     ): Boolean = database.withTransaction {
         requireAppCurrency(monthlyAmount, startingBalance)
-        val settings = AllowanceSettings(monthlyAmount, accrualDay, now.atZone(zone).toLocalDate())
+        val settings = AllowanceSettings(monthlyAmount, accrualDay, now.atZone(zone).toLocalDate(), wantsNeedFunding)
         val existing = pool.getAllowance()
         if (existing?.toDomain() != null) return@withTransaction false
         // A row this version can't read shows as not set up (ADR-0032); setting up again replaces it.
@@ -55,6 +72,7 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
         monthlyAmount: Money,
         accrualDay: Int,
         startingBalance: Money,
+        wantsNeedFunding: Boolean,
         now: Instant,
         zone: ZoneId
     ) = database.withTransaction {
@@ -62,7 +80,7 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
         val old = checkNotNull(pool.getAllowance()?.toDomain()) { "The allowance isn't set up" }
         // Months already due get the old amount; the new one applies from the next accrual on.
         accrueWith(old, now, zone)
-        val new = old.changed(monthlyAmount, accrualDay)
+        val new = old.changed(monthlyAmount, accrualDay).copy(wantsNeedFunding = wantsNeedFunding)
         pool.updateAllowance(new.toEntity())
         // An earlier accrual day may make this month due right away.
         accrueWith(new, now, zone)
@@ -80,6 +98,36 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
             requireAppCurrency(change)
             pool.insertEntry(PoolEntry.Adjustment(change, note?.trim()?.ifEmpty { null }, at).toEntity())
         }
+    }
+
+    override suspend fun setAside(itemId: ItemId, amount: Money, at: Instant): AllocationResult =
+        allocate(itemId) { item, _, balance -> checkSetAside(item, amount, balance, at) }
+
+    override suspend fun takeBack(itemId: ItemId, amount: Money, at: Instant): AllocationResult =
+        allocate(itemId) { item, savings, _ -> checkTakeBack(item, amount, savings.allocatedFor(item), at) }
+
+    /**
+     * Reads the stored item and everything its check needs inside one transaction, runs [check] and stores what it
+     * allows: nothing read here can change before the write.
+     */
+    private suspend fun allocate(
+        itemId: ItemId,
+        check: (Item, Savings, PoolBalance?) -> AllocationResult
+    ): AllocationResult = database.withTransaction {
+        val item = items.getById(itemId.value)?.toDomain() ?: return@withTransaction AllocationResult.NotActive
+        val allowance = pool.getAllowance()?.toDomain()
+        val active = items.getByStatus(ItemStatus.ACTIVE.name).map { it.toDomain() }
+        val savings = savingsOf(allowance, pool.getAllocations().mapNotNull { it.toDomain() }, active)
+        val balance = allowance?.let {
+            val currency = it.monthlyAmount.currency
+            poolBalanceOf(pool.getEntries().mapNotNull { row -> row.toDomain() }, savings.committed(currency))
+        }
+        val result = check(item, savings, balance)
+        if (result is AllocationResult.Allowed) {
+            requireAppCurrency(result.allocation.amount)
+            pool.insertAllocation(result.allocation.toEntity())
+        }
+        result
     }
 
     override suspend fun accrue(now: Instant, zone: ZoneId): Int = database.withTransaction {
@@ -109,7 +157,8 @@ internal fun AllowanceEntity.toDomain(): AllowanceSettings? = runCatching {
     AllowanceSettings(
         Money(monthlyMinor, currency),
         AllowanceSettings.clampAccrualDay(accrualDay),
-        LocalDate.parse(startDate)
+        LocalDate.parse(startDate),
+        wantsNeedFunding
     )
 }.getOrNull()
 
@@ -117,7 +166,20 @@ internal fun AllowanceSettings.toEntity(): AllowanceEntity = AllowanceEntity(
     monthlyMinor = monthlyAmount.minorUnits,
     currency = monthlyAmount.currency,
     accrualDay = accrualDay,
-    startDate = startDate.toString()
+    startDate = startDate.toString(),
+    wantsNeedFunding = wantsNeedFunding
+)
+
+/** A row in an unknown currency has no amount this version can count and is left out (ADR-0032). */
+internal fun AllocationEntity.toDomain(): Allocation? = runCatching {
+    Allocation(ItemId(itemId), Money(amountMinor, currency), Instant.ofEpochMilli(at))
+}.getOrNull()
+
+internal fun Allocation.toEntity(): AllocationEntity = AllocationEntity(
+    itemId = itemId.value,
+    amountMinor = amount.minorUnits,
+    currency = amount.currency,
+    at = at.toEpochMilli()
 )
 
 /** The stored `type` of each entry. Names are stored, so never rename one (ADR-0019). */

@@ -11,9 +11,8 @@
     <string name="home_considering_empty">Nothing yet. Add something you’d like to buy. It waits on your wishlist while you think it over.</string>
     <!-- Above the item whose waiting period ends first, with its countdown. -->
     <string name="home_next_cooling_end">Next waiting period to end</string>
-    <!-- Placeholder until savings per item (#23). -->
+    <!-- Home's "What am I saving for?" (ADR-0046): wants with what is set aside for them. -->
     <string name="home_saving_title">Saving for</string>
-    <string name="home_saving_soon">Coming soon: savings per item.</string>
     <!-- Fun money (brief §4.5, ADR-0045): plain amounts for wants, never "available to spend" (ADR-0014). -->
     <string name="home_money_title">Fun money</string>
     <string name="home_money_not_set_up">Choose a monthly amount for the things you want. It’s added each month by itself.</string>
@@ -315,4 +314,32 @@
     <string name="notification_permission_text">Get one calm notification when a waiting period ends, at most once a day.</string>
     <string name="notification_permission_allow">Allow notifications</string>
     <string name="notification_permission_not_now">Not now</string>
+
+    <!-- Savings per item (#23, ADR-0046): "set aside", never "saved" or "available". -->
+    <string name="fun_money_wants_need_funding">Wants need their price set aside</string>
+    <string name="fun_money_wants_need_funding_explained">A want is ready to decide on once its price is set aside. Off: the waiting period and your reasons are enough.</string>
+    <string name="home_saving_not_set_up">Set up fun money to set money aside for your wants.</string>
+    <string name="home_saving_empty">No wants to set money aside for yet.</string>
+    <string name="savings_title">Set aside</string>
+    <string name="savings_progress">%1$s of %2$s set aside · %3$s to go</string>
+    <string name="savings_progress_complete">%1$s of %2$s set aside</string>
+    <string name="savings_to_go">%1$s to go</string>
+    <string name="savings_not_set_up">Set money aside for this from your fun money.</string>
+    <string name="savings_set_up">Set up fun money</string>
+    <string name="savings_set_aside">Set aside</string>
+    <string name="savings_take_back">Take back</string>
+    <string name="savings_sheet_set_aside_title">Set aside for %1$s</string>
+    <string name="savings_sheet_take_back_title">Take back from %1$s</string>
+    <string name="savings_amount">Amount</string>
+    <string name="savings_not_set_aside">Not yet set aside: %1$s</string>
+    <string name="savings_held">Set aside for it: %1$s</string>
+    <string name="savings_chip_rest">The rest (%1$s)</string>
+    <string name="savings_chip_all">All (%1$s)</string>
+    <string name="savings_set_aside_up_to">You can set aside up to %1$s here.</string>
+    <string name="savings_take_back_up_to">You can take back up to %1$s.</string>
+    <string name="savings_amount_zero">Enter an amount above zero.</string>
+    <string name="savings_changed_meanwhile">Something changed meanwhile. Nothing was set aside or taken back.</string>
+    <string name="item_mark_as_need_release">The %1$s set aside for it goes back to your fun money.</string>
+    <string name="decision_early_saving">The waiting period is over, but %1$s of the price isn’t set aside yet.</string>
+    <string name="decision_below_zero_body">Paying %1$s leaves %2$s not yet set aside.</string>
 </resources>

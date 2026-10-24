@@ -22,8 +22,15 @@ fun Money.format(locale: Locale): String {
             minimumFractionDigits = 0
             maximumFractionDigits = 0
         }
-    return format.format(BigDecimal.valueOf(minorUnits, digits).setScale(0, RoundingMode.HALF_UP))
+    return format.format(shownWholeUnits())
 }
+
+/**
+ * The whole units [format] shows for this amount, halves up (ADR-0034): 20 for 19,99 €, 19 for 19,49 €. Savings use
+ * it so an item is funded exactly when the amounts on screen say its price is set aside (ADR-0046).
+ */
+fun Money.shownWholeUnits(): Long =
+    BigDecimal.valueOf(minorUnits, Money.fractionDigits(currency)).setScale(0, RoundingMode.HALF_UP).longValueExact()
 
 /**
  * This amount exactly, for prefilling an input field: no currency sign, no grouping, ASCII digits and

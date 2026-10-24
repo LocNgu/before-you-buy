@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -32,6 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
+import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistGroup
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
@@ -39,6 +42,7 @@ import io.github.locngu.beforeyoubuy.ui.components.CountdownText
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
+import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 import io.github.locngu.beforeyoubuy.ui.format.formattedDate
 import java.io.File
 import java.time.LocalDate
@@ -152,7 +156,14 @@ private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StageChip(entry.stage, waiting = entry.recheckOn != null)
-                StageStatus(entry.stage, entry.daysLeft, entry.recheckOn)
+                StageStatus(entry.stage, entry.daysLeft, entry.recheckOn, entry.savings?.shownToGo)
+            }
+            // How far the savings are, once something is set aside; detail has the amounts (brief §4.6).
+            entry.savings?.takeIf { it.allocated.minorUnits > 0 }?.let { savings ->
+                LinearProgressIndicator(
+                    progress = { savings.fraction },
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                )
             }
         }
         MoneyText(
@@ -165,10 +176,10 @@ private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit,
 
 /**
  * A countdown while cooling off, otherwise what the item is waiting for: after "Wait", the date to look again
- * ([recheckOn]). Informational, never urgent.
+ * ([recheckOn]); while saving, what is still to set aside ([toGo]). Informational, never urgent.
  */
 @Composable
-internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = null) {
+internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = null, toGo: Money? = null) {
     val style = MaterialTheme.typography.bodyMedium
     if (recheckOn != null) {
         Text(
@@ -183,7 +194,14 @@ internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = nu
 
         Stage.NEEDS_REFLECTION -> CountdownText(0, style = style)
 
-        Stage.SAVING -> Unit
+        Stage.SAVING ->
+            if (toGo != null) {
+                Text(
+                    text = stringResource(R.string.savings_to_go, toGo.format(currentLocale())),
+                    style = style,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
         Stage.READY ->
             Text(
