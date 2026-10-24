@@ -187,8 +187,8 @@ class ItemDetailViewModelTest {
             assertEquals(Stage.SAVING, viewModel.uiState.value.detail!!.stage)
 
             viewModel.openSetAside()
-            // 200 € aren't set aside yet, but the camera costs 120 €: never more than its price (ADR-0046).
-            assertEquals(Money(12_000, "EUR"), viewModel.uiState.value.sheet!!.limit)
+            // Limited by what isn't set aside, not by the camera's 120 € (ADR-0046).
+            assertEquals(Money(20_000, "EUR"), viewModel.uiState.value.sheet!!.limit)
             viewModel.onSavingsAmountChange("60")
             viewModel.confirmSavings()
 
@@ -214,7 +214,7 @@ class ItemDetailViewModelTest {
         viewModel.uiState.launchIn(backgroundScope)
 
         viewModel.openSetAside()
-        viewModel.onSavingsAmountChange("50,01")
+        viewModel.onSavingsAmountChange("51")
         val sheet = viewModel.uiState.value.sheet!!
         assertEquals(SavingsError.MoreThanLimit, sheet.error)
         assertFalse(sheet.canConfirm)
@@ -319,7 +319,7 @@ class ItemDetailViewModelTest {
     }
 
     @Test
-    fun `once the price is set aside, setting aside isn't offered, even with money left`() =
+    fun `once the price is set aside, more can still be set aside, without a rest`() =
         runTest(UnconfinedTestDispatcher()) {
             setUpFunMoney(starting = 20_000)
             val camera = readyItem()
@@ -328,8 +328,12 @@ class ItemDetailViewModelTest {
             viewModel.uiState.launchIn(backgroundScope)
 
             assertEquals(Stage.READY, viewModel.uiState.value.detail!!.stage)
-            assertFalse(viewModel.uiState.value.canSetAside)
+            assertTrue(viewModel.uiState.value.canSetAside)
             viewModel.openSetAside()
-            assertNull(viewModel.uiState.value.sheet)
+            assertNull(viewModel.uiState.value.sheet!!.rest)
+            viewModel.onSavingsAmountChange("50")
+            viewModel.confirmSavings()
+
+            assertEquals(Money(17_000, "EUR"), viewModel.uiState.value.detail!!.savings!!.allocated)
         }
 }

@@ -339,7 +339,7 @@ fun SavingsSheetContent(sheet: SavingsSheet, itemName: String, actions: SavingsA
         SecondaryText(
             stringResource(
                 if (setAside) R.string.savings_not_set_aside else R.string.savings_held,
-                sheet.shown.format(locale)
+                sheet.limit.format(locale)
             )
         )
         val error = sheet.error?.let { savingsErrorMessage(it, sheet) }

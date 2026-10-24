@@ -135,19 +135,19 @@ class SavingsTest {
     fun `setting aside is limited by what isn't set aside yet`() {
         assertEquals(
             AllocationResult.Allowed(Allocation(camera.id, eur(10_000), at)),
-            setAside(camera, eur(10_000), balance(30_000, committed = 20_000), eur(0), at)
+            setAside(camera, eur(10_000), balance(30_000, committed = 20_000), at)
         )
         assertEquals(
             AllocationResult.MoreThanNotSetAside,
-            setAside(camera, eur(10_001), balance(30_000, 20_000), eur(0), at)
+            setAside(camera, eur(10_100), balance(30_000, 20_000), at)
         )
-        assertEquals(AllocationResult.MoreThanNotSetAside, setAside(camera, eur(1), balance(-500), eur(0), at))
+        assertEquals(AllocationResult.MoreThanNotSetAside, setAside(camera, eur(1), balance(-500), at))
     }
 
     @Test
     fun `saving can start while the item cools off`() {
         // Nothing about the stage: an active want can be saved for from day 1 (brief §4.6).
-        assertTrue(setAside(camera, eur(1_000), balance(30_000), eur(0), camera.addedAt) is AllocationResult.Allowed)
+        assertTrue(setAside(camera, eur(1_000), balance(30_000), camera.addedAt) is AllocationResult.Allowed)
     }
 
     @Test
@@ -155,15 +155,15 @@ class SavingsTest {
         val enough = balance(100_000)
         assertEquals(
             AllocationResult.IsNeed,
-            setAside(camera.copy(kind = ItemKind.NEED), eur(1_000), enough, eur(0), at)
+            setAside(camera.copy(kind = ItemKind.NEED), eur(1_000), enough, at)
         )
         assertEquals(
             AllocationResult.NotActive,
-            setAside(camera.copy(status = ItemStatus.REJECTED), eur(1_000), enough, eur(0), at)
+            setAside(camera.copy(status = ItemStatus.REJECTED), eur(1_000), enough, at)
         )
-        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(0), enough, eur(0), at))
-        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(-100), enough, eur(0), at))
-        assertEquals(AllocationResult.NotSetUp, setAside(camera, eur(1_000), null, eur(0), at))
+        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(0), enough, at))
+        assertEquals(AllocationResult.NotPositive, setAside(camera, eur(-100), enough, at))
+        assertEquals(AllocationResult.NotSetUp, setAside(camera, eur(1_000), null, at))
     }
 
     @Test
@@ -172,7 +172,7 @@ class SavingsTest {
             AllocationResult.Allowed(Allocation(camera.id, eur(-5_000), at)),
             takeBack(camera, eur(5_000), eur(5_000), at)
         )
-        assertEquals(AllocationResult.MoreThanSetAside, takeBack(camera, eur(5_001), eur(5_000), at))
+        assertEquals(AllocationResult.MoreThanSetAside, takeBack(camera, eur(5_100), eur(5_000), at))
         assertEquals(AllocationResult.NotPositive, takeBack(camera, eur(0), eur(5_000), at))
         assertEquals(
             AllocationResult.NotActive,
@@ -183,7 +183,7 @@ class SavingsTest {
     @Test
     fun `amounts in another currency than the item's throw`() {
         assertThrows(IllegalArgumentException::class.java) {
-            setAside(camera, Money(1, "USD"), balance(100), eur(0), at)
+            setAside(camera, Money(1, "USD"), balance(100), at)
         }
         assertThrows(IllegalArgumentException::class.java) { takeBack(camera, Money(1, "USD"), eur(100), at) }
     }
@@ -261,25 +261,49 @@ class SavingsTest {
     }
 
     @Test
-    fun `the set-aside limit is what isn't set aside or what's still to go, whichever is less`() {
+    fun `the set-aside limit is what isn't set aside, never below zero, whatever the price`() {
+        assertEquals(eur(18_000), setAsideLimit(balance(30_000, committed = 12_000), "EUR"))
+        assertEquals(eur(0), setAsideLimit(balance(-500), "EUR"))
+    }
+
+    @Test
+    fun `the rest fills up to the price, at most the limit, and is nothing once covered`() {
         val progress = SavingsProgress(eur(6_000), eur(12_000))
-        assertEquals(eur(6_000), setAsideLimit(balance(30_000, committed = 12_000), progress))
-        assertEquals(eur(2_500), setAsideLimit(balance(2_500), progress))
-        assertEquals(eur(0), setAsideLimit(balance(-500), progress))
-        assertEquals(eur(0), setAsideLimit(balance(30_000), SavingsProgress(eur(12_000), eur(12_000))))
+        assertEquals(eur(6_000), restToSetAside(progress, eur(10_000)))
+        assertEquals(eur(2_500), restToSetAside(progress, eur(2_500)))
+        assertNull(restToSetAside(progress, eur(0)))
+        assertNull(restToSetAside(SavingsProgress(eur(12_000), eur(12_000)), eur(10_000)))
     }
 
     @Test
-    fun `the rest is all the limit allows, and nothing when that's nothing`() {
-        assertEquals(eur(6_000), restToSetAside(eur(6_000)))
-        assertNull(restToSetAside(eur(0)))
+    fun `setting aside can go beyond the price`() {
+        // A holiday with a minimum budget: more doesn't hurt (ADR-0046).
+        assertEquals(
+            AllocationResult.Allowed(Allocation(camera.id, eur(50_000), at)),
+            setAside(camera, eur(50_000), balance(100_000), at)
+        )
     }
 
     @Test
-    fun `setting aside never goes beyond the price`() {
-        val enough = balance(100_000)
-        assertEquals(AllocationResult.MoreThanToGo, setAside(camera, eur(6_001), enough, eur(6_000), at))
-        assertTrue(setAside(camera, eur(6_000), enough, eur(6_000), at) is AllocationResult.Allowed)
+    fun `an amount that reads as the limit moves exactly the limit`() {
+        // 599,99 € not set aside reads "600 €": typing 600 sets aside 599,99 €; 601 is too much.
+        val left = balance(59_999)
+        assertEquals(
+            AllocationResult.Allowed(Allocation(camera.id, eur(59_999), at)),
+            setAside(camera, eur(60_000), left, at)
+        )
+        assertEquals(AllocationResult.MoreThanNotSetAside, setAside(camera, eur(60_100), left, at))
+        // Taking back 650 € from 649,50 € takes back 649,50 €.
+        assertEquals(
+            AllocationResult.Allowed(Allocation(camera.id, eur(-64_950), at)),
+            takeBack(camera, eur(65_000), eur(64_950), at)
+        )
+        assertEquals(eur(59_999), withinShown(eur(60_000), eur(59_999)))
+        assertEquals(eur(100), withinShown(eur(100), eur(59_999)))
+        assertNull(withinShown(eur(60_100), eur(59_999)))
+        // Nothing to move: a few cents below zero aren't "0 €" to set aside.
+        assertNull(withinShown(eur(40), eur(0)))
+        assertEquals(AllocationResult.MoreThanNotSetAside, setAside(camera, eur(40), balance(-10), at))
     }
 
     @Test
@@ -318,7 +342,9 @@ class SavingsTest {
     fun `an amount is checked against the limit`() {
         assertNull(checkAmount(eur(5_000), eur(5_000)))
         assertEquals(AmountProblem.ZERO, checkAmount(eur(0), eur(5_000)))
-        assertEquals(AmountProblem.MORE_THAN_LIMIT, checkAmount(eur(5_001), eur(5_000)))
+        assertEquals(AmountProblem.MORE_THAN_LIMIT, checkAmount(eur(5_100), eur(5_000)))
+        // Reads the same as the limit: allowed (it moves exactly the limit).
+        assertNull(checkAmount(eur(60_000), eur(59_999)))
     }
 
     @Test

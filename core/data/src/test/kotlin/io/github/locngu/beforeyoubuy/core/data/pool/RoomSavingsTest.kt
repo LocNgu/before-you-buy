@@ -97,7 +97,7 @@ internal class RoomSavingsTest : DatabaseTest() {
         val bike = add(newItem("Bike"))
         pool.setAside(camera.id, eur(6_000), now)
 
-        assertEquals(AllocationResult.MoreThanNotSetAside, pool.setAside(bike.id, eur(4_001), now))
+        assertEquals(AllocationResult.MoreThanNotSetAside, pool.setAside(bike.id, eur(4_100), now))
         assertTrue(pool.setAside(bike.id, eur(4_000), now) is AllocationResult.Allowed)
         assertEquals(eur(0), funMoney().balance.unallocated)
     }
@@ -121,7 +121,7 @@ internal class RoomSavingsTest : DatabaseTest() {
         val camera = add()
         pool.setAside(camera.id, eur(10_000), now)
 
-        assertEquals(AllocationResult.MoreThanSetAside, pool.takeBack(camera.id, eur(10_001), now))
+        assertEquals(AllocationResult.MoreThanSetAside, pool.takeBack(camera.id, eur(10_100), now))
         assertTrue(pool.takeBack(camera.id, eur(4_000), now) is AllocationResult.Allowed)
 
         assertEquals(eur(6_000), allocatedFor(camera))
@@ -291,13 +291,15 @@ internal class RoomSavingsTest : DatabaseTest() {
     }
 
     @Test
-    fun `setting aside stops at the price`() = runTest {
-        setUp(starting = 30_000)
+    fun `setting aside can go beyond the price, and an amount that reads as the limit takes exactly it`() = runTest {
+        setUp(starting = 29_999)
         val camera = add()
-        pool.setAside(camera.id, eur(10_000), now)
+        assertTrue(pool.setAside(camera.id, eur(20_000), now) is AllocationResult.Allowed)
+        assertEquals(eur(20_000), allocatedFor(camera))
 
-        assertEquals(AllocationResult.MoreThanToGo, pool.setAside(camera.id, eur(2_001), now))
-        assertTrue(pool.setAside(camera.id, eur(2_000), now) is AllocationResult.Allowed)
-        assertEquals(eur(12_000), allocatedFor(camera))
+        // 99,99 € left reads "100 €": 100 sets aside exactly 99,99 €.
+        assertTrue(pool.setAside(camera.id, eur(10_000), now) is AllocationResult.Allowed)
+        assertEquals(eur(29_999), allocatedFor(camera))
+        assertEquals(eur(0), funMoney().balance.unallocated)
     }
 }

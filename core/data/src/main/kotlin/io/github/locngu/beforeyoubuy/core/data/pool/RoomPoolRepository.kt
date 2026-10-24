@@ -101,9 +101,7 @@ internal class RoomPoolRepository(private val database: BeforeYouBuyDatabase) : 
     }
 
     override suspend fun setAside(itemId: ItemId, amount: Money, at: Instant): AllocationResult =
-        allocate(itemId) { item, savings, balance ->
-            checkSetAside(item, amount, balance, savings.allocatedFor(item), at)
-        }
+        allocate(itemId) { item, _, balance -> checkSetAside(item, amount, balance, at) }
 
     override suspend fun takeBack(itemId: ItemId, amount: Money, at: Instant): AllocationResult =
         allocate(itemId) { item, savings, _ -> checkTakeBack(item, amount, savings.allocatedFor(item), at) }

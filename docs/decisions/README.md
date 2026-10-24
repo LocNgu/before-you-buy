@@ -47,7 +47,7 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0031](0031-tier-changes-apply-to-waiting-items.md) | product | Changed cooling-off tiers also apply to items still cooling off, in both directions |
 | [0032](0032-storage-layout-and-defensive-reads.md) | technical | Storage: reasons against as JSON, append-only decisions, compare-and-set item writes, preference defaults computed on read |
 | [0033](0033-policy-in-room-currency-relabel.md) | product | Currency and tiers stored with the items (one transaction for tier changes); changing the currency relabels every amount |
-| [0034](0034-whole-units-in-display.md) | product | Amounts shown in whole units, rounded (`20 €` for 19,99 €); storage, input and sums stay exact |
+| [0034](0034-whole-units-in-display.md) | product | Amounts shown in whole units, rounded (`20 €` for 19,99 €); storage, input and sums stay exact (savings rules compare shown amounts, amended by ADR-0046) |
 | [0035](0035-quick-add-form-behaviour.md) | product | Quick add: errors once a field held text, keyboard Done saves, closing discards the draft |
 | [0036](0036-share-capture-over-the-sharing-app.md) | product | Share capture: quick add over the sharing app, toast on save, cursor in the price, shop-named fallback, tracking removed |
 | [0037](0037-viewmodels-per-nav-entry.md) | technical | ViewModels are scoped to their Navigation 3 entry; per-item screens use assisted injection |
@@ -56,7 +56,7 @@ Each file records one decision that shapes how future work is done. They exist s
 | [0040](0040-decision-screen-behaviour.md) | product | Decision screen: Buy/Reject pair + Wait when Ready or a need, else Reject + "Decide early…"; waited items in their own group; purchases dated back via `decidedAt`; reject note in `decisions.note` (Home's "To decide" amended by ADR-0043) |
 | [0041](0041-history-behaviour.md) | product | History: one period filter for both tabs; "Want it again?" adds a fresh want (same facts, no answers, never a need); delete only on purpose, with a confirm |
 | [0042](0042-notification-behaviour.md) | product | Notifications: waiting periods before nudges; per-item log in Room; daily check around 10:00 via WorkManager; permission asked once after the first item; "Let it go" removes the notification silently |
-| [0043](0043-home-behaviour.md) | product | Home: "To decide" = due for decision + waits ended without answers; Wishlist/History linked from Home (no bottom bar); no Settings entry until #26; M2 sections as quiet placeholders (money placeholder amended by ADR-0045) |
+| [0043](0043-home-behaviour.md) | product | Home: "To decide" = due for decision + waits ended without answers; Wishlist/History linked from Home (no bottom bar); no Settings entry until #26; M2 sections as quiet placeholders (money placeholder amended by ADR-0045, "Saving for" by ADR-0046) |
 | [0044](0044-needs-outside-the-fun-money.md) | product | Needs always count as funded, never use the discretionary pool, and have no budget; amends ADR-0008 |
 | [0045](0045-fun-money-pool-behaviour.md) | product | Fun money: first credit on the next accrual day, days 1–28, catch-up once per month, changes from the next accrual, append-only ledger, calm labels, setup screen from Home |
 | [0046](0046-savings-per-item-behaviour.md) | product | Savings per item: "Wants need their price set aside" switch (on; never without fun money), only active wants hold money, one purchase entry per want purchase, release when marked as need, "set aside" wording, Home's "Saving for" |

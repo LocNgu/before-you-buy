@@ -125,7 +125,7 @@ Example: *Fun money for wants 300 € · Set aside for wants 200 € · Not yet 
 
 Any active want can receive allocations from the unallocated pool ("put 100 € toward the camera"). Saving can start **on day 1, in parallel with cooling off.** Needs never receive any (ADR-0044).
 
-- Allocation is limited by `unallocated` and by the item's price (never more than what's still to go); "Take back" returns money from an item.
+- Allocation is limited by `unallocated`; more than the price is allowed (a holiday with a minimum budget), buying returns what isn't spent. "Take back" returns money from an item.
 - Reject → allocations return to unallocated.
 - Buy → allocations are consumed; if the actual price differs, the difference is taken from / returned to unallocated. Going below zero asks first; the purchase is the one ledger entry (ADR-0046).
 - A want turned into a need gives its allocations back (the user confirms).

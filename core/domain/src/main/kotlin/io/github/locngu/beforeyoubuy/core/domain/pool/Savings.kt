@@ -81,7 +81,10 @@ data class SavingsProgress(val allocated: Money, val price: Money) {
         get() = if (complete) {
             Money(0, price.currency)
         } else {
-            Money.ofWholeUnits(price.shownWholeUnits() - allocated.shownWholeUnits(), price.currency)
+            // Only a price near the Long limit in a 3-digit currency can't be scaled back; then the exact rest.
+            runCatching {
+                Money.ofWholeUnits(price.shownWholeUnits() - allocated.shownWholeUnits(), price.currency)
+            }.getOrElse { toGo }
         }
 
     val fraction: Float
@@ -114,44 +117,55 @@ sealed interface AllocationResult {
     /** Setting aside more than isn't set aside yet: allocation never takes the balance below zero (brief §4.5). */
     data object MoreThanNotSetAside : Refused
 
-    /** Setting aside more than is still to go: setting aside never takes an item past its price (ADR-0046). */
-    data object MoreThanToGo : Refused
-
     /** Taking back more than the item holds. */
     data object MoreThanSetAside : Refused
 }
 
 /**
- * Sets [amount] aside for [item], which holds [allocated], at [at] (brief §4.6): an active want, at most what [balance]
- * hasn't set aside yet and what's still to go of its price (ADR-0046). [balance] is null while fun money isn't set up.
- * Saving can start on day 1, while the item still cools off. Amounts must be in the item's currency; anything else
- * throws.
+ * Sets [amount] aside for [item] at [at] (brief §4.6): an active want, at most what [balance] hasn't set aside yet.
+ * More than the price is fine (a holiday with a minimum budget, ADR-0046); buying returns what isn't spent. An amount
+ * that reads the same as that limit sets aside exactly the limit ([withinShown]). [balance] is null while fun money
+ * isn't set up. Saving can start on day 1, while the item still cools off. [amount] must be in the item's currency;
+ * anything else throws.
  */
-fun setAside(item: Item, amount: Money, balance: PoolBalance?, allocated: Money, at: Instant): AllocationResult {
+fun setAside(item: Item, amount: Money, balance: PoolBalance?, at: Instant): AllocationResult {
     require(amount.currency == item.price.currency) { "$amount isn't in the item's currency ${item.price.currency}" }
+    if (balance == null) return AllocationResult.NotSetUp
+    val moved = withinShown(amount, balance.unallocated.relabeled(amount.currency))
     return when {
-        balance == null -> AllocationResult.NotSetUp
         item.status != ItemStatus.ACTIVE -> AllocationResult.NotActive
         item.kind == ItemKind.NEED -> AllocationResult.IsNeed
         amount.minorUnits <= 0 -> AllocationResult.NotPositive
-        amount > balance.unallocated.relabeled(amount.currency) -> AllocationResult.MoreThanNotSetAside
-        amount > SavingsProgress(allocated, item.price).toGo -> AllocationResult.MoreThanToGo
-        else -> AllocationResult.Allowed(Allocation(item.id, amount, at))
+        moved == null -> AllocationResult.MoreThanNotSetAside
+        else -> AllocationResult.Allowed(Allocation(item.id, moved, at))
     }
 }
 
 /**
- * Takes [amount] back from what [item] holds ([allocated]) at [at]; it returns to what isn't set aside. [amount] must
- * be in the item's currency; anything else throws.
+ * Takes [amount] back from what [item] holds ([allocated]) at [at]; it returns to what isn't set aside. An amount that
+ * reads the same as [allocated] takes back exactly that ([withinShown]). [amount] must be in the item's currency;
+ * anything else throws.
  */
 fun takeBack(item: Item, amount: Money, allocated: Money, at: Instant): AllocationResult {
     require(amount.currency == item.price.currency) { "$amount isn't in the item's currency ${item.price.currency}" }
+    val moved = withinShown(amount, allocated)
     return when {
         item.status != ItemStatus.ACTIVE -> AllocationResult.NotActive
         amount.minorUnits <= 0 -> AllocationResult.NotPositive
-        amount > allocated -> AllocationResult.MoreThanSetAside
-        else -> AllocationResult.Allowed(Allocation(item.id, Money(-amount.minorUnits, amount.currency), at))
+        moved == null -> AllocationResult.MoreThanSetAside
+        else -> AllocationResult.Allowed(Allocation(item.id, Money(-moved.minorUnits, moved.currency), at))
     }
+}
+
+/**
+ * What moving [amount] within [limit] actually moves (ADR-0046): [amount] itself up to [limit]; an amount above it that
+ * reads the same in whole units ("600 €" for a limit of 599,99 €) moves exactly [limit], so the screen never refuses an
+ * amount it shows as allowed. Null if [amount] is more, or there is nothing to move.
+ */
+fun withinShown(amount: Money, limit: Money): Money? = when {
+    amount <= limit -> amount
+    limit.minorUnits > 0 && amount.shownWholeUnits() == limit.shownWholeUnits() -> limit
+    else -> null
 }
 
 /**
@@ -183,16 +197,18 @@ fun purchaseNeedsConfirmation(balance: PoolBalance, allocated: Money, paid: Mone
     paid > allocated.relabeled(paid.currency) && leftAfterPurchase(balance, allocated, paid).shownWholeUnits() < 0
 
 /**
- * The most that can be set aside for an item with [progress] now ([setAside]): what [balance] hasn't set aside
- * (never below zero) and what's still to go, whichever is less. Zero disables "Set aside".
+ * The most that can be set aside now ([setAside]): what [balance] hasn't set aside, never below zero, in [currency].
+ * Zero disables "Set aside". It isn't capped at the price (ADR-0046).
  */
-fun setAsideLimit(balance: PoolBalance, progress: SavingsProgress): Money {
-    val currency = progress.price.currency
-    return minOf(maxOf(balance.unallocated.relabeled(currency), Money(0, currency)), progress.toGo)
-}
+fun setAsideLimit(balance: PoolBalance, currency: String): Money =
+    maxOf(balance.unallocated.relabeled(currency), Money(0, currency))
 
-/** What "The rest" sets aside (ADR-0046): all that [limit] ([setAsideLimit]) allows; null when that's nothing. */
-fun restToSetAside(limit: Money): Money? = limit.takeIf { it.minorUnits > 0 }
+/**
+ * What "The rest" sets aside (ADR-0046): what [progress] still needs to its price, at most [limit]
+ * ([setAsideLimit]); null when that's nothing, e.g. once the price is covered.
+ */
+fun restToSetAside(progress: SavingsProgress, limit: Money): Money? =
+    minOf(progress.toGo, limit.relabeled(progress.toGo.currency)).takeIf { it.minorUnits > 0 }
 
 /** The quick amounts the sheet offers, in whole units ([QUICK_AMOUNTS]), those that fit [limit]. */
 fun quickAmounts(limit: Money): List<Money> =
@@ -209,10 +225,10 @@ enum class AmountProblem {
     MORE_THAN_LIMIT
 }
 
-/** Whether [amount] can be moved within [limit]: null if it can. */
+/** Whether [amount] can be moved within [limit], as shown ([withinShown]): null if it can. */
 fun checkAmount(amount: Money, limit: Money): AmountProblem? = when {
     amount.minorUnits <= 0 -> AmountProblem.ZERO
-    amount > limit -> AmountProblem.MORE_THAN_LIMIT
+    withinShown(amount, limit) == null -> AmountProblem.MORE_THAN_LIMIT
     else -> null
 }
 

@@ -142,11 +142,10 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
     fun setAsideSheetTooMuch() = captureSheet(
         SavingsSheet(
             SavingsMode.SET_ASIDE,
-            amount = "600",
-            limit = Money(54_900, "EUR"),
-            shown = Money(80_000, "EUR"),
+            amount = "900",
+            limit = Money(80_000, "EUR"),
             rest = Money(54_900, "EUR"),
-            quickAmounts = quickAmounts(Money(54_900, "EUR")),
+            quickAmounts = quickAmounts(Money(80_000, "EUR")),
             error = SavingsError.MoreThanLimit
         )
     )
