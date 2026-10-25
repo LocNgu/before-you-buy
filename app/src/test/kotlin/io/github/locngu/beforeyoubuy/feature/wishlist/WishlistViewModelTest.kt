@@ -7,14 +7,17 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
+import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -33,6 +36,7 @@ class WishlistViewModelTest {
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
     private val images = FakeItemImageStore()
+    private val policies = FakePolicyRepository().also { it.items = items }
     private lateinit var viewModel: WishlistViewModel
 
     private val reflection =
@@ -41,7 +45,7 @@ class WishlistViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        viewModel = WishlistViewModel(items, FakePoolRepository(items), images, clock)
+        viewModel = WishlistViewModel(items, FakePoolRepository(items), policies, images, clock)
     }
 
     @After
@@ -146,4 +150,71 @@ class WishlistViewModelTest {
 
         assertEquals(emptyList<Stage>(), groups!!.map { it.stage })
     }
+
+    @Test
+    fun `priorities come first by rank, out of their stage group, with the slot count`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val camera = add("Camera", endsInHours = 10)
+            val bike = add("Bike", endsInHours = 20)
+            add("Lamp", endsInHours = 30)
+            items.setPriorities(emptyList(), listOf(bike.id, camera.id))
+            viewModel.uiState.launchIn(backgroundScope)
+
+            val state = viewModel.uiState.value
+            assertEquals(listOf(1 to "Bike", 2 to "Camera"), state.priorities.map { it.rank to it.entry.item.name })
+            assertEquals(listOf(listOf("Lamp")), state.groups!!.map { group -> group.entries.map { it.item.name } })
+            assertEquals(3, state.prioritySlots)
+        }
+
+    @Test
+    fun `make priority with a free slot stores it at once and says so`() = runTest(UnconfinedTestDispatcher()) {
+        val camera = add("Camera", endsInHours = 10)
+
+        viewModel.makePriority(camera.id)
+
+        assertEquals(PriorityEvent.Promoted("Camera", 1), viewModel.priorityEvents.first())
+        assertEquals(1, items.stored.single().prioritySlot)
+    }
+
+    @Test
+    fun `make priority with full slots asks for the head-to-head and writes nothing`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val camera = add("Camera", endsInHours = 10)
+            val bike = add("Bike", endsInHours = 20)
+            policies.changePrioritySlots(1, emptyList())
+            items.setPriorities(emptyList(), listOf(camera.id))
+
+            viewModel.makePriority(bike.id)
+
+            assertEquals(PriorityEvent.Compare(bike.id), viewModel.priorityEvents.first())
+            assertEquals(listOf(listOf(camera.id)), items.priorityWrites)
+        }
+
+    @Test
+    fun `fewer slots move the lowest-ranked back to the wishlist`() = runTest(UnconfinedTestDispatcher()) {
+        val camera = add("Camera", endsInHours = 10)
+        val bike = add("Bike", endsInHours = 20)
+        items.setPriorities(emptyList(), listOf(camera.id, bike.id))
+        viewModel.uiState.launchIn(backgroundScope)
+
+        viewModel.changePrioritySlots(1)
+
+        assertEquals(listOf(1), policies.slotChanges)
+        assertEquals(listOf("Camera"), viewModel.uiState.value.priorities.map { it.entry.item.name })
+        assertEquals(1, viewModel.uiState.value.prioritySlots)
+    }
+
+    @Test
+    fun `fewer slots based on priorities that changed meanwhile write nothing and say so`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val camera = add("Camera", endsInHours = 10)
+            val bike = add("Bike", endsInHours = 20)
+            items.setPriorities(emptyList(), listOf(camera.id, bike.id))
+            // The state isn't collected, so what the dialog listed from (no priorities) is behind the stored ones.
+
+            viewModel.changePrioritySlots(1)
+
+            assertEquals(PriorityEvent.ChangedMeanwhile, viewModel.priorityEvents.first())
+            assertEquals(emptyList<Int>(), policies.slotChanges)
+        }
 }

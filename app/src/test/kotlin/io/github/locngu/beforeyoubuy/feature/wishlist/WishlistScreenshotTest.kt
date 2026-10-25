@@ -13,6 +13,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistSectionsOf
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
@@ -128,6 +129,16 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
                 )
             )
         )
+    }
+
+    /** Two of three slots used: the priorities by rank at the top, out of their stage groups (ADR-0047). */
+    @Test
+    fun priorities() {
+        val active = listOf(coolingLater.copy(prioritySlot = 1), unreflected, coolingSoon, ready.copy(prioritySlot = 2))
+        val sections = wishlistSectionsOf(
+            wishlistOf(active, mapOf(ready.id to reflection), Savings.NONE, now, ZoneOffset.UTC)
+        )
+        capture(WishlistUiState(sections.groups, priorities = sections.priorities, active = active))
     }
 
     @Test

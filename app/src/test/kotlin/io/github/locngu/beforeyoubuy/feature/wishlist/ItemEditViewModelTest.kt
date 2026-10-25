@@ -288,6 +288,29 @@ class ItemEditViewModelTest {
     }
 
     @Test
+    fun `making a priority a need asks first, then takes it out of the priorities`() =
+        runTest(UnconfinedTestDispatcher()) {
+            items.setPriorities(emptyList(), listOf(item.id))
+            // The form is filled from the first load: open it on the priority.
+            viewModel = ItemEditViewModel(item.id.value, items, pool, policies, images, clock)
+            viewModel.setLocale(Locale.GERMANY)
+            viewModel.onNeedChange(true)
+
+            viewModel.save()
+            assertTrue(state.confirmLeavesPriorities)
+            assertEquals(Money(0, "EUR"), state.confirmRelease)
+            assertEquals(1, items.stored.single().prioritySlot)
+
+            viewModel.saved.test {
+                viewModel.confirmRelease()
+                awaitItem()
+            }
+            assertFalse(state.confirmLeavesPriorities)
+            assertEquals(ItemKind.NEED, items.stored.single().kind)
+            assertNull(items.stored.single().prioritySlot)
+        }
+
+    @Test
     fun `making a want without savings a need saves at once`() = runTest(UnconfinedTestDispatcher()) {
         pool.setUp(Money(30_000, "EUR"), 1, Money(20_000, "EUR"), true, clock.instant(), clock.zone)
         viewModel.onNeedChange(true)

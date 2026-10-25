@@ -2,6 +2,7 @@ package io.github.locngu.beforeyoubuy.feature.wishlist
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -20,12 +25,22 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -35,9 +50,12 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.format
+import io.github.locngu.beforeyoubuy.core.domain.priorities.canBePriority
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
-import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistGroup
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
+import io.github.locngu.beforeyoubuy.feature.priorities.PrioritySlotsDialog
+import io.github.locngu.beforeyoubuy.feature.priorities.priorityMessage
 import io.github.locngu.beforeyoubuy.ui.components.CountdownText
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
 import io.github.locngu.beforeyoubuy.ui.components.MoneyText
@@ -55,21 +73,38 @@ import java.time.LocalDate
 fun WishlistScreen(
     onAdd: () -> Unit,
     onOpenItem: (ItemId) -> Unit,
+    onCompare: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     viewModel: WishlistViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val resources by rememberUpdatedState(LocalResources.current)
+    val compare by rememberUpdatedState(onCompare)
+    LaunchedEffect(viewModel, snackbarHostState) {
+        viewModel.priorityEvents.collect { event ->
+            if (event is PriorityEvent.Compare) {
+                compare(event.itemId)
+            } else {
+                priorityMessage(event, resources)?.let { snackbarHostState.showSnackbar(it) }
+            }
+        }
+    }
     WishlistContent(
         state = state,
         onAdd = onAdd,
         onOpenItem = onOpenItem,
+        onMakePriority = viewModel::makePriority,
+        onChangePrioritySlots = viewModel::changePrioritySlots,
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
 }
 
-/** Stateless wishlist, for screenshots. Items are grouped by stage; the soonest cooling-off end comes first. */
+/**
+ * Stateless wishlist, for screenshots. The priorities come first by rank, with the slots and a way to change them;
+ * then the other items grouped by stage, the soonest cooling-off end first. A want's row menu offers "Make priority".
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WishlistContent(
@@ -77,7 +112,9 @@ fun WishlistContent(
     onAdd: () -> Unit,
     onOpenItem: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMakePriority: (ItemId) -> Unit = {},
+    onChangePrioritySlots: (Int) -> Unit = {}
 ) {
     Scaffold(
         modifier = modifier,
@@ -89,7 +126,7 @@ fun WishlistContent(
         when {
             groups == null -> Unit
 
-            groups.isEmpty() ->
+            groups.isEmpty() && state.priorities.isEmpty() ->
                 Column(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     verticalArrangement = Arrangement.Center,
@@ -101,35 +138,104 @@ fun WishlistContent(
                     )
                 }
 
-            else -> WishlistList(groups, state.photos, onOpenItem, Modifier.padding(innerPadding))
+            else -> WishlistList(
+                state,
+                onOpenItem,
+                onMakePriority,
+                onChangePrioritySlots,
+                Modifier.padding(innerPadding)
+            )
         }
     }
 }
 
 @Composable
 private fun WishlistList(
-    groups: List<WishlistGroup>,
-    photos: Map<ItemId, File>,
+    state: WishlistUiState,
     onOpenItem: (ItemId) -> Unit,
+    onMakePriority: (ItemId) -> Unit,
+    onChangePrioritySlots: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var changingSlots by rememberSaveable { mutableStateOf(false) }
     // Leaves room for the floating button, so the last row isn't hidden behind it.
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
-        groups.forEach { group ->
+        if (state.priorities.isNotEmpty()) {
+            item(key = "header-priorities") {
+                PrioritiesHeader(state.priorities.size, state.prioritySlots, onChange = { changingSlots = true })
+            }
+            items(state.priorities, key = { it.entry.item.id.value }) { priority ->
+                WishlistRow(
+                    priority.entry,
+                    state.photos[priority.entry.item.id],
+                    onClick = { onOpenItem(priority.entry.item.id) },
+                    rank = priority.rank
+                )
+            }
+        }
+        state.groups.orEmpty().forEach { group ->
             item(key = "header-${group.stage}-${group.waiting}") {
                 SectionHeader(
                     if (group.waiting) stringResource(R.string.wishlist_waiting) else stageLabel(group.stage)
                 )
             }
             items(group.entries, key = { it.item.id.value }) { entry ->
-                WishlistRow(entry, photos[entry.item.id], onClick = { onOpenItem(entry.item.id) })
+                val id = entry.item.id
+                WishlistRow(
+                    entry,
+                    state.photos[id],
+                    onClick = { onOpenItem(id) },
+                    onMakePriority = if (entry.item.canBePriority) ({ onMakePriority(id) }) else null
+                )
             }
+        }
+    }
+    if (changingSlots) {
+        PrioritySlotsDialog(
+            current = state.prioritySlots,
+            active = state.active,
+            onSave = {
+                changingSlots = false
+                onChangePrioritySlots(it)
+            },
+            onDismiss = { changingSlots = false }
+        )
+    }
+}
+
+/** "Priorities", how many slots are used (brief §4.7) and "Change", which opens the slots dialog. */
+@Composable
+private fun PrioritiesHeader(used: Int, slots: Int, onChange: () -> Unit) {
+    Column {
+        SectionHeader(stringResource(R.string.priorities_title))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = pluralStringResource(R.plurals.priority_slots_used, slots, used, slots),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(onClick = onChange) { Text(stringResource(R.string.priority_slots_change)) }
         }
     }
 }
 
+/**
+ * One item: thumbnail, name, stage and status, price. A priority shows its [rank] before the name; a want that can
+ * become one has a menu with "Make priority" ([onMakePriority]).
+ */
 @Composable
-private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun WishlistRow(
+    entry: WishlistEntry,
+    photo: File?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    rank: Int? = null,
+    onMakePriority: (() -> Unit)? = null
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -149,11 +255,14 @@ private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit,
             )
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = entry.item.name,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (rank != null) PriorityRank(rank)
+                Text(
+                    text = entry.item.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StageChip(entry.stage, waiting = entry.recheckOn != null)
                 StageStatus(entry.stage, entry.daysLeft, entry.recheckOn, entry.savings?.shownToGo)
@@ -171,6 +280,40 @@ private fun WishlistRow(entry: WishlistEntry, photo: File?, onClick: () -> Unit,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
+        if (onMakePriority != null) RowMenu(entry.item.name, onMakePriority)
+    }
+}
+
+/** A priority's rank, "#1", before its name. Quiet: ranks order the list, they don't rate the item. */
+@Composable
+internal fun PriorityRank(rank: Int) {
+    Text(
+        text = stringResource(R.string.priority_rank, rank),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary
+    )
+}
+
+/** A row's ⋮ menu: "Make priority" (brief §4.7). */
+@Composable
+private fun RowMenu(name: String, onMakePriority: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                painterResource(R.drawable.ic_more_vert),
+                contentDescription = stringResource(R.string.priority_row_options, name)
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.priority_make)) },
+                onClick = {
+                    expanded = false
+                    onMakePriority()
+                }
+            )
+        }
     }
 }
 

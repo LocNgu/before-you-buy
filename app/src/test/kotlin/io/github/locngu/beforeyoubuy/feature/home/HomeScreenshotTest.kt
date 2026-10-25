@@ -97,6 +97,15 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
     @Test
     fun nothingToDecide() = capture(state(listOf(coolingLater, coolingSoon), funMoney))
 
+    /** "Saving for" becomes the priorities by rank (ADR-0047). */
+    @Test
+    fun priorities() = capture(
+        state(
+            listOf(coolingLater.copy(prioritySlot = 2), unreflected, coolingSoon.copy(prioritySlot = 1), need, ready),
+            funMoney
+        )
+    )
+
     @Test
     fun loading() = capture(HomeUiState(null))
 

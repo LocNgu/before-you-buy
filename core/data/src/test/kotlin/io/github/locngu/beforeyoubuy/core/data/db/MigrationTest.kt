@@ -177,6 +177,32 @@ internal class MigrationTest {
         }
     }
 
+    @Test
+    fun `5 to 6 gives the policy 3 priority slots and keeps the items' slots`() = runTest {
+        createFromSchema(5) { db ->
+            db.execSQL("INSERT INTO policy (id, currency, cooling_off_rules) VALUES (1, 'EUR', NULL)")
+            db.execSQL(
+                "INSERT INTO items (id, name, price_minor, currency, added_at, cooling_ends_at, kind, status, " +
+                    "priority_slot) VALUES (7, 'Camera', 120000, 'EUR', 1000, 2000, 'WANT', 'ACTIVE', 1)"
+            )
+        }
+
+        val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
+            .addMigrations(*MIGRATIONS)
+            .withPolicyRow { "USD" }
+            .allowMainThreadQueries()
+            .build()
+        try {
+            assertEquals(
+                PolicyEntity(currency = "EUR", coolingOffRules = null, prioritySlots = 3),
+                database.policyDao().get()
+            )
+            assertEquals(1, database.itemDao().getById(7)?.prioritySlot)
+        } finally {
+            database.close()
+        }
+    }
+
     /** A database file as [version] of the committed schema created it, with [fill]'s rows. */
     private fun createFromSchema(version: Int, fill: (SQLiteDatabase) -> Unit) {
         val schema = File(SCHEMAS, "$version.json").readText()

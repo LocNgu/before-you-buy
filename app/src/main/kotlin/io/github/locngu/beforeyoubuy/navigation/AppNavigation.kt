@@ -24,6 +24,7 @@ import io.github.locngu.beforeyoubuy.feature.history.HistoryItemScreen
 import io.github.locngu.beforeyoubuy.feature.history.HistoryScreen
 import io.github.locngu.beforeyoubuy.feature.home.HomeScreen
 import io.github.locngu.beforeyoubuy.feature.money.FunMoneyScreen
+import io.github.locngu.beforeyoubuy.feature.priorities.HeadToHeadScreen
 import io.github.locngu.beforeyoubuy.feature.reflection.ReflectionScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemEditScreen
@@ -67,6 +68,10 @@ data class HistoryItem(val itemId: Long) : NavKey
 /** Setting up and changing the monthly fun money (brief §4.5). */
 @Serializable
 data object FunMoney : NavKey
+
+/** "Earn its place": one item against the priorities, one comparison at a time (brief §4.7). */
+@Serializable
+data class HeadToHead(val itemId: Long) : NavKey
 
 /**
  * The app's screens. [notificationTap], if set, replaces the back stack with the screens it leads to
@@ -121,6 +126,7 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                     WishlistScreen(
                         onAdd = { quickAdd.open() },
                         onOpenItem = { backStack.open(ItemDetail(it.value)) },
+                        onCompare = { backStack.open(HeadToHead(it.value)) },
                         snackbarHostState = snackbarHostState
                     )
                 }
@@ -130,7 +136,15 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                         onEdit = { backStack.open(ItemEdit(key.itemId)) },
                         onReflect = { backStack.open(ItemReflection(key.itemId)) },
                         onDecide = { backStack.open(ItemDecision(key.itemId)) },
-                        onOpenFunMoney = { backStack.open(FunMoney) }
+                        onOpenFunMoney = { backStack.open(FunMoney) },
+                        onCompare = { backStack.open(HeadToHead(key.itemId)) }
+                    )
+                }
+                entry<HeadToHead> { key ->
+                    HeadToHeadScreen(
+                        itemId = key.itemId,
+                        // As for edit: only the screen itself closes, even if "Done" lands after another tap.
+                        onDone = { if (backStack.lastOrNull() == key) backStack.removeLastOrNull() }
                     )
                 }
                 entry<ItemEdit> { key ->

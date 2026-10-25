@@ -321,4 +321,27 @@
     <string name="item_mark_as_need_release">Die dafür zurückgelegten %1$s gehen zurück in dein Spaßgeld.</string>
     <string name="decision_early_saving">Die Wartezeit ist vorbei, aber vom Preis sind %1$s noch nicht zurückgelegt.</string>
     <string name="decision_below_zero_body">Wenn du %1$s bezahlst, bleiben %2$s noch nicht zurückgelegt.</string>
+    <string name="priorities_title">Prioritäten</string>
+    <string name="priority_item_rank">Priorität #%1$d</string>
+    <string name="priority_make">Zur Priorität machen</string>
+    <string name="priority_remove">Aus den Prioritäten nehmen</string>
+    <string name="priority_promoted">%1$s ist jetzt Priorität #%2$d.</string>
+    <string name="priority_removed">%1$s ist keine Priorität mehr.</string>
+    <string name="priority_changed_meanwhile">Deine Prioritäten haben sich inzwischen geändert. Es wurde nichts geändert.</string>
+    <string name="priority_row_options">Weitere Optionen für %1$s</string>
+    <string name="priority_slots_change">Ändern</string>
+    <string name="priority_slots_title">Prioritätsplätze</string>
+    <string name="priority_slots_body">Wie viele Wünsche können gleichzeitig Prioritäten sein?</string>
+    <string name="item_mark_as_need_leaves_priorities">Der Artikel ist dann auch keine Priorität mehr, denn Notwendiges kann keine sein.</string>
+    <string name="head_to_head_title">Platz verdienen</string>
+    <string name="head_to_head_question">Was hättest du lieber?</string>
+    <string name="head_to_head_not_priority">Noch keine Priorität</string>
+    <string name="head_to_head_no_answer">Noch keine Antwort</string>
+    <string name="head_to_head_summary_title">Deine Prioritäten</string>
+    <string name="head_to_head_done">Fertig</string>
+    <string name="head_to_head_gone">Dieser Artikel kann keine Priorität mehr werden.</string>
+    <string name="priority_outcome_stays">%1$s bleibt auf Platz %2$d</string>
+    <string name="priority_outcome_now">%1$s ist jetzt auf Platz %2$d</string>
+    <string name="priority_outcome_back">%1$s ist zurück auf der Wunschliste</string>
+    <string name="priority_outcome_stays_on_wishlist">%1$s bleibt auf der Wunschliste</string>
 </resources>

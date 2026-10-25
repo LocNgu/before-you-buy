@@ -6,6 +6,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.HistoryEntry
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
@@ -25,6 +26,13 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.poolBalanceOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.savingsOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.setAside as checkSetAside
 import io.github.locngu.beforeyoubuy.core.domain.pool.takeBack as checkTakeBack
+import io.github.locngu.beforeyoubuy.core.domain.priorities.DEFAULT_PRIORITY_SLOTS
+import io.github.locngu.beforeyoubuy.core.domain.priorities.MAX_PRIORITY_SLOTS
+import io.github.locngu.beforeyoubuy.core.domain.priorities.MIN_PRIORITY_SLOTS
+import io.github.locngu.beforeyoubuy.core.domain.priorities.compactedSlots
+import io.github.locngu.beforeyoubuy.core.domain.priorities.demotedBySlots
+import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
+import io.github.locngu.beforeyoubuy.core.domain.priorities.slotChanges
 import io.github.locngu.beforeyoubuy.core.domain.settings.AppPreferences
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
@@ -89,7 +97,53 @@ class FakeItemRepository : ItemRepository {
         }
         if (items.value.none { it == current }) return false
         replace(edited)
+        compactPriorities()
         return true
+    }
+
+    /** Ranks given to [setPriorities], in order. */
+    val priorityWrites = mutableListOf<List<ItemId>>()
+
+    /** Makes the next [setPriorities] find the priorities changed, as if one was decided meanwhile. */
+    var conflictOnNextPriorities = false
+
+    /** How many slots [setPriorities] allows, like the policy's. */
+    var prioritySlots = DEFAULT_PRIORITY_SLOTS
+
+    /** While set, [setPriorities] waits for it, like a slow database. */
+    var priorityGate: CompletableDeferred<Unit>? = null
+
+    /** Compare-and-set like the real one, with the same checks. */
+    override suspend fun setPriorities(expected: List<ItemId>, ranking: List<ItemId>): Boolean {
+        priorityGate?.await()
+        if (conflictOnNextPriorities) {
+            conflictOnNextPriorities = false
+            return false
+        }
+        val active = items.value.filter { it.status == ItemStatus.ACTIVE }
+        if (prioritiesOf(active).map { it.id } != expected) return false
+        val wants = active.filter { it.kind == ItemKind.WANT }.map { it.id }.toSet()
+        if (!wants.containsAll(ranking) || ranking.distinct().size != ranking.size || ranking.size > prioritySlots) {
+            return false
+        }
+        priorityWrites += ranking
+        applySlots(slotChanges(active, ranking))
+        return true
+    }
+
+    /** What a slot reduction writes: the priorities beyond [slots] go back to the wishlist ([demotedBySlots]). */
+    fun demoteBeyond(slots: Int) {
+        val active = items.value.filter { it.status == ItemStatus.ACTIVE }
+        val demoted = demotedBySlots(active, slots).map { it.id }.toSet()
+        applySlots(slotChanges(active, prioritiesOf(active).map { it.id } - demoted))
+    }
+
+    /** Like the real one: the remaining priorities move up after one leaves. */
+    private fun compactPriorities() = applySlots(compactedSlots(items.value.filter { it.status == ItemStatus.ACTIVE }))
+
+    private fun applySlots(changes: Map<ItemId, Int?>) {
+        items.value =
+            items.value.map { item -> if (item.id in changes) item.copy(prioritySlot = changes[item.id]) else item }
     }
 
     /** Like the real one: ended items with the decision appended last, most recently decided first. */
@@ -178,6 +232,7 @@ class FakeItemRepository : ItemRepository {
         decisions += decision
         decisionsById.value += current.id to decisionsById.value[current.id].orEmpty() + decision
         replace(result)
+        compactPriorities()
         return true
     }
 }
@@ -191,6 +246,26 @@ class FakePolicyRepository(initial: Policy = Policy("EUR", CoolingOffRules.defau
     }
 
     override suspend fun changeCurrency(currency: String) = TODO("Not needed yet")
+
+    /** Slot counts written, in order. */
+    val slotChanges = mutableListOf<Int>()
+
+    /** Like the real one, with [items] for the demotion it writes in the same step. */
+    var items: FakeItemRepository? = null
+
+    /** Like the real one: refuses if the stored priorities aren't [expected] any more. */
+    override suspend fun changePrioritySlots(slots: Int, expected: List<ItemId>): Boolean {
+        require(slots in MIN_PRIORITY_SLOTS..MAX_PRIORITY_SLOTS) { "Priority slots are 1–5, was $slots" }
+        val active = items?.stored.orEmpty().filter { it.status == ItemStatus.ACTIVE }
+        if (prioritiesOf(active).map { it.id } != expected) return false
+        slotChanges += slots
+        policy.value = policy.value.copy(prioritySlots = slots)
+        items?.let {
+            it.prioritySlots = slots
+            it.demoteBeyond(slots)
+        }
+        return true
+    }
 }
 
 /**

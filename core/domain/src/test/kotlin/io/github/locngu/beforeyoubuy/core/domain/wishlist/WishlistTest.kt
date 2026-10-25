@@ -53,6 +53,37 @@ class WishlistTest {
     }
 
     @Test
+    fun `priorities come first by rank and leave their stage group, which goes once empty`() {
+        val second = wish(1).copy(prioritySlot = 2)
+        val first = wish(2, endsAt = Instant.parse("2026-12-01T10:00:00Z")).copy(prioritySlot = 1)
+        val ready = wish(3)
+        val need = wish(4, kind = ItemKind.NEED).copy(prioritySlot = 3)
+        val groups = wishlistOf(
+            listOf(second, first, ready, need),
+            mapOf(second.id to COMPLETE_REFLECTION, ready.id to COMPLETE_REFLECTION),
+            Savings.NONE,
+            AFTER_COOLING,
+            zone
+        )
+
+        val sections = wishlistSectionsOf(groups)
+
+        assertEquals(listOf(1 to first, 2 to second), sections.priorities.map { it.rank to it.entry.item })
+        assertEquals(Stage.COOLING_OFF, sections.priorities[0].entry.stage)
+        // A need with a stored slot isn't a priority (ADR-0047); the cooling-off group had only #1 and is gone.
+        assertEquals(listOf(Stage.READY), sections.groups.map { it.stage })
+        assertEquals(listOf(ready, need), sections.groups.single().entries.map { it.item })
+        assertEquals(sections.priorities, prioritiesIn(groups))
+    }
+
+    @Test
+    fun `without priorities the sections are the stage groups`() {
+        val groups = wishlistOf(listOf(wish(1)), emptyMap(), Savings.NONE, AFTER_COOLING, zone)
+
+        assertEquals(WishlistSections(emptyList(), groups), wishlistSectionsOf(groups))
+    }
+
+    @Test
     fun `every entry carries the stage stageOf gives it`() {
         val items = listOf(wish(1), wish(2, endsAt = Instant.parse("2026-12-01T10:00:00Z")))
 

@@ -11,15 +11,16 @@ import androidx.room.PrimaryKey
 // #23 adds `allocations` next to these, referencing `items.id`.
 
 /**
- * The app's currency and cooling-off tiers (`Policy`): one row, id [ID]. Next to the items so a tier or currency
- * change rewrites them in one transaction (ADR-0031, ADR-0033). [coolingOffRules] is `CoolingOffRulesJson`, or null
- * for the defaults in [currency].
+ * The app's currency, cooling-off tiers and priority slots (`Policy`): one row, id [ID]. Next to the items so a tier,
+ * currency or slot change rewrites them in one transaction (ADR-0031, ADR-0033, ADR-0047). [coolingOffRules] is
+ * `CoolingOffRulesJson`, or null for the defaults in [currency]. [prioritySlots] since version 6.
  */
 @Entity(tableName = "policy")
 internal data class PolicyEntity(
     @PrimaryKey val id: Int = ID,
     val currency: String,
-    @ColumnInfo(name = "cooling_off_rules") val coolingOffRules: String?
+    @ColumnInfo(name = "cooling_off_rules") val coolingOffRules: String?,
+    @ColumnInfo(name = "priority_slots", defaultValue = "3") val prioritySlots: Int = 3
 ) {
     companion object {
         const val ID = 1

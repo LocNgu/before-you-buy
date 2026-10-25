@@ -74,11 +74,14 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.format
+import io.github.locngu.beforeyoubuy.core.domain.priorities.canBePriority
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.ItemDetail
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.webLink
 import io.github.locngu.beforeyoubuy.feature.capture.priceErrorMessage
 import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
+import io.github.locngu.beforeyoubuy.feature.priorities.priorityMessage
 import io.github.locngu.beforeyoubuy.feature.reflection.upgradeOrNewLabel
 import io.github.locngu.beforeyoubuy.feature.reflection.usageLabel
 import io.github.locngu.beforeyoubuy.ui.components.ButtonPair
@@ -105,6 +108,7 @@ fun ItemDetailScreen(
     onReflect: () -> Unit,
     onDecide: () -> Unit,
     onOpenFunMoney: () -> Unit,
+    onCompare: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ItemDetailViewModel =
         hiltViewModel<ItemDetailViewModel, ItemDetailViewModel.Factory> { it.create(itemId) }
@@ -123,6 +127,16 @@ fun ItemDetailScreen(
             snackbarHostState.showSnackbar(text)
         }
     }
+    val compare by rememberUpdatedState(onCompare)
+    LaunchedEffect(viewModel, snackbarHostState) {
+        viewModel.priorityEvents.collect { event ->
+            if (event is PriorityEvent.Compare) {
+                compare()
+            } else {
+                priorityMessage(event, resources)?.let { snackbarHostState.showSnackbar(it) }
+            }
+        }
+    }
 
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
@@ -133,6 +147,8 @@ fun ItemDetailScreen(
         onReflect = onReflect,
         onDecide = onDecide,
         onMarkAsNeed = viewModel::markAsNeed,
+        onMakePriority = viewModel::makePriority,
+        onRemovePriority = viewModel::removePriority,
         onOpenFunMoney = onOpenFunMoney,
         savingsActions = viewModel,
         onCopyLink = { link ->
@@ -172,7 +188,9 @@ fun ItemDetailContent(
     onCopyLink: (String) -> Unit,
     onOpenLink: (String) -> Unit,
     snackbarHostState: SnackbarHostState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMakePriority: () -> Unit = {},
+    onRemovePriority: () -> Unit = {}
 ) {
     val detail = state.detail
     Scaffold(
@@ -203,6 +221,7 @@ fun ItemDetailContent(
                     onReflect,
                     onDecide,
                     onMarkAsNeed,
+                    PriorityActions(onMakePriority, onRemovePriority),
                     onOpenFunMoney,
                     savingsActions,
                     state.canSetAside,
@@ -258,6 +277,7 @@ private fun Detail(
     onReflect: () -> Unit,
     onDecide: () -> Unit,
     onMarkAsNeed: () -> Unit,
+    priorityActions: PriorityActions,
     onOpenFunMoney: () -> Unit,
     savingsActions: SavingsActions,
     canSetAside: Boolean,
@@ -275,9 +295,12 @@ private fun Detail(
         Savings(detail, onOpenFunMoney, savingsActions, canSetAside)
         Details(detail)
         Decide(detail, onDecide)
-        Actions(detail, onMarkAsNeed, onOpenLink)
+        Actions(detail, onMarkAsNeed, priorityActions, onOpenLink)
     }
 }
+
+/** "Make priority" and "Remove from priorities" (brief §4.7, ADR-0047). */
+private class PriorityActions(val make: () -> Unit, val remove: () -> Unit)
 
 /**
  * What is set aside for a want (brief §4.6), with equal "Set aside" and "Take back" buttons, each enabled while there
@@ -423,6 +446,9 @@ private fun Header(detail: ItemDetail) {
         }
         SecondaryText(wanted)
         if (item.kind == ItemKind.NEED) SecondaryText(stringResource(R.string.item_need))
+        item.prioritySlot?.takeIf { item.kind == ItemKind.WANT }?.let {
+            SecondaryText(stringResource(R.string.priority_item_rank, it))
+        }
     }
 }
 
@@ -614,13 +640,21 @@ private fun Decide(detail: ItemDetail, onDecide: () -> Unit) {
 
 /**
  * Once cooled off, the link may show as a plain text button; while cooling off it's only in the menu (ADR-0013).
- * "Mark as need" asks first: it ends the wait.
+ * "Make priority" for a want that isn't one, "Remove from priorities" for one that is (ADR-0047). "Mark as need" asks
+ * first: it ends the wait.
  */
 @Composable
-private fun Actions(detail: ItemDetail, onMarkAsNeed: () -> Unit, onOpenLink: (String) -> Unit) {
+private fun Actions(
+    detail: ItemDetail,
+    onMarkAsNeed: () -> Unit,
+    priorityActions: PriorityActions,
+    onOpenLink: (String) -> Unit
+) {
     val address = detail.item.link?.let { webLink(it) }?.takeIf { detail.linkProminent }
     val canMarkAsNeed = detail.item.canMarkAsNeed
-    if (address == null && !canMarkAsNeed) return
+    val canMakePriority = detail.item.canBePriority
+    val isPriority = detail.item.prioritySlot != null && detail.item.kind == ItemKind.WANT
+    if (address == null && !canMarkAsNeed && !canMakePriority && !isPriority) return
     var confirming by rememberSaveable { mutableStateOf(false) }
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (address != null) {
@@ -628,6 +662,12 @@ private fun Actions(detail: ItemDetail, onMarkAsNeed: () -> Unit, onOpenLink: (S
             TextButton(onClick = { onOpenLink(address) }, modifier = Modifier.offset(x = (-12).dp)) {
                 Text(stringResource(R.string.item_open_link))
             }
+        }
+        if (canMakePriority) {
+            OutlinedButton(onClick = priorityActions.make) { Text(stringResource(R.string.priority_make)) }
+        }
+        if (isPriority) {
+            OutlinedButton(onClick = priorityActions.remove) { Text(stringResource(R.string.priority_remove)) }
         }
         if (canMarkAsNeed) {
             OutlinedButton(onClick = { confirming = true }) { Text(stringResource(R.string.item_mark_as_need)) }
@@ -637,7 +677,7 @@ private fun Actions(detail: ItemDetail, onMarkAsNeed: () -> Unit, onOpenLink: (S
         AlertDialog(
             onDismissRequest = { confirming = false },
             title = { Text(stringResource(R.string.item_mark_as_need_title)) },
-            text = { MarkAsNeedBody(detail.savings?.allocated) },
+            text = { MarkAsNeedBody(detail.savings?.allocated, detail.item.prioritySlot != null) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -654,16 +694,18 @@ private fun Actions(detail: ItemDetail, onMarkAsNeed: () -> Unit, onOpenLink: (S
 }
 
 /**
- * Why a need is different, and, if money is set aside for the want, that it goes back to the fun money (ADR-0044).
- * Edit asks the same when its switch makes a want with savings a need.
+ * Why a need is different, and, if money is set aside for the want, that it goes back to the fun money (ADR-0044);
+ * for a priority ([leavesPriorities]), that it leaves the priorities (ADR-0047). Edit asks the same when its switch
+ * makes such a want a need.
  */
 @Composable
-internal fun MarkAsNeedBody(allocated: Money?) {
+internal fun MarkAsNeedBody(allocated: Money?, leavesPriorities: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.item_mark_as_need_body))
         if (allocated != null && allocated.minorUnits > 0) {
             Text(stringResource(R.string.item_mark_as_need_release, allocated.format(currentLocale())))
         }
+        if (leavesPriorities) Text(stringResource(R.string.item_mark_as_need_leaves_priorities))
     }
 }
 

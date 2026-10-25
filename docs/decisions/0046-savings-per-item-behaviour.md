@@ -1,6 +1,6 @@
 # ADR-0046: Savings per item: the funding switch, release by decision, one purchase entry, "set aside"
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0047 (Home's "Saving for" with priorities)
 **Type**: product
 **Date**: 2026-10-24
 

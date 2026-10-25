@@ -23,7 +23,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PoolEntryEntity::class,
         AllocationEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
@@ -115,8 +115,19 @@ internal val MIGRATION_4_5: Migration = object : Migration(4, 5) {
     }
 }
 
+/**
+ * 5 → 6 (issue #24): `policy.priority_slots`, how many wants can be priorities at once, 3 until the user changes it
+ * (ADR-0011, ADR-0047). `items.priority_slot` existed from the start and stays as it is.
+ */
+internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE policy ADD COLUMN `priority_slots` INTEGER NOT NULL DEFAULT 3")
+    }
+}
+
 /** Every migration, oldest first. A new schema version adds its own here, with a test in `MigrationTest`. */
-internal val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+internal val MIGRATIONS: Array<Migration> =
+    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 
 /**
  * Makes sure the policy row exists whenever the database opens, before anything reads it: the currency is fixed

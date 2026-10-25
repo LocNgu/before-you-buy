@@ -15,4 +15,5 @@ paths:
 - "Decided against", not "saved" or "resisted".
 - Every string exists in `values/` (English) and `values-de/` (German). German uses "du". Terms: Wartezeit (cooling-off), Wunschliste, Prioritäten, Dagegen entschieden, Gekauft, Verlauf (history), Spaßgeld (fun money, ADR-0045), zurückgelegt (set aside) — confirm or extend in issue #29.
 - Fun money labels (ADR-0045): "Fun money for wants", "Set aside for wants", "Not yet set aside". Never "available", "spend" or "you can afford".
+- Priorities (ADR-0047): "Priorities" / „Prioritäten“, "Make priority" / „Zur Priorität machen“, "Remove from priorities", ranks "#1" (German summary: „auf Platz 2“). The head-to-head asks "Which would you rather have?" / „Was hättest du lieber?“; both answers are the item names, equal. Summaries state what changed, never "won"/"lost".
 - Savings per item (ADR-0046): "650 € of 1,600 € set aside · 950 € to go" / „650 € von 1.600 € zurückgelegt · noch 950 €“; buttons "Set aside" / "Take back" („Zurücklegen“ / „Zurücknehmen“). Never "saved"; nothing celebrates a full bar.

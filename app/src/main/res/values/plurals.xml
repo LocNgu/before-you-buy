@@ -90,4 +90,16 @@
         <item quantity="one">%d item on your wishlist</item>
         <item quantity="other">%d items on your wishlist</item>
     </plurals>
+    <plurals name="priority_slots_used">
+        <item quantity="one">%1$d of %2$d slot used</item>
+        <item quantity="other">%1$d of %2$d slots used</item>
+    </plurals>
+    <plurals name="priority_slots_option">
+        <item quantity="one">%1$d slot</item>
+        <item quantity="other">%1$d slots</item>
+    </plurals>
+    <plurals name="priority_slots_demoted">
+        <item quantity="one">%1$d priority goes back to the wishlist:</item>
+        <item quantity="other">%1$d priorities go back to the wishlist:</item>
+    </plurals>
 </resources>

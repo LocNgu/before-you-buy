@@ -33,7 +33,7 @@ paths:
 - When the tiers change, apply `coolingEndAfterRulesChange` to every item (ADR-0031): it recomputes the end of active wants that are still cooling off, longer or shorter, from `addedAt` and the current price. Items whose wait has ended, needs and ended items keep their end.
 - Every cooling-off function throws up front if a price isn't in the rules' currency or is negative, whatever the item's kind.
 - `CoolingOffRules.relabeled(currency)` relabels thresholds; tiers that round to the same threshold collapse into the pricier one, so the result is valid.
-- `changeKind` is the only way to change kind. Want → `NEED` sets `markedAsNeedAt` and keeps `coolingEndsAt`; `NEED` → want clears `markedAsNeedAt`.
+- `changeKind` is the only way to change kind. Want → `NEED` sets `markedAsNeedAt`, keeps `coolingEndsAt` and clears `prioritySlot` (only wants are priorities, ADR-0047); `NEED` → want clears `markedAsNeedAt`.
 
 ## Tests
 

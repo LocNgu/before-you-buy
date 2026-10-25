@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
@@ -17,8 +18,10 @@ import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Duration
 import java.time.Instant
 import java.util.Locale
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -336,4 +339,77 @@ class ItemDetailViewModelTest {
 
             assertEquals(Money(17_000, "EUR"), viewModel.uiState.value.detail!!.savings!!.allocated)
         }
+
+    @Test
+    fun `make priority takes a free slot, remove from priorities gives it up`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 2)
+        val viewModel = viewModelFor(item)
+
+        viewModel.makePriority()
+        assertEquals(PriorityEvent.Promoted("Camera", 1), viewModel.priorityEvents.first())
+        assertEquals(1, items.stored.single().prioritySlot)
+
+        viewModel.removePriority()
+        assertEquals(PriorityEvent.Removed("Camera"), viewModel.priorityEvents.first())
+        assertNull(items.stored.single().prioritySlot)
+    }
+
+    @Test
+    fun `make priority with full slots opens the head-to-head instead`() = runTest(UnconfinedTestDispatcher()) {
+        val first = add(endsInHours = 2)
+        val second = add(endsInHours = 2)
+        items.prioritySlots = 1
+        policies.changePrioritySlots(1, emptyList())
+        items.setPriorities(emptyList(), listOf(first.id))
+        val viewModel = viewModelFor(second)
+
+        viewModel.makePriority()
+
+        assertEquals(PriorityEvent.Compare(second.id), viewModel.priorityEvents.first())
+        assertNull(items.stored.single { it.id == second.id }.prioritySlot)
+    }
+
+    @Test
+    fun `a double tap on make priority writes once and says so once`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 2)
+        val viewModel = viewModelFor(item)
+        val gate = CompletableDeferred<Unit>()
+        items.priorityGate = gate
+
+        viewModel.priorityEvents.test {
+            viewModel.makePriority()
+            viewModel.makePriority()
+            gate.complete(Unit)
+
+            assertEquals(PriorityEvent.Promoted("Camera", 1), awaitItem())
+            // Not a second "changed meanwhile" about its own write.
+            expectNoEvents()
+        }
+        assertEquals(1, items.priorityWrites.size)
+    }
+
+    @Test
+    fun `priorities that changed meanwhile write nothing and say so`() = runTest(UnconfinedTestDispatcher()) {
+        val item = add(endsInHours = 2)
+        val viewModel = viewModelFor(item)
+        items.conflictOnNextPriorities = true
+
+        viewModel.makePriority()
+
+        assertEquals(PriorityEvent.ChangedMeanwhile, viewModel.priorityEvents.first())
+        assertNull(items.stored.single().prioritySlot)
+    }
+
+    @Test
+    fun `marking a priority as a need takes it out of the priorities`() = runTest(UnconfinedTestDispatcher()) {
+        val first = add(endsInHours = 2)
+        val second = add(endsInHours = 2)
+        items.setPriorities(emptyList(), listOf(first.id, second.id))
+        val viewModel = viewModelFor(items.stored.first())
+        viewModel.uiState.launchIn(backgroundScope)
+
+        viewModel.markAsNeed()
+
+        assertEquals(listOf(null, 1), items.stored.map { it.prioritySlot })
+    }
 }
