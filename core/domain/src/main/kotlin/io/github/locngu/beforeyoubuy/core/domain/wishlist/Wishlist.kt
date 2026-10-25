@@ -10,6 +10,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.SavingsProgress
 import io.github.locngu.beforeyoubuy.core.domain.pool.progressOf
+import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -90,6 +91,32 @@ fun wishlistOf(
         waiting = true
     )
     return groups + waitingGroup
+}
+
+/** A priority with its [rank] (1 first) and its wishlist [entry] (stage, countdown, savings). */
+data class Priority(val rank: Int, val entry: WishlistEntry)
+
+/**
+ * The wishlist as the screen shows it (brief §4.7, §6.3): the [priorities] by rank at the top, then the other active
+ * items in their stage [groups] ([wishlistOf]). A priority is only in [priorities], not again in its stage group.
+ */
+data class WishlistSections(val priorities: List<Priority>, val groups: List<WishlistGroup>)
+
+/** The priorities among the entries of [groups] ([wishlistOf]), rank 1 first ([prioritiesOf]). */
+fun prioritiesIn(groups: List<WishlistGroup>): List<Priority> {
+    val entries = groups.flatMap { it.entries }.associateBy { it.item.id }
+    return prioritiesOf(entries.values.map { it.item })
+        .mapIndexed { index, item -> Priority(index + 1, entries.getValue(item.id)) }
+}
+
+/** [groups] ([wishlistOf]) split into the priorities and everything else; groups left empty are dropped. */
+fun wishlistSectionsOf(groups: List<WishlistGroup>): WishlistSections {
+    val priorities = prioritiesIn(groups)
+    val ids = priorities.map { it.entry.item.id }.toSet()
+    val rest = groups
+        .map { group -> group.copy(entries = group.entries.filter { it.item.id !in ids }) }
+        .filter { it.entries.isNotEmpty() }
+    return WishlistSections(priorities, rest)
 }
 
 /**

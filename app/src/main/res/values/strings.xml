@@ -342,4 +342,28 @@
     <string name="item_mark_as_need_release">The %1$s set aside for it goes back to your fun money.</string>
     <string name="decision_early_saving">The waiting period is over, but %1$s of the price isn’t set aside yet.</string>
     <string name="decision_below_zero_body">Paying %1$s leaves %2$s not yet set aside.</string>
+    <string name="priorities_title">Priorities</string>
+    <string name="priority_rank" translatable="false">#%1$d</string>
+    <string name="priority_item_rank">Priority #%1$d</string>
+    <string name="priority_make">Make priority</string>
+    <string name="priority_remove">Remove from priorities</string>
+    <string name="priority_promoted">%1$s is now priority #%2$d.</string>
+    <string name="priority_removed">%1$s is no longer a priority.</string>
+    <string name="priority_changed_meanwhile">Your priorities changed meanwhile. Nothing was changed.</string>
+    <string name="priority_row_options">More options for %1$s</string>
+    <string name="priority_slots_change">Change</string>
+    <string name="priority_slots_title">Priority slots</string>
+    <string name="priority_slots_body">How many wants can be priorities at once?</string>
+    <string name="item_mark_as_need_leaves_priorities">It also leaves your priorities, because a need can’t be one.</string>
+    <string name="head_to_head_title">Earn its place</string>
+    <string name="head_to_head_question">Which would you rather have?</string>
+    <string name="head_to_head_not_priority">Not a priority yet</string>
+    <string name="head_to_head_no_answer">No answer yet</string>
+    <string name="head_to_head_summary_title">Your priorities</string>
+    <string name="head_to_head_done">Done</string>
+    <string name="head_to_head_gone">This item can’t become a priority anymore.</string>
+    <string name="priority_outcome_stays">%1$s stays #%2$d</string>
+    <string name="priority_outcome_now">%1$s is now #%2$d</string>
+    <string name="priority_outcome_back">%1$s moved back to the wishlist</string>
+    <string name="priority_outcome_stays_on_wishlist">%1$s stays on the wishlist</string>
 </resources>

@@ -55,8 +55,9 @@ import kotlinx.coroutines.launch
  * @property photo the photo saving keeps: the stored one, a newly picked one, or none once removed.
  * @property importingPhoto a picked photo is being copied; saving waits for it.
  * @property photoFailed the last picked image couldn't be read; the previous photo stays.
- * @property confirmRelease saving makes a want with this much set aside a need, which gives it back (ADR-0044): the
- *   user confirms first.
+ * @property confirmRelease saving makes a want a need, which gives back this much set aside (ADR-0044; zero if
+ *   nothing is) or takes it out of the priorities ([confirmLeavesPriorities], ADR-0047): the user confirms first.
+ * @property confirmLeavesPriorities the want being confirmed is a priority, and a need can't be one.
  */
 data class ItemEditUiState(
     val form: CaptureForm? = null,
@@ -71,7 +72,8 @@ data class ItemEditUiState(
     val photo: File? = null,
     val importingPhoto: Boolean = false,
     val photoFailed: Boolean = false,
-    val confirmRelease: Money? = null
+    val confirmRelease: Money? = null,
+    val confirmLeavesPriorities: Boolean = false
 )
 
 /** How saving would change the wait, with the end date in the device's zone (from the injected clock). */
@@ -88,7 +90,10 @@ interface ItemEditActions : ItemFormActions {
 
     fun onRemovePhoto()
 
-    /** Saves, or asks first if that gives back money set aside ([ItemEditUiState.confirmRelease]). */
+    /**
+     * Saves, or asks first if that gives back money set aside or takes a priority out of the priorities
+     * ([ItemEditUiState.confirmRelease]).
+     */
     fun save()
 
     fun confirmRelease()
@@ -201,11 +206,11 @@ class ItemEditViewModel @AssistedInject constructor(
 
     override fun confirmRelease() {
         if (editor.value.confirmRelease == null) return
-        editor.update { it.copy(confirmRelease = null) }
+        editor.update { it.copy(confirmRelease = null, confirmLeavesPriorities = false) }
         save(releaseConfirmed = true)
     }
 
-    override fun dismissRelease() = editor.update { it.copy(confirmRelease = null) }
+    override fun dismissRelease() = editor.update { it.copy(confirmRelease = null, confirmLeavesPriorities = false) }
 
     private fun save(releaseConfirmed: Boolean) {
         val current = editor.value
@@ -217,8 +222,9 @@ class ItemEditViewModel @AssistedInject constructor(
         // Until the savings are loaded, whether saving gives money back is unknown: never skip the question.
         val allocated = savings.value?.allocatedFor(item) ?: return
         val edited = editedItem(item, form, policy, locale, clock.instant(), clock.zone, current.imageRef)
-        if (!releaseConfirmed && releaseWhenMarkedAsNeed(item, edited, allocated) != null) {
-            editor.value = current.copy(confirmRelease = allocated)
+        val leavesPriorities = item.prioritySlot != null && edited.prioritySlot == null
+        if (!releaseConfirmed && (releaseWhenMarkedAsNeed(item, edited, allocated) != null || leavesPriorities)) {
+            editor.value = current.copy(confirmRelease = allocated, confirmLeavesPriorities = leavesPriorities)
             return
         }
         editor.value = current.copy(saving = true, conflict = false)
@@ -278,7 +284,8 @@ class ItemEditViewModel @AssistedInject constructor(
             photo = editor.imageRef?.let(images::fileFor),
             importingPhoto = editor.importing > 0,
             photoFailed = editor.photoFailed,
-            confirmRelease = editor.confirmRelease
+            confirmRelease = editor.confirmRelease,
+            confirmLeavesPriorities = editor.confirmLeavesPriorities
         )
     }
 
@@ -304,6 +311,7 @@ class ItemEditViewModel @AssistedInject constructor(
         val photoFailed: Boolean = false,
         val saving: Boolean = false,
         val conflict: Boolean = false,
-        val confirmRelease: Money? = null
+        val confirmRelease: Money? = null,
+        val confirmLeavesPriorities: Boolean = false
     )
 }

@@ -81,4 +81,16 @@
         <item quantity="one">%d Artikel auf deiner Wunschliste</item>
         <item quantity="other">%d Artikel auf deiner Wunschliste</item>
     </plurals>
+    <plurals name="priority_slots_used">
+        <item quantity="one">%1$d von %2$d Platz belegt</item>
+        <item quantity="other">%1$d von %2$d Plätzen belegt</item>
+    </plurals>
+    <plurals name="priority_slots_option">
+        <item quantity="one">%1$d Platz</item>
+        <item quantity="other">%1$d Plätze</item>
+    </plurals>
+    <plurals name="priority_slots_demoted">
+        <item quantity="one">%1$d Priorität geht zurück auf die Wunschliste:</item>
+        <item quantity="other">%1$d Prioritäten gehen zurück auf die Wunschliste:</item>
+    </plurals>
 </resources>

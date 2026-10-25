@@ -46,6 +46,10 @@ internal interface ItemDao {
     @Query("UPDATE items SET price_minor = :priceMinor, currency = :currency WHERE id = :id")
     suspend fun setPrice(id: Long, priceMinor: Long, currency: String)
 
+    /** Only the slot, so unreadable columns of the row survive (ADR-0032). */
+    @Query("UPDATE items SET priority_slot = :slot WHERE id = :id")
+    suspend fun setPrioritySlot(id: Long, slot: Int?)
+
     @Query("SELECT * FROM items WHERE id = :id")
     fun observeById(id: Long): Flow<ItemEntity?>
 

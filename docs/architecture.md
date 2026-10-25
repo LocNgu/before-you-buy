@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19), notifications (#20), the Home dashboard (#21) and the monthly fun money (#22) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19), notifications (#20), the Home dashboard (#21), the monthly fun money (#22), savings per item (#23) and priorities (#24) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -33,7 +33,7 @@ Dependencies: Apache-2.0/MIT/BSD only in what ships (test and build tools exempt
 
 ```
 :app            Activities, Compose screens (package-by-feature), ViewModels, Hilt wiring, workers, notifications
-:core:domain    Pure Kotlin/JVM: models, lifecycle stage, cooling-off, money math, Home/wishlist/history views, allowance, opportunity cost, share-text parsing
+:core:domain    Pure Kotlin/JVM: models, lifecycle stage, cooling-off, money math, Home/wishlist/history views, allowance, priorities and head-to-head, opportunity cost, share-text parsing
 :core:data      Room, DAOs, DataStore, repositories (+ their Hilt module), export/import
 ```
 
@@ -54,7 +54,7 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 
 ## Persistence (`:core:data`, ADR-0019, ADR-0032)
 
-- Room, schema version 5 (migrations in `BeforeYouBuyDatabase.kt`, tested by `MigrationTest`): `policy` (one row: the app's currency and cooling-off tiers, ADR-0033), `items` (every stored `Item` fact), `reflections` (1:1 with the item; `reasons_against` is a JSON array of strings, not a child table), `decisions` (append-only history; `note` since version 2), `item_notifications` (1:1, what was notified about the item, since version 3, ADR-0042), `allowance` (one row once set up) and `pool_entries` (the fun money's append-only ledger, unique per accrual month, since version 4, ADR-0045). Children reference `items(id)` with `ON DELETE CASCADE` (`pool_entries`: `SET NULL`). `allowance.wants_need_funding` and `allocations` (money set aside per item, append-only, `ON DELETE CASCADE`) since version 5, ADR-0046. No stage column.
+- Room, schema version 6 (migrations in `BeforeYouBuyDatabase.kt`, tested by `MigrationTest`): `policy` (one row: the app's currency and cooling-off tiers, ADR-0033), `items` (every stored `Item` fact), `reflections` (1:1 with the item; `reasons_against` is a JSON array of strings, not a child table), `decisions` (append-only history; `note` since version 2), `item_notifications` (1:1, what was notified about the item, since version 3, ADR-0042), `allowance` (one row once set up) and `pool_entries` (the fun money's append-only ledger, unique per accrual month, since version 4, ADR-0045). Children reference `items(id)` with `ON DELETE CASCADE` (`pool_entries`: `SET NULL`). `allowance.wants_need_funding` and `allocations` (money set aside per item, append-only, `ON DELETE CASCADE`) since version 5, ADR-0046. `policy.priority_slots` (1–5, default 3) since version 6, ADR-0047; `items.priority_slot` is the rank. No stage column.
 - Schema JSON goes to `core/data/schemas/` and is committed (ADR-0019).
 - `ItemRepository`, `PolicyRepository`, `PreferencesRepository`, `NotificationLogRepository` and `PoolRepository` (interfaces in `:core:domain`) are bound by `:core:data`'s own Hilt module `DataModule`; everything in `:core:data` stays `internal`. `:app` just injects the interfaces.
 - Item writes are compare-and-set: `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored row still equals what the caller read, and return false otherwise. `recordDecision` writes the decision and the item's new state in one transaction; `update` never changes the status. `delete(current)` removes an ended item with its reflection and decisions, compare-and-set too.

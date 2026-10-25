@@ -34,10 +34,12 @@ import io.github.locngu.beforeyoubuy.core.domain.home.SavingFor
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.Priority
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
 import io.github.locngu.beforeyoubuy.feature.money.FunMoneyAmounts
 import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
+import io.github.locngu.beforeyoubuy.feature.wishlist.PriorityRank
 import io.github.locngu.beforeyoubuy.feature.wishlist.StageChip
 import io.github.locngu.beforeyoubuy.feature.wishlist.StageStatus
 import io.github.locngu.beforeyoubuy.ui.components.CountdownText
@@ -137,9 +139,17 @@ private fun HomeSections(
         item(key = "considering") {
             Considering(overview.activeCount, overview.nextCoolingEnd, onOpenWishlist)
         }
-        item(key = "saving") { SectionHeader(stringResource(R.string.home_saving_title)) }
+        if (overview.priorities.isNotEmpty()) {
+            // "What am I saving for?" is the priorities once there are some (brief §6.1, ADR-0047).
+            item(key = "priorities") { SectionHeader(stringResource(R.string.priorities_title)) }
+            items(overview.priorities, key = { "priority_${it.entry.item.id.value}" }) { priority ->
+                PriorityRow(priority, onClick = { onOpenItem(priority.entry.item.id) })
+            }
+        } else {
+            item(key = "saving") { SectionHeader(stringResource(R.string.home_saving_title)) }
+        }
         when {
-            money == null -> Unit
+            money == null || overview.priorities.isNotEmpty() -> Unit
 
             money == FunMoney.NotSetUp ->
                 item(key = "saving_not_set_up") { QuietLine(stringResource(R.string.home_saving_not_set_up)) }
@@ -284,6 +294,41 @@ private fun SavingForRow(saving: SavingFor, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface
         )
         SavingsProgressBar(saving.progress, Modifier.fillMaxWidth())
+    }
+}
+
+/**
+ * A priority (brief §4.7): its rank and name, and what is set aside of its price, or the price without fun money.
+ * Tapping opens it.
+ */
+@Composable
+private fun PriorityRow(priority: Priority, onClick: () -> Unit) {
+    val item = priority.entry.item
+    val savings = priority.entry.savings
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PriorityRank(priority.rank)
+            Text(
+                text = item.name,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (savings == null) {
+                MoneyText(
+                    item.price,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        savings?.let { SavingsProgressBar(it, Modifier.fillMaxWidth()) }
     }
 }
 

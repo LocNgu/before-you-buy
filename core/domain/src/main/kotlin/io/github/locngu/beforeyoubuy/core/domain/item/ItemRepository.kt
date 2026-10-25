@@ -68,6 +68,21 @@ interface ItemRepository {
     suspend fun recordDecision(current: Item, decision: Decision, result: Item): Boolean
 
     /**
+     * Makes [ranking] the priorities, rank 1 first (brief §4.7): the n-th item gets slot n, every other active item
+     * none ([io.github.locngu.beforeyoubuy.core.domain.priorities.slotChanges]). Used by "Make priority", the
+     * head-to-head and "Remove from priorities" (ADR-0047).
+     *
+     * Writes only if the stored priorities are still [expected] (ids, rank 1 first), every id in [ranking] is an
+     * active want and [ranking] fits the priority slots. Returns false and writes nothing otherwise, e.g. a priority
+     * was bought meanwhile or the slots changed.
+     *
+     * [update] and [recordDecision] keep the ranks without gaps: when a priority ends or becomes a need, the ones
+     * below it move up in the same transaction
+     * ([io.github.locngu.beforeyoubuy.core.domain.priorities.compactedSlots]).
+     */
+    suspend fun setPriorities(expected: List<ItemId>, ranking: List<ItemId>): Boolean
+
+    /**
      * Deletes [current], a purchased or rejected item as the caller read it, with its reflection answers and
      * decisions: history entries are only deleted on the user's explicit request (brief §5, issue #19). Its photo
      * stays on disk until the sweep at app start finds no item referencing it (ADR-0038).

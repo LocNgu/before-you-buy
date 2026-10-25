@@ -4,10 +4,12 @@ import androidx.room.withTransaction
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
 import io.github.locngu.beforeyoubuy.core.data.pool.toDomain
 import io.github.locngu.beforeyoubuy.core.data.pool.toEntity
+import io.github.locngu.beforeyoubuy.core.data.settings.toDomain
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.HistoryEntry
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
@@ -16,6 +18,10 @@ import io.github.locngu.beforeyoubuy.core.domain.money.relabeled
 import io.github.locngu.beforeyoubuy.core.domain.money.total
 import io.github.locngu.beforeyoubuy.core.domain.pool.poolPurchaseOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.releaseWhenMarkedAsNeed
+import io.github.locngu.beforeyoubuy.core.domain.priorities.DEFAULT_PRIORITY_SLOTS
+import io.github.locngu.beforeyoubuy.core.domain.priorities.compactedSlots
+import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
+import io.github.locngu.beforeyoubuy.core.domain.priorities.slotChanges
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -44,6 +50,8 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
             releaseWhenMarkedAsNeed(current, edited, allocatedFor(current))?.let {
                 pool.insertAllocation(it.toEntity())
             }
+            // A priority that became a need leaves a gap; the ones below move up (ADR-0047).
+            if (current.prioritySlot != null) compactPriorities()
         }
     }
 
@@ -84,8 +92,31 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
             // A want's purchase is spent from the fun money with its decision (brief §4.6); a need's never is.
             val funMoneySetUp = pool.getAllowance()?.toDomain() != null
             poolPurchaseOf(current, decision, funMoneySetUp)?.let { pool.insertEntry(it.toEntity()) }
+            // Buying or rejecting a priority frees its slot; the ones below move up (brief §4.7).
+            if (current.prioritySlot != null) compactPriorities()
         }
     }
+
+    override suspend fun setPriorities(expected: List<ItemId>, ranking: List<ItemId>): Boolean =
+        database.withTransaction {
+            val active = activeItems()
+            if (prioritiesOf(active).map { it.id } != expected) return@withTransaction false
+            val wants = active.filter { it.kind == ItemKind.WANT }.map { it.id }.toSet()
+            if (!wants.containsAll(ranking) || ranking.distinct().size != ranking.size) return@withTransaction false
+            val slots = policies.get()?.toDomain()?.prioritySlots ?: DEFAULT_PRIORITY_SLOTS
+            if (ranking.size > slots) return@withTransaction false
+            writeSlots(slotChanges(active, ranking))
+            true
+        }
+
+    /** Gives the priorities ranks 1…n again after one left ([compactedSlots]); inside the caller's transaction. */
+    private suspend fun compactPriorities() = writeSlots(compactedSlots(activeItems()))
+
+    private suspend fun activeItems(): List<Item> = items.getByStatus(ItemStatus.ACTIVE.name).map { it.toDomain() }
+
+    /** Targeted writes, so columns this version can't read survive (ADR-0032). */
+    private suspend fun writeSlots(changes: Map<ItemId, Int?>) =
+        changes.forEach { (id, slot) -> items.setPrioritySlot(id.value, slot) }
 
     /** What is set aside for [item] in its currency, from the stored allocations. */
     private suspend fun allocatedFor(item: Item): Money {

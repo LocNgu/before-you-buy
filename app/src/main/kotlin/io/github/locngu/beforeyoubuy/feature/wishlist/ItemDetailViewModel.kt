@@ -31,6 +31,9 @@ import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
 import io.github.locngu.beforeyoubuy.feature.money.observeSavings
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
+import io.github.locngu.beforeyoubuy.feature.priorities.makePriority
+import io.github.locngu.beforeyoubuy.feature.priorities.removePriority
 import java.io.File
 import java.time.Clock
 import java.util.Locale
@@ -181,6 +184,32 @@ class ItemDetailViewModel @AssistedInject constructor(
 
     /** One-shot messages for the snackbar. */
     val message: Flow<ItemDetailMessage> = messages.receiveAsFlow()
+
+    private val priorityChannel = Channel<PriorityEvent>(Channel.BUFFERED)
+
+    /** What "Make priority" / "Remove from priorities" did: a message, or opening the head-to-head. */
+    val priorityEvents: Flow<PriorityEvent> = priorityChannel.receiveAsFlow()
+
+    // One priority write at a time: a double tap would otherwise find its own change and report a conflict.
+    private var writingPriorities = false
+
+    /** "Make priority" (brief §4.7): a free slot at once, full slots through the head-to-head. */
+    fun makePriority() = writePriorities { makePriority(id, items, policies) }
+
+    /** "Remove from priorities" (ADR-0047): the ones below move up. */
+    fun removePriority() = writePriorities { removePriority(id, items) }
+
+    private fun writePriorities(write: suspend () -> PriorityEvent) {
+        if (writingPriorities) return
+        writingPriorities = true
+        viewModelScope.launch {
+            try {
+                priorityChannel.send(write())
+            } finally {
+                writingPriorities = false
+            }
+        }
+    }
 
     /** The UI's locale, which decides how amounts are read (ADR-0027). */
     fun setLocale(locale: Locale) {

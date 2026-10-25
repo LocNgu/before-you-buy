@@ -61,7 +61,7 @@ fun coolingEndAfterRulesChange(item: Item, rules: CoolingOffRules, now: Instant,
  * The item after the user changes its kind to [kind] at [at]. Only active items change kind; anything else throws.
  *
  * - Want → `NEED`: allowed any time (ADR-0008), recorded in [Item.markedAsNeedAt] for history. The cooling-off end
- *   is kept, in case the item turns back into a want.
+ *   is kept, in case the item turns back into a want. It leaves the priorities: only wants hold a slot (ADR-0047).
  * - `NEED` → want: cools off from [Item.addedAt] like a new want at its current price under the current rules,
  *   replacing any earlier end, so a want that was a need before gets the wait its price calls for now.
  *   Clears [Item.markedAsNeedAt].
@@ -71,7 +71,8 @@ fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, 
     requireFits(item.price, rules)
     if (kind == item.kind) return item
     return when (kind) {
-        ItemKind.NEED -> item.copy(kind = ItemKind.NEED, markedAsNeedAt = at)
+        // Only wants hold a priority slot (ADR-0047); the repository moves the others up.
+        ItemKind.NEED -> item.copy(kind = ItemKind.NEED, markedAsNeedAt = at, prioritySlot = null)
 
         ItemKind.WANT -> item.copy(
             kind = ItemKind.WANT,

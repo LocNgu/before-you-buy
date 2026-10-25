@@ -142,7 +142,7 @@ fun ItemEditContent(
         AlertDialog(
             onDismissRequest = actions::dismissRelease,
             title = { Text(stringResource(R.string.item_mark_as_need_title)) },
-            text = { MarkAsNeedBody(allocated) },
+            text = { MarkAsNeedBody(allocated, state.confirmLeavesPriorities) },
             confirmButton = {
                 TextButton(onClick = actions::confirmRelease) { Text(stringResource(R.string.quick_add_save)) }
             },
