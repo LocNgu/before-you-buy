@@ -4,6 +4,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-26
+
 ### Added
 
 - Home answers what you can decide on and what you're considering. "To decide" lists items that are ready and items whose waiting period is over but still need your reasons; tap one to decide. "Considering" shows how many items are on your wishlist and which waiting period ends next ("Road bike · 12 days left"), with a link to the wishlist. History opens from the top bar; back always returns to Home.
@@ -60,7 +62,9 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 - The app language can be chosen per app in Android settings (Android 13 and newer).
 - Signed APKs on GitHub Releases for each version, which install on the phone and update in place with data kept (`docs/releasing.md`).
 
-[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/LocNgu/before-you-buy/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/LocNgu/before-you-buy/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/LocNgu/before-you-buy/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/LocNgu/before-you-buy/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/LocNgu/before-you-buy/compare/v0.1.0...v0.1.1
