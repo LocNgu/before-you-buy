@@ -1,6 +1,7 @@
 package io.github.locngu.beforeyoubuy.feature.wishlist
 
 import app.cash.turbine.test
+import io.github.locngu.beforeyoubuy.core.domain.decision.OpportunityCostLine
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
@@ -175,6 +176,26 @@ class ItemDetailViewModelTest {
 
     private suspend fun setUpFunMoney(starting: Long, wantsNeedFunding: Boolean = true) {
         pool.setUp(Money(30_000, "EUR"), 1, Money(starting, "EUR"), wantsNeedFunding, start, clock.zone)
+    }
+
+    @Test
+    fun `shows the first two lines of what else this money could do`() = runTest(UnconfinedTestDispatcher()) {
+        // 300 € a month, nothing yet; the camera costs 120 €, the 290 € lamp is priority #1 and two small items fit:
+        // four lines, detail shows the first two. Buying the camera pushes the lamp from one month to two.
+        setUpFunMoney(starting = 0)
+        val camera = add(endsInHours = 24)
+        val lampId =
+            items.add(camera.copy(id = ItemId.NEW, name = "Lamp", price = Money(29_000, "EUR"), prioritySlot = 1))
+        items.add(camera.copy(id = ItemId.NEW, name = "Socks", price = Money(1_000, "EUR")))
+        items.add(camera.copy(id = ItemId.NEW, name = "Book", price = Money(2_000, "EUR")))
+        val lamp = items.stored.single { it.id == lampId }
+        val viewModel = viewModelFor(camera)
+        viewModel.uiState.launchIn(backgroundScope)
+
+        assertEquals(
+            listOf(OpportunityCostLine.DelaysPriority(lamp, 1, 1), OpportunityCostLine.ShareOfGoal(lamp, 1, 41)),
+            viewModel.uiState.value.opportunityCost
+        )
     }
 
     /** A want whose wait is over and whose answers are given: only money can hold it back. */

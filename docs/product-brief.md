@@ -235,7 +235,7 @@ Shown on the decision screen and item detail. Computed in the pure domain layer.
 - *Buying this delays your #2 priority by ~3 months* (based on allowance rate)
 - *= your 3 smallest wishlist items combined*
 
-MVP shows the simplest two (months of allowance, other priorities); the rest follows in M2.
+MVP shows the simplest two (months of allowance, other priorities); the rest follows in M2. Order, needs, the delay estimate and the "Don't buy" label: ADR-0048.
 
 ## 8. Notifications
 

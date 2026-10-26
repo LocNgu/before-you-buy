@@ -212,11 +212,12 @@
     <string name="decision_recheck_on">You wanted to look again on %1$s</string>
     <string name="decision_no_reasons">No reasons noted yet.</string>
     <string name="decision_answer_questions">Answer the questions</string>
-    <string name="decision_others_title">What else this money could do</string>
     <string name="decision_question">Do you still want to spend this money on this?</string>
     <string name="decision_buy">Buy</string>
     <!-- %1$s: the item's price, e.g. "1,200 €". Names the alternative concretely (research §1). -->
     <string name="decision_reject">Don’t buy — keep %1$s</string>
+    <!-- The top "What else this money could do" line names a priority: keep 1,200 € for your Camera (#2). -->
+    <string name="decision_reject_for">Don’t buy — keep %1$s for your %2$s (#%3$d)</string>
     <string name="decision_wait">Wait</string>
     <string name="decision_early">Decide early…</string>
 
@@ -366,4 +367,10 @@
     <string name="priority_outcome_now">%1$s is now #%2$d</string>
     <string name="priority_outcome_back">%1$s moved back to the wishlist</string>
     <string name="priority_outcome_stays_on_wishlist">%1$s stays on the wishlist</string>
+
+    <!-- What else this money could do (issue #25, brief §7, ADR-0048). Plain statements: no "afford", no "spend". -->
+    <string name="opportunity_cost_title">What else this money could do</string>
+    <string name="opportunity_cost_share">%1$d%% of the price of your %2$s (#%3$d)</string>
+    <string name="opportunity_cost_share_less">Less than 1%% of the price of your %1$s (#%2$d)</string>
+    <string name="opportunity_cost_months_less">Less than a month of your fun money</string>
 </resources>

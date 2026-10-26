@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -181,8 +182,16 @@ class DecisionViewModel @AssistedInject constructor(
         ).stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val loaded: Flow<Loaded> =
-        combine(items.observeById(id), items.observeReflection(id), items.observeActive(), savings, ::Inputs)
-            .flatMapLatest { (item, reflection, active, savings) ->
+        combine(
+            items.observeById(id),
+            items.observeReflection(id),
+            items.observeActive(),
+            savings,
+            // Once loaded, so "Don't buy — keep …" doesn't change its words a moment after the screen opens.
+            funMoney.filterNotNull(),
+            ::Inputs
+        )
+            .flatMapLatest { (item, reflection, active, savings, funMoney) ->
                 flow {
                     if (item == null || item.status != ItemStatus.ACTIVE) {
                         emit(Loaded.Gone)
@@ -191,7 +200,8 @@ class DecisionViewModel @AssistedInject constructor(
                     // Recomputed when cooling off ends, a wait's date comes or the date changes, like item detail.
                     while (true) {
                         val now = clock.instant()
-                        emit(Loaded.Active(decisionOverviewOf(item, reflection, active, savings, now, clock.zone)))
+                        val overview = decisionOverviewOf(item, reflection, active, savings, funMoney, now, clock.zone)
+                        emit(Loaded.Active(overview))
                         delay(untilWishlistChanges(listOf(item), now, clock.zone).toMillis().coerceAtLeast(1))
                     }
                 }
@@ -370,7 +380,8 @@ class DecisionViewModel @AssistedInject constructor(
         val item: Item?,
         val reflection: Reflection?,
         val active: List<Item>,
-        val savings: Savings
+        val savings: Savings,
+        val funMoney: FunMoney
     )
 
     /** A purchase waiting for "Go below zero?". */

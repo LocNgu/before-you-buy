@@ -4,7 +4,6 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
-import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
@@ -13,6 +12,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
 import io.github.locngu.beforeyoubuy.core.domain.money.parseMoney
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.SavingsProgress
 import io.github.locngu.beforeyoubuy.core.domain.pool.progressOf
@@ -54,9 +54,8 @@ enum class BuyPath(val type: DecisionType) {
  * @property daysLeft as in [io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry.daysLeft].
  * @property wantedForDays calendar days since the item was added (ADR-0018).
  * @property reflected the required reflection answers are there; if not, the screen offers the questions.
- * @property others what else this money could do (basic opportunity cost, brief §7): the user's other active items,
- *   at most [OTHER_ITEMS_SHOWN], priorities first, then the longest wanted.
- * @property moreOthers how many other active items didn't fit into [others].
+ * @property opportunityCost what else this money could do (brief §7, [opportunityCostOf]); its top line may name the
+ *   priority "Don't buy — keep …" keeps the money for ([keepFor]).
  * @property recheckOn the re-check date of an earlier "Wait", while it's still ahead.
  * @property savings what is set aside for a want while fun money is set up (brief §6.5 "amount saved"); null for a
  *   need and without fun money.
@@ -70,34 +69,28 @@ data class DecisionOverview(
     val daysLeft: Int,
     val wantedForDays: Int,
     val reflected: Boolean,
-    val others: List<Item>,
-    val moreOthers: Int,
+    val opportunityCost: List<OpportunityCostLine>,
     val recheckOn: LocalDate?,
     val savings: SavingsProgress?,
     val funding: Funding
 )
 
-/** How many other items "What else this money could do" lists before "and N more". */
-const val OTHER_ITEMS_SHOWN = 3
-
 /**
  * The decision screen for an active [item] at [now] in [zone], with its reflection answers, the user's [active]
- * items (the item itself may be among them) and the [savings] (as in the wishlist). Purchased and rejected items have
- * nothing to decide and throw.
+ * items (the item itself may be among them), the [savings] (as in the wishlist) and the [funMoney]. Purchased and
+ * rejected items have nothing to decide and throw.
  */
 fun decisionOverviewOf(
     item: Item,
     reflection: Reflection?,
     active: List<Item>,
     savings: Savings,
+    funMoney: FunMoney,
     now: Instant,
     zone: ZoneId
 ): DecisionOverview {
     val funding = savings.fundingOf(item)
     val stage = stageOf(item, reflection, funding, now)
-    val others = active
-        .filter { it.status == ItemStatus.ACTIVE && it.id != item.id }
-        .sortedWith(compareBy(nullsLast()) { it: Item -> it.prioritySlot }.thenBy { it.addedAt }.thenBy { it.id.value })
     return DecisionOverview(
         item = item,
         reflection = reflection,
@@ -106,8 +99,7 @@ fun decisionOverviewOf(
         daysLeft = daysLeft(item, now, zone),
         wantedForDays = wantedForDays(item, now, zone),
         reflected = isReflected(item, reflection),
-        others = others.take(OTHER_ITEMS_SHOWN),
-        moreOthers = (others.size - OTHER_ITEMS_SHOWN).coerceAtLeast(0),
+        opportunityCost = opportunityCostOf(item, active, savings, funMoney),
         recheckOn = recheckOnOf(item, stage, now, zone),
         savings = savings.progressOf(item).takeIf { savings.setUp },
         funding = funding
