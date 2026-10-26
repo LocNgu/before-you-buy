@@ -209,10 +209,10 @@
     <string name="decision_recheck_on">Du wolltest es am %1$s wieder ansehen</string>
     <string name="decision_no_reasons">Noch keine Gründe notiert.</string>
     <string name="decision_answer_questions">Fragen beantworten</string>
-    <string name="decision_others_title">Was du sonst mit dem Geld machen könntest</string>
     <string name="decision_question">Willst du dieses Geld immer noch dafür ausgeben?</string>
     <string name="decision_buy">Kaufen</string>
     <string name="decision_reject">Nicht kaufen – %1$s behalten</string>
+    <string name="decision_reject_for">Nicht kaufen – %1$s für %2$s (#%3$d) behalten</string>
     <string name="decision_wait">Warten</string>
     <string name="decision_early">Vorzeitig entscheiden …</string>
 
@@ -344,4 +344,9 @@
     <string name="priority_outcome_now">%1$s ist jetzt auf Platz %2$d</string>
     <string name="priority_outcome_back">%1$s ist zurück auf der Wunschliste</string>
     <string name="priority_outcome_stays_on_wishlist">%1$s bleibt auf der Wunschliste</string>
+
+    <string name="opportunity_cost_title">Was du sonst mit dem Geld machen könntest</string>
+    <string name="opportunity_cost_share">%1$d %% des Preises von %2$s (#%3$d)</string>
+    <string name="opportunity_cost_share_less">Weniger als 1 %% des Preises von %1$s (#%2$d)</string>
+    <string name="opportunity_cost_months_less">Weniger als ein Monat deines Spaßgelds</string>
 </resources>

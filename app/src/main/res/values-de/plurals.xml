@@ -41,11 +41,6 @@
         <item quantity="other">Du willst das seit %d Tagen</item>
     </plurals>
 
-    <plurals name="decision_others_more">
-        <item quantity="one">und %d weiterer Artikel auf deiner Liste</item>
-        <item quantity="other">und %d weitere Artikel auf deiner Liste</item>
-    </plurals>
-
     <plurals name="decision_early_days_left">
         <item quantity="one">Noch %d Tag Wartezeit.</item>
         <item quantity="other">Noch %d Tage Wartezeit.</item>
@@ -92,5 +87,26 @@
     <plurals name="priority_slots_demoted">
         <item quantity="one">%1$d Priorität geht zurück auf die Wunschliste:</item>
         <item quantity="other">%1$d Prioritäten gehen zurück auf die Wunschliste:</item>
+    </plurals>
+
+    <plurals name="opportunity_cost_months">
+        <item quantity="one">%1$d Monat deines Spaßgelds</item>
+        <item quantity="other">%1$d Monate deines Spaßgelds</item>
+    </plurals>
+    <plurals name="opportunity_cost_months_about">
+        <item quantity="one">Etwa %1$d Monat deines Spaßgelds</item>
+        <item quantity="other">Etwa %1$d Monate deines Spaßgelds</item>
+    </plurals>
+    <plurals name="opportunity_cost_delays">
+        <item quantity="one">Wenn du das kaufst, verschiebt sich %2$s (#%3$d) um etwa %1$d Monat</item>
+        <item quantity="other">Wenn du das kaufst, verschiebt sich %2$s (#%3$d) um etwa %1$d Monate</item>
+    </plurals>
+    <plurals name="opportunity_cost_smaller_items">
+        <item quantity="one">Das %1$d günstigste Ding auf deiner Wunschliste kostet %2$s</item>
+        <item quantity="other">Die %1$d günstigsten Dinge auf deiner Wunschliste kosten zusammen %2$s</item>
+    </plurals>
+    <plurals name="opportunity_cost_all_items">
+        <item quantity="one">Das %1$d andere Ding auf deiner Wunschliste kostet %2$s</item>
+        <item quantity="other">Alle %1$d anderen Dinge auf deiner Wunschliste kosten zusammen %2$s</item>
     </plurals>
 </resources>

@@ -57,6 +57,7 @@ import io.github.locngu.beforeyoubuy.core.domain.decision.BuyPath
 import io.github.locngu.beforeyoubuy.core.domain.decision.DecisionForm
 import io.github.locngu.beforeyoubuy.core.domain.decision.DecisionOverview
 import io.github.locngu.beforeyoubuy.core.domain.decision.WAIT_DAYS
+import io.github.locngu.beforeyoubuy.core.domain.decision.keepFor
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.format
@@ -78,7 +79,7 @@ import java.time.LocalDate
 
 /**
  * The decision screen for an item (brief §6.5, issue #18): the item, the user's reasons and what else the money could
- * do, then "Do you still want to spend this money on this?" with Buy and "Don't buy — keep …" as equals (ADR-0012,
+ * do (issue #25), then "Do you still want to spend this money on this?" with Buy and "Don't buy — keep …" as equals (ADR-0012,
  * ADR-0028). [onDecided] closes the screen once a decision is stored; [onReflect] opens the reflection questions.
  */
 @Composable
@@ -201,7 +202,7 @@ private fun Overview(overview: DecisionOverview, actions: DecisionActions, onRef
     Header(overview)
     // The user's own reasons come before anything else (ADR-0013).
     Reasons(overview, onReflect)
-    Others(overview)
+    OpportunityCostSection(overview.opportunityCost)
     Text(
         stringResource(R.string.decision_question),
         modifier = Modifier.padding(horizontal = 16.dp).semantics { heading() },
@@ -209,7 +210,7 @@ private fun Overview(overview: DecisionOverview, actions: DecisionActions, onRef
         color = MaterialTheme.colorScheme.onSurface
     )
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        val keep = stringResource(R.string.decision_reject, overview.item.price.format(currentLocale()))
+        val keep = keepLabel(overview)
         if (overview.buyPath == BuyPath.EARLY) {
             // Not Ready: no Buy. Not buying stays one tap; buying early is the quieter way, behind friction (ADR-0006).
             SecondaryButton(
@@ -236,6 +237,18 @@ private fun Overview(overview: DecisionOverview, actions: DecisionActions, onRef
             ) { Text(stringResource(R.string.decision_wait)) }
         }
     }
+}
+
+/**
+ * "Don't buy — keep 1,200 €", naming the priority the money stays for when the top opportunity cost line is about one
+ * (research §1: describe the alternative concretely; ADR-0048).
+ */
+@Composable
+private fun keepLabel(overview: DecisionOverview): String {
+    val price = overview.item.price.format(currentLocale())
+    val keepFor = overview.opportunityCost.keepFor()
+        ?: return stringResource(R.string.decision_reject, price)
+    return stringResource(R.string.decision_reject_for, price, keepFor.priority.name, keepFor.rank)
 }
 
 /** Name, price, how long it's wanted and where its cooling-off stands. */
@@ -297,39 +310,6 @@ private fun reasonsAgainstText(overview: DecisionOverview): String? = overview.r
     ?.filter { it.isNotBlank() }
     ?.takeIf { it.isNotEmpty() }
     ?.joinToString("\n") { "• ${it.trim()}" }
-
-/** "What else this money could do" (basic opportunity cost, brief §7): the other items and their prices. */
-@Composable
-private fun Others(overview: DecisionOverview) {
-    if (overview.others.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(stringResource(R.string.decision_others_title))
-        overview.others.forEach { other ->
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    other.name,
-                    modifier = Modifier.weight(1f).padding(end = 16.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                MoneyText(
-                    other.price,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-        if (overview.moreOthers > 0) {
-            SecondaryText(
-                pluralStringResource(R.plurals.decision_others_more, overview.moreOthers, overview.moreOthers),
-                Modifier.padding(horizontal = 16.dp)
-            )
-        }
-    }
-}
 
 /**
  * The price paid and the date. Buying early (ADR-0006) first shows the days left and the reasons against again and

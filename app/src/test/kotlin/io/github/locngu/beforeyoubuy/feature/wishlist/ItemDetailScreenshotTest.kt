@@ -6,12 +6,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.takahirom.roborazzi.RoborazziRule
+import io.github.locngu.beforeyoubuy.core.domain.decision.OPPORTUNITY_COST_DETAIL_LINES
+import io.github.locngu.beforeyoubuy.core.domain.decision.opportunityCostOf
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.quickAmounts
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
@@ -22,6 +27,7 @@ import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -32,7 +38,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Item detail while cooling off (no reasons yet, and with some), when Ready, waiting after "Wait", for a need, with a
  * photo (small while cooling off, larger when Ready), with money set aside (while cooling off, saving, all of it) and
- * once gone, plus the "Set aside" / "Take back" sheet, in English and German. Without fun money (the other states),
+ * with the compact "What else this money could do", once gone, plus the "Set aside" / "Take back" sheet, in English and German. Without fun money (the other states),
  * the savings section offers to set it up. Record: `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
@@ -160,6 +166,37 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
             canConfirm = true
         )
     )
+
+    /**
+     * The compact "What else this money could do": with 300 € a month of fun money and a 1,600 € priority, the first two
+     * of its four lines (the delay and the share).
+     */
+    @Test
+    fun opportunityCost() {
+        val ready = camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600))
+        val savings = setAside(65_000)
+        val bike = camera.copy(id = ItemId(2), name = t("Road bike", "Rennrad"), price = Money(160_000, "EUR"))
+        val others = listOf(
+            bike.copy(prioritySlot = 1),
+            bike.copy(id = ItemId(3), name = t("Headphones", "Kopfhörer"), price = Money(24_900, "EUR")),
+            bike.copy(id = ItemId(4), name = t("Lamp", "Lampe"), price = Money(8_900, "EUR"))
+        )
+        val funMoney = FunMoney.SetUp(
+            allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 9, 1)),
+            balance = PoolBalance(pool = Money(65_000, "EUR"), committed = Money(65_000, "EUR")),
+            nextAccrual = LocalDate.of(2026, 11, 1),
+            startingBalance = Money(0, "EUR")
+        )
+        val lines = opportunityCostOf(ready, others, savings, funMoney)
+        assertEquals(4, lines.size)
+        capture(
+            ItemDetailUiState(
+                itemDetailOf(ready, reasons, savings, now, ZoneOffset.UTC),
+                opportunityCost = lines.take(OPPORTUNITY_COST_DETAIL_LINES),
+                canSetAside = false
+            )
+        )
+    }
 
     /** Fun money set up, wants need their price, and [minor] set aside for the camera. */
     private fun setAside(minor: Long) =

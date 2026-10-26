@@ -4,7 +4,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
-import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
+import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.ADDED
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.AFTER_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COMPLETE_REFLECTION
@@ -17,6 +17,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isDueForDecision
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import java.time.Instant
 import java.time.LocalDate
@@ -41,6 +42,9 @@ class DecidingTest {
 
     private fun form(item: Item = ready, on: LocalDate = today) = decisionFormOf(item, on, locale)
 
+    private fun overviewOf(item: Item, reflection: Reflection?, now: Instant) =
+        decisionOverviewOf(item, reflection, emptyList(), Savings.NONE, FunMoney.NotSetUp, now, zone)
+
     private fun other(id: Long, addedAt: Instant = ADDED, slot: Int? = null) =
         item().copy(id = ItemId(id), name = "Item $id", addedAt = addedAt, prioritySlot = slot)
 
@@ -48,19 +52,19 @@ class DecidingTest {
     fun `a ready want is bought plainly, a need as a need, anything else early`() {
         assertEquals(
             BuyPath.BUY,
-            decisionOverviewOf(ready, COMPLETE_REFLECTION, emptyList(), Savings.NONE, AFTER_COOLING, zone).buyPath
+            overviewOf(ready, COMPLETE_REFLECTION, AFTER_COOLING).buyPath
         )
         assertEquals(
             BuyPath.BUY_NEED,
-            decisionOverviewOf(need, null, emptyList(), Savings.NONE, DURING_COOLING, zone).buyPath
+            overviewOf(need, null, DURING_COOLING).buyPath
         )
         assertEquals(
             BuyPath.EARLY,
-            decisionOverviewOf(ready, COMPLETE_REFLECTION, emptyList(), Savings.NONE, DURING_COOLING, zone).buyPath
+            overviewOf(ready, COMPLETE_REFLECTION, DURING_COOLING).buyPath
         )
         assertEquals(
             BuyPath.EARLY,
-            decisionOverviewOf(ready, null, emptyList(), Savings.NONE, AFTER_COOLING, zone).buyPath
+            overviewOf(ready, null, AFTER_COOLING).buyPath
         )
     }
 
@@ -73,7 +77,7 @@ class DecidingTest {
 
     @Test
     fun `the overview has the days left, how long it's wanted and whether it's reflected`() {
-        val overview = decisionOverviewOf(ready, null, emptyList(), Savings.NONE, DURING_COOLING, zone)
+        val overview = overviewOf(ready, null, DURING_COOLING)
 
         assertEquals(Stage.COOLING_OFF, overview.stage)
         assertEquals(16, overview.daysLeft)
@@ -83,34 +87,24 @@ class DecidingTest {
     }
 
     @Test
-    fun `what else the money could do lists the other active items, priorities first, then the longest wanted`() {
-        val newer = other(2, addedAt = ADDED.plusSeconds(60))
-        val older = other(3, addedAt = ADDED.minusSeconds(60))
-        val priority = other(4, addedAt = ADDED.plusSeconds(120), slot = 1)
-        val ended = other(5).copy(status = ItemStatus.PURCHASED)
+    fun `the overview carries what else the money could do`() {
+        val priority = other(4, slot = 1).copy(price = Money(24_000, "EUR"))
 
-        val overview =
-            decisionOverviewOf(
-                ready,
-                COMPLETE_REFLECTION,
-                listOf(ready, newer, ended, older, priority),
-                Savings.NONE,
-                AFTER_COOLING,
-                zone
-            )
+        val overview = decisionOverviewOf(
+            ready,
+            COMPLETE_REFLECTION,
+            listOf(ready, priority),
+            Savings.NONE,
+            FunMoney.NotSetUp,
+            AFTER_COOLING,
+            zone
+        )
 
-        assertEquals(listOf(priority.id, older.id, newer.id), overview.others.map { it.id })
-        assertEquals(0, overview.moreOthers)
-    }
-
-    @Test
-    fun `what else the money could do shows a few and counts the rest`() {
-        val others = (2L..6L).map { other(it, addedAt = ADDED.plusSeconds(it)) }
-
-        val overview = decisionOverviewOf(ready, COMPLETE_REFLECTION, others, Savings.NONE, AFTER_COOLING, zone)
-
-        assertEquals(others.take(OTHER_ITEMS_SHOWN).map { it.id }, overview.others.map { it.id })
-        assertEquals(2, overview.moreOthers)
+        assertEquals(
+            opportunityCostOf(ready, listOf(priority), Savings.NONE, FunMoney.NotSetUp),
+            overview.opportunityCost
+        )
+        assertEquals(priority, overview.opportunityCost.keepFor()?.priority)
     }
 
     @Test
@@ -119,7 +113,7 @@ class DecidingTest {
 
         assertEquals(
             LocalDate.of(2026, 11, 9),
-            decisionOverviewOf(waited, COMPLETE_REFLECTION, emptyList(), Savings.NONE, AFTER_COOLING, zone).recheckOn
+            overviewOf(waited, COMPLETE_REFLECTION, AFTER_COOLING).recheckOn
         )
     }
 

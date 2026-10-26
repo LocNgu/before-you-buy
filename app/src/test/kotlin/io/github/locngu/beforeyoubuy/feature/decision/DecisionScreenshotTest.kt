@@ -16,6 +16,9 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
+import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
+import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
@@ -30,7 +33,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The decision screen for a Ready want (with other items to spend the money on), a want still cooling off (overview
+ * The decision screen for a Ready want (with 0, 2 and 4 "What else this money could do" lines), a want still cooling off (overview
  * and the early path), a need, and the buy, wait and reject steps, in English and German. Record:
  * `./gradlew :app:recordRoborazziDebug`.
  */
@@ -87,8 +90,17 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
         coolingEndsAt = now.minusSeconds(2L * 24 * 3600)
     )
 
+    /** Two lines without fun money: the share of the priority (named by "Don't buy") and the cheapest items. */
     @Test
     fun ready() = capture(camera, reasons, others)
+
+    /** Nothing else on the list and no fun money: no "What else this money could do", a plain "Don't buy". */
+    @Test
+    fun readyNoOpportunityCost() = capture(camera, reasons)
+
+    /** All four lines: 300 € a month of fun money, nothing set aside yet. */
+    @Test
+    fun readyWithFunMoney() = capture(camera, reasons, others, funMoney = funMoney)
 
     @Test
     fun early() = capture(cooling, Reflection(why = reasons.why, reasonsAgainst = reasons.reasonsAgainst), others)
@@ -123,6 +135,13 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
     @Test
     fun savingEarlyBuy() = capture(camera, reasons, step = DecisionStep.BUY, savings = setAside)
 
+    private val funMoney = FunMoney.SetUp(
+        allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 8, 1)),
+        balance = PoolBalance(pool = Money(0, "EUR"), committed = Money(0, "EUR")),
+        nextAccrual = LocalDate.of(2026, 11, 1),
+        startingBalance = Money(0, "EUR")
+    )
+
     private val setAside = Savings(setUp = true, required = true, byItem = mapOf(camera.id to Money(80_000, "EUR")))
 
     private fun capture(
@@ -131,9 +150,10 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
         others: List<Item> = emptyList(),
         step: DecisionStep = DecisionStep.OVERVIEW,
         earlyReason: String = "",
-        savings: Savings = Savings.NONE
+        savings: Savings = Savings.NONE,
+        funMoney: FunMoney = FunMoney.NotSetUp
     ) {
-        val overview = decisionOverviewOf(item, reflection, listOf(item) + others, savings, now, zone)
+        val overview = decisionOverviewOf(item, reflection, listOf(item) + others, savings, funMoney, now, zone)
         val form = decisionFormOf(item, today, locale).copy(earlyReason = earlyReason)
         capture(
             DecisionUiState(

@@ -68,6 +68,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
+import io.github.locngu.beforeyoubuy.core.domain.decision.OpportunityCostLine
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.MAX_IMAGE_SIZE_PX
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
@@ -79,6 +80,7 @@ import io.github.locngu.beforeyoubuy.core.domain.wishlist.ItemDetail
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.canMarkAsNeed
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.webLink
 import io.github.locngu.beforeyoubuy.feature.capture.priceErrorMessage
+import io.github.locngu.beforeyoubuy.feature.decision.OpportunityCostSection
 import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.feature.priorities.priorityMessage
@@ -218,6 +220,7 @@ fun ItemDetailContent(
                 Detail(
                     detail,
                     state.photo,
+                    state.opportunityCost,
                     onReflect,
                     onDecide,
                     onMarkAsNeed,
@@ -274,6 +277,7 @@ private fun LinkMenu(link: String, onCopyLink: (String) -> Unit, onOpenLink: (St
 private fun Detail(
     detail: ItemDetail,
     photo: File?,
+    opportunityCost: List<OpportunityCostLine>,
     onReflect: () -> Unit,
     onDecide: () -> Unit,
     onMarkAsNeed: () -> Unit,
@@ -293,6 +297,8 @@ private fun Detail(
         Reasons(detail, onReflect)
         if (photo != null) Photo(detail, photo)
         Savings(detail, onOpenFunMoney, savingsActions, canSetAside)
+        // The compact version; the decision screen shows every line (brief §7).
+        OpportunityCostSection(opportunityCost)
         Details(detail)
         Decide(detail, onDecide)
         Actions(detail, onMarkAsNeed, priorityActions, onOpenLink)

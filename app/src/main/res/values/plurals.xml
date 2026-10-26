@@ -42,12 +42,6 @@
         <item quantity="other">You’ve wanted this for %d days</item>
     </plurals>
 
-    <!-- "What else this money could do": other items that didn't fit the list. -->
-    <plurals name="decision_others_more">
-        <item quantity="one">and %d more on your list</item>
-        <item quantity="other">and %d more on your list</item>
-    </plurals>
-
     <!-- Early purchase: what's left of the waiting period. -->
     <plurals name="decision_early_days_left">
         <item quantity="one">%d day of the waiting period is left.</item>
@@ -101,5 +95,29 @@
     <plurals name="priority_slots_demoted">
         <item quantity="one">%1$d priority goes back to the wishlist:</item>
         <item quantity="other">%1$d priorities go back to the wishlist:</item>
+    </plurals>
+
+    <!-- What else this money could do (issue #25): %1$d is the count. -->
+    <plurals name="opportunity_cost_months">
+        <item quantity="one">%1$d month of your fun money</item>
+        <item quantity="other">%1$d months of your fun money</item>
+    </plurals>
+    <plurals name="opportunity_cost_months_about">
+        <item quantity="one">About %1$d month of your fun money</item>
+        <item quantity="other">About %1$d months of your fun money</item>
+    </plurals>
+    <!-- %1$d months, %2$s the priority's name, %3$d its rank. -->
+    <plurals name="opportunity_cost_delays">
+        <item quantity="one">Buying this delays your %2$s (#%3$d) by about %1$d month</item>
+        <item quantity="other">Buying this delays your %2$s (#%3$d) by about %1$d months</item>
+    </plurals>
+    <!-- %1$d items (always at least 2), %2$s what they cost together. -->
+    <plurals name="opportunity_cost_smaller_items">
+        <item quantity="one">Your %1$d cheapest wishlist item comes to %2$s</item>
+        <item quantity="other">Your %1$d cheapest wishlist items come to %2$s together</item>
+    </plurals>
+    <plurals name="opportunity_cost_all_items">
+        <item quantity="one">The %1$d other item on your wishlist comes to %2$s</item>
+        <item quantity="other">All %1$d other items on your wishlist come to %2$s together</item>
     </plurals>
 </resources>

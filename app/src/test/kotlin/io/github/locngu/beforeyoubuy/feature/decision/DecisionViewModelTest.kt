@@ -2,6 +2,10 @@ package io.github.locngu.beforeyoubuy.feature.decision
 
 import app.cash.turbine.test
 import io.github.locngu.beforeyoubuy.core.domain.decision.BuyPath
+import io.github.locngu.beforeyoubuy.core.domain.decision.OpportunityCostLine
+import io.github.locngu.beforeyoubuy.core.domain.decision.decisionFormOf
+import io.github.locngu.beforeyoubuy.core.domain.decision.keepFor
+import io.github.locngu.beforeyoubuy.core.domain.decision.rejectDecision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
@@ -94,7 +98,6 @@ class DecisionViewModelTest {
             val state = viewModel.uiState.value
             assertEquals(Stage.READY, state.overview!!.stage)
             assertEquals(BuyPath.BUY, state.overview!!.buyPath)
-            assertEquals(listOf("Bike upgrade"), state.overview!!.others.map { it.name })
             assertEquals("1200", state.form!!.price)
             assertEquals(today, state.form!!.boughtOn)
             assertEquals(today.plusDays(7), state.form!!.waitUntil)
@@ -255,6 +258,45 @@ class DecisionViewModelTest {
     private suspend fun setUpFunMoney(starting: Long) {
         pool.setUp(Money(30_000, "EUR"), 1, Money(starting, "EUR"), true, start, clock.zone)
     }
+
+    @Test
+    fun `what else this money could do comes from the fun money and the priorities`() =
+        runTest(UnconfinedTestDispatcher()) {
+            // 300 € a month, nothing yet; a 1.600 € priority. Buying the 1.200 € camera delays it by 4 months.
+            setUpFunMoney(starting = 0)
+            val camera = add()
+            val bikeId = items.add(
+                Item(
+                    id = ItemId.NEW,
+                    name = "Bike",
+                    price = Money(160_000, "EUR"),
+                    addedAt = start.minus(Duration.ofDays(10)),
+                    coolingEndsAt = start.plus(Duration.ofDays(20)),
+                    prioritySlot = 1
+                )
+            )
+            val bike = items.stored.single { it.id == bikeId }
+            val viewModel = viewModelFor(camera)
+
+            val lines = viewModel.uiState.value.overview!!.opportunityCost
+            assertEquals(
+                listOf(
+                    OpportunityCostLine.DelaysPriority(bike, 1, 4),
+                    OpportunityCostLine.ShareOfGoal(bike, 1, 75),
+                    OpportunityCostLine.MonthsOfAllowance(4, exact = true)
+                ),
+                lines
+            )
+            assertEquals(bike, lines.keepFor()?.priority)
+
+            // Rejecting the bike leaves nothing to compare with but the fun money.
+            val reject = rejectDecision(decisionFormOf(bike, today, Locale.GERMANY), start)
+            items.recordDecision(bike, reject, bike.copy(status = ItemStatus.REJECTED, prioritySlot = null))
+            assertEquals(
+                listOf(OpportunityCostLine.MonthsOfAllowance(4, exact = true)),
+                viewModel.uiState.value.overview!!.opportunityCost
+            )
+        }
 
     @Test
     fun `once fun money is set up, a want is Ready only when its price is set aside`() =
