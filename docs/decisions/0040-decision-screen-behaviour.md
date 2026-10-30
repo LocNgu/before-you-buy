@@ -1,6 +1,6 @@
 # ADR-0040: Decision screen: what's offered per stage, waiting items in their own group, purchase dates, reject note
 
-**Status**: accepted; amended by ADR-0043 (Home's "To decide" also lists waits ended without answers) and ADR-0048 ("What else this money could do" is the full opportunity cost)
+**Status**: accepted; amended by ADR-0043 (Home's "To decide" also lists waits ended without answers), ADR-0048 ("What else this money could do" is the full opportunity cost) and ADR-0049 (a parked want says it isn't a priority and how much of its wait is done; "Looking again later" is a stage of a priority, not a group)
 **Type**: product
 **Date**: 2026-10-21
 

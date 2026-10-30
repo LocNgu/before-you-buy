@@ -1,6 +1,6 @@
 # ADR-0007: Waiting and saving in parallel; Ready = cooled + reflected + funded; stage derived
 
-**Status**: accepted
+**Status**: superseded by ADR-0049
 **Type**: product
 **Date**: 2026-10-04
 

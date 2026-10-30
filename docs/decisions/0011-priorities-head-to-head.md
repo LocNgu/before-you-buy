@@ -1,6 +1,6 @@
 # ADR-0011: 1–5 priority slots (default 3); new items win a slot head-to-head
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0049 (a slot also starts the wait and makes Ready possible)
 **Type**: product
 **Date**: 2026-10-04
 

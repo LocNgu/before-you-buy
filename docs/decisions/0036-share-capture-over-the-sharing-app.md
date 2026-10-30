@@ -1,6 +1,6 @@
 # ADR-0036: Share capture opens quick add over the sharing app; name and link read offline
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0049 (the toast says "Added to your wishlist." and no longer matches the snackbar)
 **Type**: product
 **Date**: 2026-10-18
 
