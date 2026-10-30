@@ -56,10 +56,11 @@ Anything the user is considering buying.
 | Notes | no | |
 | Kind | yes | `WANT` (default) or `NEED` (see 4.4) |
 | Date added | auto | |
+| Time waited | auto | Calendar days the want has spent in a priority slot (see 4.2); starts at 0 |
 | Target purchase date | no | Informational only |
 | Reflection answers | later | See 4.3 |
 | Allocated savings | derived | Sum of allocations |
-| Priority slot | no | 1..N if the item is an active priority |
+| Priority slot | no | 1..N if the item is an active priority. A want without one is *parked* (shown as "Wishlist", see 4.7) |
 
 ### 4.2 Cooling-off period
 
@@ -74,9 +75,11 @@ Every `WANT` gets a waiting period based on its price. Defaults (user-configurab
 
 Rules:
 
-- The cooling-off end is fixed when the item is added: `coolingEndsAt = addedAt + period(price)`.
-- **Editing the price can only extend, never shorten** the period: `coolingEndsAt = max(current, addedAt + period(newPrice))`. (Prevents gaming by entering a low price first.)
-- Changing the tier settings also moves the end of items that are still cooling off, longer or shorter: `coolingEndsAt = addedAt + period(price)` under the new tiers (ADR-0031). Items whose wait has ended keep it.
+- **The waiting period runs only while the want holds a priority slot** (4.7, ADR-0049). A new want is always parked on the wishlist, with no timer running. Its wait starts when it gets a slot: directly while one is free, otherwise by winning the head-to-head.
+- The app keeps how long the want has waited, in calendar days. **Losing a slot pauses the wait, it never resets it** (a lost head-to-head, "Remove from priorities", fewer slots): the time already waited is kept, and the wait continues the next time the item gets a slot. The wait is complete once the time waited reaches `period(price)`. A priority shows its end date; a parked want has none.
+- **Editing the price can only extend, never shorten** the period: `period = max(current, period(newPrice))`. (Prevents gaming by entering a low price first.)
+- Changing the tier settings changes the period of every want whose wait isn't complete, longer or shorter, to `period(price)` under the new tiers; the time already waited stays (ADR-0031, ADR-0049). A complete wait stays complete.
+- A need has no waiting period (4.4).
 - *"Wanting something immediately does not make it immediately purchasable."*
 
 ### 4.3 Reflection
@@ -123,9 +126,10 @@ Example: *Fun money for wants 300 € · Set aside for wants 200 € · Not yet 
 
 ### 4.6 Savings per item (earmarks)
 
-Any active want can receive allocations from the unallocated pool ("put 100 € toward the camera"). Saving can start **on day 1, in parallel with cooling off.** Needs never receive any (ADR-0044).
+Any **priority** can receive allocations from the unallocated pool ("put 100 € toward the camera"). Saving can start **as soon as the want holds a slot, in parallel with its waiting period.** A parked want can be reflected on but not saved for, so fun money goes to items the user chose (ADR-0049). Needs never receive any (ADR-0044).
 
 - Allocation is limited by `unallocated`; more than the price is allowed (a holiday with a minimum budget), buying returns what isn't spent. "Take back" returns money from an item.
+- Money already set aside on an item that loses its slot stays with it; nothing is taken back silently, and "Take back" still works. No new money can be set aside until it holds a slot again.
 - Reject → allocations return to unallocated.
 - Buy → allocations are consumed; if the actual price differs, the difference is taken from / returned to unallocated. Going below zero asks first; the purchase is the one ledger entry (ADR-0046).
 - A want turned into a need gives its allocations back (the user confirms).
@@ -134,53 +138,66 @@ Any active want can receive allocations from the unallocated pool ("put 100 € 
 
 ### 4.7 Priorities
 
-- **N active priority slots**, configurable 1–5, **default 3**.
-- If a free slot exists, an item can simply be promoted.
-- If all slots are full, the new item must **earn its place via head-to-head comparison**: the app shows the new item next to each current priority (price, reasons, usage, saved amount) and asks *"Which would you rather have?"*. Losing items move back to the general wishlist; ranks are updated by the outcomes.
+- **N active priority slots**, configurable 1–5, **default 3**, the same for any price.
+- The wishlist itself has no limit, so capture stays fast. **Only priorities wait, can be set aside for and can be Ready** (ADR-0049). A new want is always added to the wishlist and has to be made a priority first.
+- If a free slot exists, a want can simply be promoted. That starts its wait.
+- If all slots are full, the want must **earn its place via head-to-head comparison**: the app shows it next to each current priority (price, reasons, usage, saved amount) and asks *"Which would you rather have?"*. Losing items move back to the wishlist and their wait pauses; ranks are updated by the outcomes.
+- Ranks exist only for priorities; wishlist items have none.
 - Rationale: joint (side-by-side) evaluation leads to more considered choices than evaluating each item alone (see `research.md`).
 
 ## 5. Lifecycle
 
-The original linear idea (*Idea → Cooling Off → Considered → Saving → Ready → Purchased/Rejected*) was revised: **waiting and saving run in parallel.**
+The original linear idea (*Idea → Cooling Off → Considered → Saving → Ready → Purchased/Rejected*) was revised: **waiting and saving run in parallel, for priorities.** Only a want that holds a priority slot waits, so only priorities can be Ready (ADR-0049).
 
-An active item has three independent conditions:
+An active item has four conditions:
 
-- `cooledOff` — now ≥ `coolingEndsAt` (always true for `NEED`)
+- `parked` — a `WANT` without a priority slot (never true for `NEED`)
+- `cooledOff` — time waited ≥ `period(price)` (always true for `NEED`)
 - `reflected` — required reflection answers present (always true for `NEED`)
 - `funded` — allocations ≥ price, in whole units as shown (always true for `NEED`, ADR-0044, and while funding isn't required, ADR-0046)
 
-The **displayed stage** is derived, never stored:
+The **displayed stage** is derived, never stored. `parked` is checked first and wins over every other stage:
 
 | Stage | Condition |
 |---|---|
-| Cooling off | not cooledOff |
-| Needs reflection | cooledOff, not reflected |
-| Saving | cooledOff, reflected, not funded |
-| **Ready** | cooledOff, reflected, funded |
+| Parked (shown as "Wishlist") | parked |
+| Cooling off | holds a slot, not cooledOff |
+| Needs reflection | holds a slot, cooledOff, not reflected |
+| Saving | holds a slot, cooledOff, reflected, not funded |
+| **Ready** | holds a slot, cooledOff, reflected, funded |
+
+A parked want is never Ready, however long it has waited. A `NEED` is Ready at once.
 
 Terminal statuses (stored): `PURCHASED`, `REJECTED` (= "Decided against").
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Active: quick add / share
-    state Active {
+    [*] --> Parked: quick add / share (a want)
+    [*] --> Need: quick add (a need)
+    Parked --> Priority: Make it a priority (free slot, or wins the head-to-head)
+    Priority --> Parked: loses a head-to-head, removed, fewer slots (the wait pauses)
+    state Priority {
         [*] --> CoolingOff
-        CoolingOff --> NeedsReflection: timer done
+        CoolingOff --> NeedsReflection: waited the full period
         NeedsReflection --> Saving: required answers given
         Saving --> Ready: funded
     }
-    Active --> Purchased: Buy / Buy anyway (early, logged) / Need
-    Active --> Rejected: Reject / Let it go
+    Priority --> Purchased: Buy (Ready) / Decide early (logged)
+    Parked --> Purchased: Decide early (logged)
+    Need --> Purchased: Buy
+    Priority --> Rejected: Reject / Let it go
+    Parked --> Rejected: Reject / Let it go
+    Need --> Rejected: Reject / Let it go
     Purchased --> [*]
     Rejected --> [*]
 ```
 
-Allocations and reflection answers can happen at any time while an item is active, so an item may go straight from *Cooling off* to *Ready* the moment its timer ends. *Wait* keeps the item active with a re-check date.
+Reflection answers can be given at any time, parked or not; money can be set aside while the want holds a slot. So a priority may go straight from *Cooling off* to *Ready* the moment its timer ends, and a want that has already waited its full period is Ready the moment it is promoted and its answers (and money, where required) are in. *Wait* keeps the item active with a re-check date.
 
 Decisions:
 
-- **Buy** — available when Ready (or for `NEED`). Records actual price and date.
-- **Buy anyway (early)** — available any time but behind deliberate friction: type a reason, see the opportunity cost, confirm. Logged as `earlyPurchase = true` and visible in history/stats. (Soft lock, chosen 2026-10-04.)
+- **Buy** — available when Ready (a priority) or for `NEED`. Records actual price and date.
+- **Buy anyway (early)** — available any time but behind deliberate friction: type a reason, see the opportunity cost, confirm. Logged as `earlyPurchase = true` and visible in history/stats. (Soft lock, chosen 2026-10-04.) It is the only way to buy a parked want: instead of the days left it says that the item isn't one of the priorities and how much of its waiting period is done (not started / N of M days / done).
 - **Wait** — sets a re-check date (e.g. 7 / 30 days); item stays active.
 - **Reject / Let it go** — moves to "Decided against". Never deleted (user may delete explicitly).
 
@@ -189,8 +206,8 @@ Decisions:
 ### 6.1 Home / dashboard — answers four questions
 
 1. **What am I considering?** — priorities + wishlist count
-2. **What can I decide on?** — Ready items (and items whose cooling-off just ended)
-3. **What am I saving for?** — priority goals with progress (until priorities exist: up to 3 wants by progress, ADR-0046)
+2. **What can I decide on?** — Ready priorities and needs (and priorities whose cooling-off just ended); never a parked want (ADR-0049)
+3. **What am I saving for?** — priority goals with progress; money is set aside only for priorities (ADR-0049)
 4. **How much discretionary money do I have?** — available / committed / unallocated
 
 The "decided against" total is **not** shown next to Ready items (moral licensing — see `research.md`).
@@ -199,9 +216,11 @@ The "decided against" total is **not** shown next to Ready items (moral licensin
 
 Bottom sheet: name + price (+ optional link, kind = want/need). Saving takes ≤ 10 seconds. Opens prefilled from the share sheet.
 
+For a want, a quiet line under the price shows its tier as the price is typed: *"Waiting period: 90 days, once it's a priority"*. A need keeps *"Needs skip the waiting period"*. A new want is always added to the wishlist: the snackbar says *"Added to your wishlist."* with a **"Make it a priority"** action (a free slot at once, otherwise the head-to-head). After share capture the toast says the same without an action (ADR-0049).
+
 ### 6.3 Wishlist & item detail
 
-List grouped by stage. Item detail leads with **the user's own reasons and the countdown**, not the product photo (image small/collapsed while cooling off). There is **no prominent "open in shop" button** while cooling off — browsing during a delay defeats it (research). The link is still accessible (e.g. overflow menu / copy link).
+Three sections: **Priorities** (by rank, each with its stage: Cooling off / Needs reflection / Saving / Ready / Looking again later), **Needs** (if any; Ready at once) and **Wishlist** (every parked want: no stage, no rank, nothing counting down). A parked want's detail and decision screen say *"Not one of your priorities"* and offer **"Make it a priority"** (ADR-0049). Item detail leads with **the user's own reasons and the countdown**, not the product photo (image small/collapsed while cooling off). There is **no prominent "open in shop" button** while cooling off — browsing during a delay defeats it (research). The link is still accessible (e.g. overflow menu / copy link).
 
 ### 6.4 Reflection
 
@@ -209,7 +228,7 @@ Short, one question per step, skippable except required ones. "Reasons against" 
 
 ### 6.5 Decision screen
 
-Shows: price · how long they've wanted it · cooling-off completed (or how much is left, for early) · amount saved · original reasons (for & against) · expected usage · what it replaces · other priorities · effect on the discretionary pool · **opportunity cost**.
+Shows: price · how long they've wanted it · cooling-off completed (or how much is left, for early; for a parked want, that it isn't a priority and how much of its wait is done) · amount saved · original reasons (for & against) · expected usage · what it replaces · other priorities · effect on the discretionary pool · **opportunity cost**.
 
 Then asks: **"Do you still want to spend this money on this?"** — Buy / Wait / Reject, with Reject visually equal to Buy.
 
@@ -239,7 +258,7 @@ MVP shows the simplest two (months of allowance, other priorities); the rest fol
 
 ## 8. Notifications
 
-Encourage reflection, never consumption. A daily background check (WorkManager), at most one digest-style notification per day.
+Encourage reflection, never consumption. A daily background check (WorkManager), at most one digest-style notification per day. Only priorities are notified about: parked wants are left alone on purpose (ADR-0049).
 
 Allowed:
 

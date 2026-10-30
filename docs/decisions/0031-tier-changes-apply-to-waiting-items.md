@@ -1,6 +1,6 @@
 # ADR-0031: Changed cooling-off tiers also apply to items still cooling off
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0049 (tier changes are measured against the time already waited; a need turned into a want keeps the time it had waited)
 **Type**: product
 **Date**: 2026-10-13
 

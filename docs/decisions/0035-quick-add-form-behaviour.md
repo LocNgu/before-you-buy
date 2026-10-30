@@ -1,6 +1,6 @@
 # ADR-0035: Quick add: errors after typing, Done saves, closing discards
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0049 (the snackbar after saving a want says "Added to your wishlist." and offers "Make it a priority"; the price field shows the waiting period)
 **Type**: product
 **Date**: 2026-10-17
 

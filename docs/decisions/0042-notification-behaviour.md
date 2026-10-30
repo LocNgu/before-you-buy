@@ -1,6 +1,6 @@
 # ADR-0042: Notifications: waiting periods before nudges, per-item log in Room, daily check around 10:00, permission asked once after the first item
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0049 (both kinds only concern priorities; parked wants are never notified about)
 **Type**: product
 **Date**: 2026-10-21
 
