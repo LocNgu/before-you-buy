@@ -10,8 +10,10 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.ADDED
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.AFTER_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COOLING_ENDS
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COOLING_OFF_DAYS
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.parked
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import java.time.Instant
@@ -155,34 +157,47 @@ class ItemEditTest {
     }
 
     @Test
-    fun `a want marked as need keeps its end and records when`() {
+    fun `a priority marked as need leaves the priorities, keeps what it waited and records when`() {
         val edited = edit(editFormOf(camera, german).copy(kind = ItemKind.NEED))
 
         assertEquals(ItemKind.NEED, edited.kind)
         assertEquals(DURING_COOLING, edited.markedAsNeedAt)
-        assertEquals(COOLING_ENDS, edited.coolingEndsAt)
+        assertNull(edited.prioritySlot)
+        assertNull(edited.coolingEndsAt)
+        assertEquals(14, edited.waitedDays)
         assertEquals(WaitChange.None, waitChange(camera, edited, DURING_COOLING))
     }
 
     @Test
-    fun `a need that becomes a want waits like a new want at the new price`() {
-        val need = camera.copy(kind = ItemKind.NEED, coolingEndsAt = ADDED)
+    fun `a need that becomes a want is parked with the days of its new price`() {
+        val need = item(ItemKind.NEED)
 
         val edited = edit(editFormOf(need, german).copy(kind = ItemKind.WANT, price = "600"), need)
 
-        val ends = Instant.parse("2026-11-30T10:00:00Z")
         assertEquals(ItemKind.WANT, edited.kind)
-        assertEquals(ends, edited.coolingEndsAt)
-        assertEquals(WaitChange.Starts(ends), waitChange(need, edited, DURING_COOLING))
+        assertEquals(60, edited.coolingOffDays)
+        assertNull(edited.prioritySlot)
+        assertNull(edited.coolingEndsAt)
+        assertEquals(WaitChange.None, waitChange(need, edited, DURING_COOLING))
+    }
+
+    @Test
+    fun `a parked want's price change extends its days but shows no end date`() {
+        val edited = edit(editFormOf(parked(), german).copy(price = "600"), parked())
+
+        assertEquals(60, edited.coolingOffDays)
+        assertNull(edited.coolingEndsAt)
+        assertEquals(WaitChange.None, waitChange(parked(), edited, DURING_COOLING))
     }
 
     @Test
     fun `a need's price change doesn't start a wait`() {
-        val need = camera.copy(kind = ItemKind.NEED, coolingEndsAt = ADDED)
+        val need = item(ItemKind.NEED)
 
         val edited = edit(editFormOf(need, german).copy(price = "2000"), need)
 
-        assertEquals(ADDED, edited.coolingEndsAt)
+        assertNull(edited.coolingEndsAt)
+        assertEquals(COOLING_OFF_DAYS, edited.coolingOffDays)
         assertEquals(WaitChange.None, waitChange(need, edited, DURING_COOLING))
     }
 

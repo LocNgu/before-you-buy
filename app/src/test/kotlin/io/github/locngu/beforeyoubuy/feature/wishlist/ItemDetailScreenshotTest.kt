@@ -20,6 +20,7 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.quickAmounts
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
@@ -63,9 +64,9 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
         name = t("Mirrorless camera", "Systemkamera"),
         price = Money(119_900, "EUR"),
         addedAt = now.minusSeconds(40L * 24 * 3600),
-        coolingEndsAt = now.plusSeconds(23L * 24 * 3600),
+        coolingOffDays = 30,
         link = "https://shop.example/camera"
-    )
+    ).asPriority(now.plusSeconds(23L * 24 * 3600))
 
     private val reasons = Reflection(
         why = t("Better photos on hikes than with my phone", "Bessere Fotos beim Wandern als mit dem Handy"),

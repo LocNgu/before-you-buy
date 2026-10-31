@@ -3,9 +3,11 @@ package io.github.locngu.beforeyoubuy.core.data.settings
 import androidx.room.withTransaction
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
 import io.github.locngu.beforeyoubuy.core.data.db.PolicyEntity
+import io.github.locngu.beforeyoubuy.core.data.item.setSlotsAndWaits
+import io.github.locngu.beforeyoubuy.core.data.item.storedCoolingEnd
 import io.github.locngu.beforeyoubuy.core.data.item.toDomain
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
-import io.github.locngu.beforeyoubuy.core.domain.coolingoff.coolingEndAfterRulesChange
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitAfterRulesChange
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
@@ -16,6 +18,7 @@ import io.github.locngu.beforeyoubuy.core.domain.priorities.clampPrioritySlots
 import io.github.locngu.beforeyoubuy.core.domain.priorities.demotedBySlots
 import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
 import io.github.locngu.beforeyoubuy.core.domain.priorities.slotChanges
+import io.github.locngu.beforeyoubuy.core.domain.priorities.withSlots
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.isUsableCurrency
@@ -45,8 +48,16 @@ internal class RoomPolicyRepository(private val database: BeforeYouBuyDatabase) 
             policies.update(row.copy(coolingOffRules = CoolingOffRulesJson.encode(rules)))
             items.getByStatus(ItemStatus.ACTIVE.name).forEach { entity ->
                 val item = entity.toDomain()
-                val end = coolingEndAfterRulesChange(item, rules, changedAt, zone)
-                if (end != item.coolingEndsAt) items.setCoolingEnd(entity.id, end.toEpochMilli())
+                val changed = waitAfterRulesChange(item, rules, changedAt, zone)
+                if (changed != item) {
+                    items.setWait(
+                        entity.id,
+                        changed.coolingOffDays,
+                        changed.waitedDays,
+                        changed.waitingSince?.toEpochMilli(),
+                        changed.storedCoolingEnd()
+                    )
+                }
             }
         }
 
@@ -82,18 +93,16 @@ internal class RoomPolicyRepository(private val database: BeforeYouBuyDatabase) 
         }
     }
 
-    override suspend fun changePrioritySlots(slots: Int, expected: List<ItemId>): Boolean {
+    override suspend fun changePrioritySlots(slots: Int, expected: List<ItemId>, at: Instant, zone: ZoneId): Boolean {
         require(slots in MIN_PRIORITY_SLOTS..MAX_PRIORITY_SLOTS) { "Priority slots are 1–5, was $slots" }
         return database.withTransaction {
             val active = items.getByStatus(ItemStatus.ACTIVE.name).map { it.toDomain() }
             val priorities = prioritiesOf(active).map { it.id }
             if (priorities != expected) return@withTransaction false
             policies.update(requireRow().copy(prioritySlots = slots))
-            // The lowest-ranked priorities that no longer fit go back to the wishlist (ADR-0047).
+            // The lowest-ranked priorities that no longer fit go back to the wishlist (ADR-0047); their wait pauses.
             val demoted = demotedBySlots(active, slots).map { it.id }
-            slotChanges(active, priorities - demoted.toSet()).forEach { (id, slot) ->
-                items.setPrioritySlot(id.value, slot)
-            }
+            items.setSlotsAndWaits(withSlots(active, slotChanges(active, priorities - demoted.toSet()), at, zone))
             true
         }
     }

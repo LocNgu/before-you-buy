@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.locngu.beforeyoubuy.core.domain.capture.CaptureForm
 import io.github.locngu.beforeyoubuy.core.domain.capture.capturedItem
+import io.github.locngu.beforeyoubuy.core.domain.capture.capturedWaitDays
 import io.github.locngu.beforeyoubuy.core.domain.capture.checkCapture
-import io.github.locngu.beforeyoubuy.core.domain.capture.coolingOffDays
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
@@ -151,7 +151,7 @@ class QuickAddViewModel @Inject constructor(
         if (!current.visible || current.saving || !checkCapture(current.form, policy.currency, locale).isValid) return
         editor.value = current.copy(saving = true)
         viewModelScope.launch {
-            val item = capturedItem(current.form, policy, locale, clock.instant(), clock.zone)
+            val item = capturedItem(current.form, policy, locale, clock.instant())
             try {
                 items.add(item)
                 // The form stays until the next open, so the sheet doesn't empty while it slides away.
@@ -160,7 +160,7 @@ class QuickAddViewModel @Inject constructor(
                 // Also if storing fails, so the form never stays locked.
                 editor.update { it.copy(saving = false) }
             }
-            savedEvents.send(QuickAddSaved(item.kind, coolingOffDays(item, clock.zone)))
+            savedEvents.send(QuickAddSaved(item.kind, capturedWaitDays(item)))
         }
     }
 

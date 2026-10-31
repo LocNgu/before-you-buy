@@ -8,6 +8,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import java.time.Instant
 import java.time.Period
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 
 /**
  * How long a want at [price] cools off: the period of the last tier whose threshold the price reaches. [price]
@@ -19,51 +20,77 @@ fun periodFor(price: Money, rules: CoolingOffRules): Period {
 }
 
 /**
- * When a new item's cooling-off ends (brief §4.2): [addedAt] plus the period for [price], counted in calendar days
- * in [zone] so a daylight-saving change doesn't move the end by an hour (ADR-0018). A `NEED` doesn't wait
- * (ADR-0008), so it ends at [addedAt]. Like [periodFor], throws for a price that doesn't fit the rules, whatever
- * the kind.
+ * How many calendar days a want at [price] waits (brief §4.2): the days of [periodFor]. Periods are whole days.
+ * Like [periodFor], throws for a price that doesn't fit the rules.
  */
-fun initialCoolingEnd(addedAt: Instant, price: Money, kind: ItemKind, rules: CoolingOffRules, zone: ZoneId): Instant {
-    val period = periodFor(price, rules)
-    return when (kind) {
-        ItemKind.NEED -> addedAt
-        ItemKind.WANT -> addedAt.atZone(zone).plus(period).toInstant()
-    }
+fun coolingOffDaysFor(price: Money, rules: CoolingOffRules): Int = periodFor(price, rules).days
+
+/** Whether the item's wait runs: it got a priority slot and hasn't lost it (ADR-0049). */
+val Item.waitRuns: Boolean get() = waitingSince != null
+
+/**
+ * Whole calendar days the item has waited at [now] in [zone] (ADR-0018): the earlier stretches plus the running one.
+ * A part of a day doesn't count, so this never credits time that hasn't passed (ADR-0050).
+ */
+fun daysWaited(item: Item, now: Instant, zone: ZoneId): Int =
+    item.waitedDays + (item.waitingSince?.let { wholeDaysBetween(it, now, zone) } ?: 0)
+
+/**
+ * The item with its wait running from [at] (ADR-0049): it got a priority slot. It ends once the days still to wait
+ * have passed, in calendar days in [zone]; a want that has already waited its full period is complete at once. Only
+ * active wants wait: anything else, or a wait already running, is returned unchanged.
+ */
+fun startWait(item: Item, at: Instant, zone: ZoneId): Item {
+    if (item.status != ItemStatus.ACTIVE || item.kind != ItemKind.WANT || item.waitRuns) return item
+    return item.copy(waitingSince = at, coolingEndsAt = runningEnd(at, item.coolingOffDays, item.waitedDays, zone))
 }
 
 /**
- * The item's cooling-off end after its price changes to [newPrice] (brief §4.2, ADR-0005): the later of the current
- * end and the end a new item at [newPrice] would have had on the same [Item.addedAt]. A higher price can extend
- * the wait; a lower one never shortens it. A `NEED` keeps its end. [newPrice] must be in the item's currency.
+ * The item with its wait paused at [at] (ADR-0049): it lost its slot. The whole calendar days of the running stretch
+ * are added to [Item.waitedDays]; the wait never resets. A part of a day is dropped ([daysWaited]). An item whose
+ * wait doesn't run is returned unchanged.
  */
-fun coolingEndAfterPriceEdit(item: Item, newPrice: Money, rules: CoolingOffRules, zone: ZoneId): Instant {
+fun pauseWait(item: Item, at: Instant, zone: ZoneId): Item {
+    if (!item.waitRuns) return item
+    return item.copy(waitedDays = daysWaited(item, at, zone), waitingSince = null, coolingEndsAt = null)
+}
+
+/**
+ * The item's wait after its price changes to [newPrice] (brief §4.2, ADR-0005): the days to wait become the larger of
+ * the current ones and those for [newPrice], so a higher price can extend the wait and a lower one never shortens it.
+ * A running wait ends later accordingly. A `NEED` keeps its wait. Only the wait changes; the caller sets the price.
+ * [newPrice] must be in the item's currency.
+ */
+fun waitAfterPriceEdit(item: Item, newPrice: Money, rules: CoolingOffRules, zone: ZoneId): Item {
     require(newPrice.currency == item.price.currency) {
         "New price in ${newPrice.currency} doesn't match the item's currency ${item.price.currency}"
     }
-    return maxOf(item.coolingEndsAt, initialCoolingEnd(item.addedAt, newPrice, item.kind, rules, zone))
+    val days = coolingOffDaysFor(newPrice, rules)
+    if (item.kind == ItemKind.NEED || days <= item.coolingOffDays) return item
+    return withCoolingOffDays(item, days, zone)
 }
 
 /**
- * The item's cooling-off end after the user changes the tiers to [rules] at [now] (ADR-0031): an active want that
- * is still cooling off gets the end a new item at its current price would have had on the same [Item.addedAt],
- * longer or shorter than before. If that end has already passed, the item has cooled off. Items whose wait has
- * already ended, needs, and purchased or rejected items keep their end, so lengthening the tiers never puts a
- * Ready item back into cooling off. Apply it to every item when the tiers change.
+ * The item's wait after the user changes the tiers to [rules] at [now] (ADR-0031, ADR-0049): an active want whose
+ * wait isn't complete gets the days its current price calls for under [rules], longer or shorter than before,
+ * measured against the time it has already waited. If that is already enough, the wait is complete. Complete waits,
+ * needs and purchased or rejected items keep theirs, so lengthening the tiers never puts a Ready item back into
+ * cooling off. Apply it to every item when the tiers change.
  */
-fun coolingEndAfterRulesChange(item: Item, rules: CoolingOffRules, now: Instant, zone: ZoneId): Instant {
+fun waitAfterRulesChange(item: Item, rules: CoolingOffRules, now: Instant, zone: ZoneId): Item {
     requireFits(item.price, rules)
-    if (item.status != ItemStatus.ACTIVE || isCooledOff(item, now)) return item.coolingEndsAt
-    return initialCoolingEnd(item.addedAt, item.price, item.kind, rules, zone)
+    if (item.status != ItemStatus.ACTIVE || isCooledOff(item, now)) return item
+    return withCoolingOffDays(item, coolingOffDaysFor(item.price, rules), zone)
 }
 
 /**
  * The item after the user changes its kind to [kind] at [at]. Only active items change kind; anything else throws.
  *
- * - Want → `NEED`: allowed any time (ADR-0008), recorded in [Item.markedAsNeedAt] for history. The cooling-off end
- *   is kept, in case the item turns back into a want. It leaves the priorities: only wants hold a slot (ADR-0047).
- * - `NEED` → want: cools off from [Item.addedAt] like a new want at its current price under the current rules,
- *   replacing any earlier end, so a want that was a need before gets the wait its price calls for now.
+ * - Want → `NEED`: allowed any time (ADR-0008), recorded in [Item.markedAsNeedAt] for history. It leaves the
+ *   priorities, since only wants hold a slot (ADR-0047), so its wait pauses at [at] in [zone]; what it waited is kept
+ *   in case it turns back into a want.
+ * - `NEED` → want: parked on the wishlist without a slot, with the days its current price calls for under the
+ *   current rules (ADR-0031) and the time it had waited as a want (none if it was captured as a need, ADR-0049).
  *   Clears [Item.markedAsNeedAt].
  */
 fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, zone: ZoneId): Item {
@@ -72,15 +99,33 @@ fun changeKind(item: Item, kind: ItemKind, at: Instant, rules: CoolingOffRules, 
     if (kind == item.kind) return item
     return when (kind) {
         // Only wants hold a priority slot (ADR-0047); the repository moves the others up.
-        ItemKind.NEED -> item.copy(kind = ItemKind.NEED, markedAsNeedAt = at, prioritySlot = null)
+        ItemKind.NEED -> pauseWait(item, at, zone).copy(kind = ItemKind.NEED, markedAsNeedAt = at, prioritySlot = null)
 
-        ItemKind.WANT -> item.copy(
+        ItemKind.WANT -> pauseWait(item, at, zone).copy(
             kind = ItemKind.WANT,
             markedAsNeedAt = null,
-            coolingEndsAt = initialCoolingEnd(item.addedAt, item.price, ItemKind.WANT, rules, zone)
+            coolingOffDays = coolingOffDaysFor(item.price, rules)
         )
     }
 }
+
+/** [item] waiting [days] in all; a running wait gets the end that matches, counted from its start. */
+private fun withCoolingOffDays(item: Item, days: Int, zone: ZoneId): Item {
+    val since = item.waitingSince ?: return item.copy(coolingOffDays = days)
+    return item.copy(coolingOffDays = days, coolingEndsAt = runningEnd(since, days, item.waitedDays, zone))
+}
+
+/** When a wait running from [since] is complete: the days still to wait later, in calendar days in [zone]. */
+private fun runningEnd(since: Instant, days: Int, waited: Int, zone: ZoneId): Instant =
+    if (waited >= days) since else since.atZone(zone).plusDays((days - waited).toLong()).toInstant()
+
+/**
+ * Whole calendar days from [from] to [to] in [zone], on local date-times like `plusDays`: 1 only once the same time of
+ * day comes round again, also across a daylight-saving change. 0 if [to] is before [from]. How waits count time
+ * (ADR-0050).
+ */
+fun wholeDaysBetween(from: Instant, to: Instant, zone: ZoneId): Int =
+    maxOf(0L, ChronoUnit.DAYS.between(from.atZone(zone), to.atZone(zone))).toInt()
 
 /** Wiring bugs fail on every path, not only once an item turns into a want. */
 private fun requireFits(price: Money, rules: CoolingOffRules) {

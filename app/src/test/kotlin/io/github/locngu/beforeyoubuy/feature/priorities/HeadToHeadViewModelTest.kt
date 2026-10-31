@@ -11,7 +11,9 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,19 +42,20 @@ class HeadToHeadViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private suspend fun add(name: String, kind: ItemKind = ItemKind.WANT): Item {
-        val id = items.add(Item(ItemId.NEW, name, Money(50_000, "EUR"), now, now, kind))
+        val id = items.add(Item(ItemId.NEW, name, Money(50_000, "EUR"), now, coolingOffDays = 60, kind = kind))
         return items.stored.single { it.id == id }
     }
 
     /** Camera #1, Laptop #2, Bike #3, and the challenger 3D printer. */
     private suspend fun full(): List<Item> {
         val all = listOf(add("Camera"), add("Laptop"), add("Bike"), add("3D printer"))
-        items.setPriorities(emptyList(), all.take(3).map { it.id })
+        items.setPriorities(emptyList(), all.take(3).map { it.id }, now, ZoneOffset.UTC)
         items.priorityWrites.clear()
         return all
     }
 
-    private fun viewModelFor(item: Item) = HeadToHeadViewModel(item.id.value, items, pool, policies)
+    private fun viewModelFor(item: Item) =
+        HeadToHeadViewModel(item.id.value, items, pool, policies, Clock.fixed(now, ZoneOffset.UTC))
 
     private fun ranking() = items.stored.filter { it.prioritySlot != null }.sortedBy { it.prioritySlot }.map { it.name }
 
@@ -139,7 +142,7 @@ class HeadToHeadViewModelTest {
     fun `a slot freed meanwhile takes the challenger without a comparison`() = runTest {
         val camera = add("Camera")
         val printer = add("3D printer")
-        items.setPriorities(emptyList(), listOf(camera.id))
+        items.setPriorities(emptyList(), listOf(camera.id), now, ZoneOffset.UTC)
 
         val state = viewModelFor(printer).uiState.value
 

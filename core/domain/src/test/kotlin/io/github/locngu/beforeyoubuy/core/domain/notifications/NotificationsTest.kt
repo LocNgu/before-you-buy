@@ -1,5 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.domain.notifications
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.pauseWait
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.startWait
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
@@ -11,6 +13,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COMPLETE_REFLECTION
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COOLING_ENDS
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.parked
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import java.time.Duration
 import java.time.Instant
@@ -39,6 +42,33 @@ class NotificationsTest {
     ) = planNotifications(items, reflections, notified, now, zone, prefs)
 
     private fun NotificationPlan?.ids() = this?.items?.map { it.item.id.value }
+
+    // Only priorities (ADR-0049)
+
+    @Test
+    fun `a parked want is never notified about, however long it has waited`() {
+        val waitedOut = parked(waitedDays = 40).copy(id = ItemId(1))
+        val unreflected = parked().copy(id = ItemId(2))
+
+        assertNull(plan(listOf(waitedOut, unreflected), AFTER_COOLING))
+    }
+
+    @Test
+    fun `a want that had waited its full period when it got its slot isn't told its wait is over`() {
+        val promoted = startWait(parked(waitedDays = 30).copy(id = ItemId(1), prioritySlot = 1), DURING_COOLING, zone)
+
+        assertNull(plan(listOf(promoted), AFTER_COOLING, reflections = mapOf(ItemId(1) to COMPLETE_REFLECTION)))
+    }
+
+    @Test
+    fun `a wait that resumes and then ends in the slot is notified`() {
+        val paused = pauseWait(wish(1), ADDED.plus(Duration.ofDays(10)), zone)
+        val resumed = startWait(paused.copy(prioritySlot = 1), DURING_COOLING, zone) // 20 more days from 15 Oct
+
+        val answered = mapOf(ItemId(1) to COMPLETE_REFLECTION)
+        assertNull(plan(listOf(resumed), Instant.parse("2026-11-04T09:00:00Z"), answered))
+        assertEquals(listOf(1L), plan(listOf(resumed), Instant.parse("2026-11-04T10:00:00Z")).ids())
+    }
 
     // Waiting period over
 

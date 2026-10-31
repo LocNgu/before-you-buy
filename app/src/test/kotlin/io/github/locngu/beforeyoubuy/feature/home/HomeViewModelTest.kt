@@ -10,6 +10,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -59,9 +60,9 @@ class HomeViewModelTest {
                     name = name,
                     price = Money(12_000, "EUR"),
                     addedAt = start,
-                    coolingEndsAt = start.plus(Duration.ofHours(endsInHours)),
+                    coolingOffDays = 30,
                     kind = kind
-                )
+                ).asPriority(start.plus(Duration.ofHours(endsInHours)))
             )
         return items.stored.first { it.id == id }
     }

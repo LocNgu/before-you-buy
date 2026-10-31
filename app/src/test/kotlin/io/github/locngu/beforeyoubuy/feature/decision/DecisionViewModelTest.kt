@@ -17,6 +17,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -73,9 +74,9 @@ class DecisionViewModelTest {
                 name = name,
                 price = Money(120_000, "EUR"),
                 addedAt = start.minus(Duration.ofDays(30)),
-                coolingEndsAt = start.plus(Duration.ofHours(endsInHours)),
+                coolingOffDays = 30,
                 kind = kind
-            )
+            ).asPriority(start.plus(Duration.ofHours(endsInHours)))
         )
         if (reflected) items.reflect(id, reflection)
         return items.stored.single { it.id == id }
@@ -271,9 +272,9 @@ class DecisionViewModelTest {
                     name = "Bike",
                     price = Money(160_000, "EUR"),
                     addedAt = start.minus(Duration.ofDays(10)),
-                    coolingEndsAt = start.plus(Duration.ofDays(20)),
+                    coolingOffDays = 30,
                     prioritySlot = 1
-                )
+                ).asPriority(start.plus(Duration.ofDays(20)))
             )
             val bike = items.stored.single { it.id == bikeId }
             val viewModel = viewModelFor(camera)

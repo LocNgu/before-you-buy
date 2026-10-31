@@ -1,6 +1,6 @@
 package io.github.locngu.beforeyoubuy.core.domain.history
 
-import io.github.locngu.beforeyoubuy.core.domain.coolingoff.initialCoolingEnd
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.coolingOffDaysFor
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.HistoryEntry
@@ -186,10 +186,11 @@ fun untilHistoryChanges(now: Instant, zone: ZoneId): Duration =
 
 /**
  * "Want it again?" on a decided-against [item] at [now] in [zone] (issue #19): a **new** want with the item's facts
- * (name, price, link, photo, category, notes, a target date that is still ahead) that cools off from [now] under the
- * [policy]'s tiers, like a newly captured want. It is always a want, even if the old item was a need, and it has no
- * reflection answers: the user thinks it over afresh. The old item stays in history unchanged. Its id is
- * [ItemId.NEW]; store it with [io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository.add].
+ * (name, price, link, photo, category, notes, a target date that is still ahead), added at [now] with the days the
+ * [policy]'s tiers call for and parked on the wishlist like a newly captured want (ADR-0049). It is always a want, even
+ * if the old item was a need, and it has no reflection answers: the user thinks it over afresh. The old item stays in
+ * history unchanged. Its id is [ItemId.NEW]; store it with
+ * [io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository.add].
  *
  * Only rejected items can be wanted again, and the price must be in the policy's currency; anything else throws.
  */
@@ -201,7 +202,7 @@ fun wantedAgain(item: Item, policy: Policy, now: Instant, zone: ZoneId): Item {
         name = item.name,
         price = item.price,
         addedAt = now,
-        coolingEndsAt = initialCoolingEnd(now, item.price, ItemKind.WANT, policy.coolingOffRules, zone),
+        coolingOffDays = coolingOffDaysFor(item.price, policy.coolingOffRules),
         kind = ItemKind.WANT,
         link = item.link,
         imageRef = item.imageRef,

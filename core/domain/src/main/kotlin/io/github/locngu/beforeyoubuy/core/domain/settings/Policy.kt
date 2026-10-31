@@ -40,17 +40,16 @@ interface PolicyRepository {
     val policy: Flow<Policy>
 
     /**
-     * Stores [rules] and, in the same transaction, moves the cooling-off end of every active want that is still
-     * cooling off at [changedAt] (ADR-0031, via
-     * [io.github.locngu.beforeyoubuy.core.domain.coolingoff.coolingEndAfterRulesChange], in [zone]). Both are written
-     * or neither is. [rules] must be in the current currency; anything else throws.
+     * Stores [rules] and, in the same transaction, changes the wait of every active want whose wait isn't complete at
+     * [changedAt] (ADR-0031, via [io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitAfterRulesChange], in
+     * [zone]). Both are written or neither is. [rules] must be in the current currency; anything else throws.
      */
     suspend fun changeCoolingOffRules(rules: CoolingOffRules, changedAt: Instant, zone: ZoneId)
 
     /**
      * Makes [currency] the app's currency and relabels every stored amount to it in one transaction (ADR-0033):
      * item prices, actual prices in history, the tiers, the monthly allowance and every pool entry keep their numbers ("100 €" becomes "100 $"; see
-     * [io.github.locngu.beforeyoubuy.core.domain.money.relabeled]). Cooling-off ends don't change. Anything not
+     * [io.github.locngu.beforeyoubuy.core.domain.money.relabeled]). Waits don't change. Anything not
      * [usable][isUsableCurrency] throws; the current currency changes nothing.
      */
     suspend fun changeCurrency(currency: String)
@@ -59,10 +58,10 @@ interface PolicyRepository {
      * Makes [slots] (1–5, anything else throws) the number of priority slots. Fewer slots than priorities send the
      * lowest-ranked back to the wishlist in the same transaction
      * ([io.github.locngu.beforeyoubuy.core.domain.priorities.demotedBySlots]); the screen lists them first (ADR-0047).
-     * More slots change no item.
+     * Their wait pauses at [at], counted in calendar days in [zone] (ADR-0049). More slots change no item.
      *
      * Writes only if the stored priorities are still [expected] (ids, rank 1 first), the ones the screen listed from;
      * returns false and writes nothing otherwise, so a demotion the user didn't see never happens.
      */
-    suspend fun changePrioritySlots(slots: Int, expected: List<ItemId>): Boolean
+    suspend fun changePrioritySlots(slots: Int, expected: List<ItemId>, at: Instant, zone: ZoneId): Boolean
 }

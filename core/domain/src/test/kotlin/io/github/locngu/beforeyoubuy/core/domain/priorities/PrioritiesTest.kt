@@ -9,6 +9,8 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.ADDED
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.parked
+import java.time.Duration
 import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,8 +20,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PrioritiesTest {
-    private fun want(id: Long, slot: Int? = null, kind: ItemKind = ItemKind.WANT): Item =
-        item(kind).copy(id = ItemId(id), name = "Item $id", prioritySlot = slot, addedAt = ADDED.plusSeconds(id))
+    /** A priority whose wait runs from [ADDED], a parked want without [slot], or a need. */
+    private fun want(id: Long, slot: Int? = null, kind: ItemKind = ItemKind.WANT): Item {
+        val base = if (slot == null && kind == ItemKind.WANT) parked() else item(kind)
+        return base.copy(id = ItemId(id), name = "Item $id", prioritySlot = slot, addedAt = ADDED.plusSeconds(id))
+    }
 
     private fun ids(vararg values: Long) = values.map(::ItemId)
 
@@ -116,6 +121,41 @@ class PrioritiesTest {
         assertEquals(ids(2, 3), ranking)
         assertEquals(mapOf(ItemId(1) to null, ItemId(2) to 1, ItemId(3) to 2), slotChanges(active, ranking))
         assertThrows(IllegalArgumentException::class.java) { slotChanges(active, ids(1, 1)) }
+    }
+
+    @Test
+    fun `a want that gets a slot starts waiting, one that loses it pauses, one that moves up keeps waiting`() {
+        val first = want(1, slot = 1)
+        val second = want(2, slot = 2)
+        val challenger = want(3).copy(waitedDays = 5)
+        val active = listOf(first, second, challenger)
+        val at = DURING_COOLING // 14 days after ADDED
+
+        val written = withSlots(active, slotChanges(active, ids(3, 1)), at, ZoneOffset.UTC).associateBy { it.id }
+
+        assertEquals(setOf(ItemId(1), ItemId(2), ItemId(3)), written.keys)
+        val promoted = written.getValue(ItemId(3))
+        assertEquals(1, promoted.prioritySlot)
+        assertEquals(at, promoted.waitingSince)
+        assertEquals(at.plus(Duration.ofDays(25)), promoted.coolingEndsAt) // 30 days, 5 already waited
+        val moved = written.getValue(ItemId(1))
+        assertEquals(2, moved.prioritySlot)
+        assertEquals(first.coolingEndsAt, moved.coolingEndsAt)
+        val demoted = written.getValue(ItemId(2))
+        assertNull(demoted.prioritySlot)
+        assertNull(demoted.coolingEndsAt)
+        assertEquals(14, demoted.waitedDays)
+    }
+
+    @Test
+    fun `fewer slots pause the waits of the priorities that go back`() {
+        val active = listOf(want(1, slot = 1), want(2, slot = 2), want(3, slot = 3))
+        val changes = demotedBySlots(active, 1).associate { it.id to null }
+
+        val written = withSlots(active, changes, DURING_COOLING, ZoneOffset.UTC)
+
+        assertEquals(ids(2, 3), written.map { it.id })
+        assertTrue(written.all { it.prioritySlot == null && it.waitingSince == null && it.waitedDays == 14 })
     }
 
     @Test

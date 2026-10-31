@@ -7,6 +7,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
@@ -52,9 +53,9 @@ class ItemEditViewModelTest {
                 name = "Camera",
                 price = Money(11_999, "EUR"),
                 addedAt = added,
-                coolingEndsAt = coolingEnds,
+                coolingOffDays = 30,
                 link = "https://shop.example/camera"
-            )
+            ).asPriority(coolingEnds)
         )
         item = items.stored.single { it.id == id }
         viewModel = ItemEditViewModel(id.value, items, pool, policies, images, clock)
@@ -117,17 +118,17 @@ class ItemEditViewModelTest {
         }
 
     @Test
-    fun `a need turned back into a want says when its wait ends`() = runTest(UnconfinedTestDispatcher()) {
+    fun `a need turned back into a want is parked, with no end date to show`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.onNeedChange(true)
         assertNull(state.waitNote)
 
-        items.replace(item.copy(kind = ItemKind.NEED, coolingEndsAt = added))
+        items.replace(item.copy(kind = ItemKind.NEED, prioritySlot = null, waitingSince = null, coolingEndsAt = null))
         val needEditor = ItemEditViewModel(item.id.value, items, pool, policies, images, clock).apply {
             setLocale(Locale.GERMANY)
         }
         needEditor.onNeedChange(false)
 
-        assertEquals(WaitNote.Starts(LocalDate.of(2026, 10, 31)), needEditor.uiState.value.waitNote)
+        assertNull("its wait has no end until it's a priority (ADR-0049)", needEditor.uiState.value.waitNote)
     }
 
     @Test
@@ -290,8 +291,7 @@ class ItemEditViewModelTest {
     @Test
     fun `making a priority a need asks first, then takes it out of the priorities`() =
         runTest(UnconfinedTestDispatcher()) {
-            items.setPriorities(emptyList(), listOf(item.id))
-            // The form is filled from the first load: open it on the priority.
+            // The item is a priority from setUp. The form is filled from the first load: open it on the priority.
             viewModel = ItemEditViewModel(item.id.value, items, pool, policies, images, clock)
             viewModel.setLocale(Locale.GERMANY)
             viewModel.onNeedChange(true)

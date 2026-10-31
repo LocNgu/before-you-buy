@@ -5,8 +5,14 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.locngu.beforeyoubuy.core.data.item.toDomain
+import io.github.locngu.beforeyoubuy.core.data.item.toEntity
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isParked
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import java.io.File
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -31,6 +37,9 @@ internal class MigrationTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val name = "migration-test.db"
 
+    // 2 November 2026, 10:15 in Berlin (CET): "now" for migrations that need it.
+    private val clock: Clock = Clock.fixed(Instant.parse("2026-11-02T09:15:00Z"), ZoneId.of("Europe/Berlin"))
+
     @Before
     @After
     fun deleteDatabase() {
@@ -51,7 +60,7 @@ internal class MigrationTest {
         }
 
         val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
-            .addMigrations(*MIGRATIONS)
+            .addMigrations(*migrations(clock))
             .withPolicyRow { "USD" }
             .allowMainThreadQueries()
             .build()
@@ -82,7 +91,7 @@ internal class MigrationTest {
         }
 
         val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
-            .addMigrations(*MIGRATIONS)
+            .addMigrations(*migrations(clock))
             .withPolicyRow { "USD" }
             .allowMainThreadQueries()
             .build()
@@ -113,7 +122,7 @@ internal class MigrationTest {
         }
 
         val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
-            .addMigrations(*MIGRATIONS)
+            .addMigrations(*migrations(clock))
             .withPolicyRow { "USD" }
             .allowMainThreadQueries()
             .build()
@@ -155,7 +164,7 @@ internal class MigrationTest {
         }
 
         val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
-            .addMigrations(*MIGRATIONS)
+            .addMigrations(*migrations(clock))
             .withPolicyRow { "USD" }
             .allowMainThreadQueries()
             .build()
@@ -188,7 +197,7 @@ internal class MigrationTest {
         }
 
         val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
-            .addMigrations(*MIGRATIONS)
+            .addMigrations(*migrations(clock))
             .withPolicyRow { "USD" }
             .allowMainThreadQueries()
             .build()
@@ -202,6 +211,69 @@ internal class MigrationTest {
             database.close()
         }
     }
+
+    @Test
+    fun `6 to 7 keeps the priorities' waits, parks the other wants with the days since they were added`() = runTest {
+        createFromSchema(6) { db ->
+            db.execSQL(
+                "INSERT INTO policy (id, currency, cooling_off_rules, priority_slots) VALUES (1, 'EUR', NULL, 3)"
+            )
+            fun insert(id: Int, added: String, ends: String, kind: String, status: String, slot: Int?, need: String?) =
+                db.execSQL(
+                    "INSERT INTO items (id, name, price_minor, currency, added_at, cooling_ends_at, kind, status, " +
+                        "priority_slot, marked_as_need_at) VALUES (?, ?, 12000, 'EUR', ?, ?, ?, ?, ?, ?)",
+                    arrayOf<Any?>(id, "Item $id", millis(added), millis(ends), kind, status, slot, need?.let(::millis))
+                )
+            // A priority: 1 Oct 10:00 CEST, 30 calendar days to 31 Oct 10:00 CET (30 × 24 h plus the autumn hour).
+            insert(1, "2026-10-01T08:00:00Z", "2026-10-31T09:00:00Z", "WANT", "ACTIVE", 1, null)
+            // Parked: 20 Oct 10:30 CEST. At 10:15 on 2 Nov that's 12 calendar days, though over 13 × 24 h.
+            insert(2, "2026-10-20T08:30:00Z", "2026-11-19T09:30:00Z", "WANT", "ACTIVE", null, null)
+            // Parked, its wait long over: 1 Aug, 7 days. 93 days have passed.
+            insert(3, "2026-08-01T08:00:00Z", "2026-08-08T08:00:00Z", "WANT", "ACTIVE", null, null)
+            // A want that became a need after 3 days, and one captured as a need.
+            insert(4, "2026-10-01T08:00:00Z", "2026-10-31T09:00:00Z", "NEED", "ACTIVE", null, "2026-10-04T08:00:00Z")
+            insert(5, "2026-10-10T08:00:00Z", "2026-10-10T08:00:00Z", "NEED", "ACTIVE", null, null)
+            // Bought, with its decision and answers.
+            insert(6, "2026-09-01T08:00:00Z", "2026-10-01T08:00:00Z", "WANT", "PURCHASED", null, null)
+            db.execSQL(
+                "INSERT INTO decisions (item_id, type, decided_at, source, actual_price_minor, " +
+                    "actual_price_currency) VALUES (6, 'BUY', ${millis("2026-10-02T08:00:00Z")}, 'APP', 11000, 'EUR')"
+            )
+            db.execSQL("INSERT INTO reflections (item_id, reasons_against) VALUES (6, '[\"Heavy\"]')")
+        }
+
+        val database = Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, name)
+            .addMigrations(*migrations(clock))
+            .withPolicyRow { "USD" }
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val items = database.itemDao()
+            suspend fun waitOf(id: Long) = items.getById(id)!!
+                .let { listOf(it.coolingOffDays.toLong(), it.waitedDays.toLong(), it.waitingSince, it.coolingEndsAt) }
+
+            // Days to wait, days waited, running since, stored end.
+            assertEquals(listOf(30L, 0L, millis("2026-10-01T08:00:00Z"), millis("2026-10-31T09:00:00Z")), waitOf(1))
+            assertEquals(listOf(30L, 12L, null, millis("2026-10-20T08:30:00Z")), waitOf(2))
+            assertEquals(listOf(7L, 93L, null, millis("2026-08-01T08:00:00Z")), waitOf(3))
+            assertEquals(listOf(30L, 3L, null, millis("2026-10-01T08:00:00Z")), waitOf(4))
+            assertEquals(listOf(0L, 0L, null, millis("2026-10-10T08:00:00Z")), waitOf(5))
+            assertEquals(listOf(30L, 0L, null, millis("2026-09-01T08:00:00Z")), waitOf(6))
+
+            val active = items.getByStatus("ACTIVE").map { it.toDomain() }
+            assertEquals(listOf(1L), active.filter { !it.isParked && it.kind == ItemKind.WANT }.map { it.id.value })
+            assertEquals(listOf(2L, 3L), active.filter { it.isParked }.map { it.id.value })
+            assertEquals(Instant.parse("2026-10-31T09:00:00Z"), active.first { it.id.value == 1L }.coolingEndsAt)
+            // Every row reads back as it is stored, so compare-and-set writes still match (ADR-0032).
+            items.getAll().forEach { assertEquals(it, it.toDomain().toEntity()) }
+            assertEquals(1, database.decisionDao().observeForItem(6).first().size)
+            assertEquals(1, database.reflectionDao().observeAll().first().size)
+        } finally {
+            database.close()
+        }
+    }
+
+    private fun millis(instant: String): Long = Instant.parse(instant).toEpochMilli()
 
     /** A database file as [version] of the committed schema created it, with [fill]'s rows. */
     private fun createFromSchema(version: Int, fill: (SQLiteDatabase) -> Unit) {

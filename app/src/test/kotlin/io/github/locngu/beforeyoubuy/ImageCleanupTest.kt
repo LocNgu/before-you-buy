@@ -17,7 +17,7 @@ class ImageCleanupTest {
         val now = Instant.parse("2026-10-19T10:00:00Z")
         val items = FakeItemRepository()
         val images = FakeItemImageStore()
-        val item = Item(ItemId.NEW, "Camera", Money(12_000, "EUR"), now, now)
+        val item = Item(ItemId.NEW, "Camera", Money(12_000, "EUR"), now, coolingOffDays = 30)
         items.add(item.copy(imageRef = "a.jpg"))
         items.add(item)
 

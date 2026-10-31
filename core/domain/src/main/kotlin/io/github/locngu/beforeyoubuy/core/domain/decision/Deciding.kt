@@ -37,8 +37,9 @@ enum class BuyPath(val type: DecisionType) {
     BUY_NEED(DecisionType.BUY_NEED),
 
     /**
-     * A want that isn't Ready: no Buy and no Wait (it's waiting already), only Reject and a quieter "Decide early…"
-     * behind friction: a typed reason, the days left and the reasons against again, a confirm (ADR-0006).
+     * A want that isn't Ready, parked ones included (ADR-0049): no Buy and no Wait (it's waiting already), only
+     * Reject and a quieter "Decide early…" behind friction: a typed reason, the days left and the reasons against
+     * again, a confirm (ADR-0006).
      */
     EARLY(DecisionType.BUY_EARLY)
     ;
@@ -140,11 +141,12 @@ fun decisionFormOf(item: Item, today: LocalDate, locale: Locale): DecisionForm =
 
 /**
  * The dates a purchase on [path] can be dated to, up to [today] in [zone]: a plain Buy from the day the item's
- * cooling-off ended, a need or an early purchase from the day the item was added.
+ * running wait was complete (a priority, ADR-0049), a need or an early purchase from the day the item was added.
  */
 fun purchaseDates(item: Item, path: BuyPath, today: LocalDate, zone: ZoneId): ClosedRange<LocalDate> {
     val added = item.addedAt.atZone(zone).toLocalDate()
-    val earliest = if (path == BuyPath.BUY) maxOf(added, item.coolingEndsAt.atZone(zone).toLocalDate()) else added
+    val cooled = item.coolingEndsAt?.atZone(zone)?.toLocalDate()
+    val earliest = if (path == BuyPath.BUY && cooled != null) maxOf(added, cooled) else added
     return minOf(earliest, today)..today
 }
 

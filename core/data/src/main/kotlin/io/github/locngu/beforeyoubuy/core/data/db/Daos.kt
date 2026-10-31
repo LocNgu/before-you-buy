@@ -39,8 +39,17 @@ internal interface ItemDao {
     suspend fun getImageRefs(): List<String>
 
     /** Changes only the cooling-off end, so columns this version can't read are kept as stored. */
-    @Query("UPDATE items SET cooling_ends_at = :coolingEndsAt WHERE id = :id")
-    suspend fun setCoolingEnd(id: Long, coolingEndsAt: Long)
+    @Query(
+        "UPDATE items SET cooling_off_days = :coolingOffDays, waited_days = :waitedDays, " +
+            "waiting_since = :waitingSince, cooling_ends_at = :coolingEndsAt WHERE id = :id"
+    )
+    suspend fun setWait(id: Long, coolingOffDays: Int, waitedDays: Int, waitingSince: Long?, coolingEndsAt: Long)
+
+    @Query(
+        "UPDATE items SET priority_slot = :slot, waited_days = :waitedDays, waiting_since = :waitingSince, " +
+            "cooling_ends_at = :coolingEndsAt WHERE id = :id"
+    )
+    suspend fun setSlotAndWait(id: Long, slot: Int?, waitedDays: Int, waitingSince: Long?, coolingEndsAt: Long)
 
     /** Changes only the price, for a currency relabel (ADR-0033). */
     @Query("UPDATE items SET price_minor = :priceMinor, currency = :currency WHERE id = :id")

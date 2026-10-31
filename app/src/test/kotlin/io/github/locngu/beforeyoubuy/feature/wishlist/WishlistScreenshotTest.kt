@@ -14,6 +14,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistSectionsOf
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
@@ -53,9 +54,9 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
         name = name,
         price = Money(euros * 100, "EUR"),
         addedAt = now.minusSeconds(40L * 24 * 3600),
-        coolingEndsAt = now.plusSeconds(endsInDays * 24 * 3600),
+        coolingOffDays = 30,
         kind = kind
-    )
+    ).asPriority(now.plusSeconds(endsInDays * 24 * 3600))
 
     private val reflection =
         Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))

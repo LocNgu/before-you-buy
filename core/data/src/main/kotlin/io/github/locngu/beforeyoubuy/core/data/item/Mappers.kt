@@ -1,6 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.data.item
 
 import io.github.locngu.beforeyoubuy.core.data.db.DecisionEntity
+import io.github.locngu.beforeyoubuy.core.data.db.ItemDao
 import io.github.locngu.beforeyoubuy.core.data.db.ItemEntity
 import io.github.locngu.beforeyoubuy.core.data.db.ReflectionEntity
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
@@ -29,7 +30,7 @@ internal fun Item.toEntity(): ItemEntity = ItemEntity(
     priceMinor = price.minorUnits,
     currency = price.currency,
     addedAt = addedAt.toEpochMilli(),
-    coolingEndsAt = coolingEndsAt.toEpochMilli(),
+    coolingEndsAt = storedCoolingEnd(),
     kind = kind.name,
     status = status.name,
     link = link,
@@ -39,27 +40,47 @@ internal fun Item.toEntity(): ItemEntity = ItemEntity(
     targetDate = targetDate?.toString(),
     recheckAt = recheckAt?.toEpochMilli(),
     prioritySlot = prioritySlot,
-    markedAsNeedAt = markedAsNeedAt?.toEpochMilli()
+    markedAsNeedAt = markedAsNeedAt?.toEpochMilli(),
+    coolingOffDays = coolingOffDays,
+    waitedDays = waitedDays,
+    waitingSince = waitingSince?.toEpochMilli()
 )
 
-/** Unknown kind → `WANT`; unknown status → `ACTIVE`; an unreadable target date → none (it's informational). */
-internal fun ItemEntity.toDomain(): Item = Item(
-    id = ItemId(id),
-    name = name,
-    price = Money(priceMinor, currency),
-    addedAt = Instant.ofEpochMilli(addedAt),
-    coolingEndsAt = Instant.ofEpochMilli(coolingEndsAt),
-    kind = enumOrNull<ItemKind>(kind) ?: ItemKind.WANT,
-    status = enumOrNull<ItemStatus>(status) ?: ItemStatus.ACTIVE,
-    link = link,
-    imageRef = imageRef,
-    category = category,
-    notes = notes,
-    targetDate = targetDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
-    recheckAt = recheckAt?.let(Instant::ofEpochMilli),
-    prioritySlot = prioritySlot,
-    markedAsNeedAt = markedAsNeedAt?.let(Instant::ofEpochMilli)
-)
+/** `cooling_ends_at`: the running wait's end, or [Item.addedAt] while the wait doesn't run ([ItemEntity]). */
+internal fun Item.storedCoolingEnd(): Long = (coolingEndsAt ?: addedAt).toEpochMilli()
+
+/**
+ * Unknown kind → `WANT`; unknown status → `ACTIVE`; an unreadable target date → none (it's informational). Negative
+ * days read as 0 and an end before its start as the start; such a row is read-only, like any read with a fallback.
+ */
+internal fun ItemEntity.toDomain(): Item {
+    val since = waitingSince?.let(Instant::ofEpochMilli)
+    return Item(
+        id = ItemId(id),
+        name = name,
+        price = Money(priceMinor, currency),
+        addedAt = Instant.ofEpochMilli(addedAt),
+        coolingOffDays = coolingOffDays.coerceAtLeast(0),
+        waitedDays = waitedDays.coerceAtLeast(0),
+        waitingSince = since,
+        coolingEndsAt = since?.let { maxOf(it, Instant.ofEpochMilli(coolingEndsAt)) },
+        kind = enumOrNull<ItemKind>(kind) ?: ItemKind.WANT,
+        status = enumOrNull<ItemStatus>(status) ?: ItemStatus.ACTIVE,
+        link = link,
+        imageRef = imageRef,
+        category = category,
+        notes = notes,
+        targetDate = targetDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+        recheckAt = recheckAt?.let(Instant::ofEpochMilli),
+        prioritySlot = prioritySlot,
+        markedAsNeedAt = markedAsNeedAt?.let(Instant::ofEpochMilli)
+    )
+}
+
+/** Writes the slot and wait of each item in [changed] (from `withSlots`), targeted so other columns survive. */
+internal suspend fun ItemDao.setSlotsAndWaits(changed: List<Item>) = changed.forEach {
+    setSlotAndWait(it.id.value, it.prioritySlot, it.waitedDays, it.waitingSince?.toEpochMilli(), it.storedCoolingEnd())
+}
 
 internal fun Reflection.toEntity(itemId: ItemId): ReflectionEntity = ReflectionEntity(
     itemId = itemId.value,

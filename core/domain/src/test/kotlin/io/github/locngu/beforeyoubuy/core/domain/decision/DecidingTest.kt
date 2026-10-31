@@ -15,6 +15,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isDueForDecision
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.parked
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
@@ -65,6 +66,11 @@ class DecidingTest {
         assertEquals(
             BuyPath.EARLY,
             overviewOf(ready, null, AFTER_COOLING).buyPath
+        )
+        // A want that isn't a priority is only bought early, however long it has waited (ADR-0049).
+        assertEquals(
+            BuyPath.EARLY,
+            overviewOf(parked(waitedDays = 40), COMPLETE_REFLECTION, AFTER_COOLING).buyPath
         )
     }
 

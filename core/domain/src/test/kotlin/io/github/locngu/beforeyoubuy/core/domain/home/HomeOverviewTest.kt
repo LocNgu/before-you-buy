@@ -12,6 +12,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.PRICE
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isDueForDecision
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.parked
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Allocation
 import io.github.locngu.beforeyoubuy.core.domain.pool.AllowanceSettings
@@ -28,8 +29,16 @@ import org.junit.Test
 class HomeOverviewTest {
     private val zone: ZoneId = ZoneOffset.UTC
 
+    /** A priority (slot 1) whose wait runs from [ADDED] until [endsAt]; a need, which doesn't wait. */
     private fun wish(id: Long, endsAt: Instant = COOLING_ENDS, kind: ItemKind = ItemKind.WANT): Item =
-        item(kind).copy(id = ItemId(id), coolingEndsAt = endsAt)
+        if (kind == ItemKind.NEED) {
+            item(kind).copy(id = ItemId(id))
+        } else {
+            item().copy(id = ItemId(id), coolingEndsAt = endsAt)
+        }
+
+    /** A want without a slot (ADR-0049). */
+    private fun parkedWish(id: Long, waitedDays: Int = 0): Item = parked(waitedDays).copy(id = ItemId(id))
 
     @Test
     fun `nothing to decide, consider or count without items`() {
@@ -43,18 +52,20 @@ class HomeOverviewTest {
     fun `ready items come first, then those whose cooling off ended without answers`() {
         val unreflected = wish(1, endsAt = Instant.parse("2026-10-10T10:00:00Z"))
         val ready = wish(2, endsAt = Instant.parse("2026-10-20T10:00:00Z"))
-        val need = wish(3, kind = ItemKind.NEED).copy(coolingEndsAt = Instant.parse("2026-10-25T10:00:00Z"))
+        val need = wish(3, kind = ItemKind.NEED)
         val cooling = wish(4, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
+        val parked = parkedWish(5, waitedDays = 40)
 
         val home = homeOverviewOf(
-            listOf(cooling, need, unreflected, ready),
-            mapOf(ready.id to COMPLETE_REFLECTION),
+            listOf(cooling, need, unreflected, ready, parked),
+            mapOf(ready.id to COMPLETE_REFLECTION, parked.id to COMPLETE_REFLECTION),
             Savings.NONE,
             AFTER_COOLING,
             zone
         )
 
-        assertEquals(listOf(ready, need, unreflected), home.toDecide.map { it.item })
+        // A need has no end, so it comes first in the Ready group; a parked want is never to decide (ADR-0049).
+        assertEquals(listOf(need, ready, unreflected), home.toDecide.map { it.item })
         assertEquals(listOf(Stage.READY, Stage.READY, Stage.NEEDS_REFLECTION), home.toDecide.map { it.stage })
     }
 
@@ -85,22 +96,23 @@ class HomeOverviewTest {
     }
 
     @Test
-    fun `counts every active item, waiting ones included, and nothing ended`() {
+    fun `counts every active item, waiting and parked ones included, and nothing ended`() {
         val waiting = wish(1, endsAt = Instant.parse("2026-10-20T10:00:00Z"))
             .copy(recheckAt = Instant.parse("2026-11-10T00:00:00Z"))
         val cooling = wish(2, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
         val bought = wish(3).copy(status = ItemStatus.PURCHASED)
         val rejected = wish(4).copy(status = ItemStatus.REJECTED)
+        val parked = parkedWish(5)
 
         val home = homeOverviewOf(
-            listOf(waiting, cooling, bought, rejected),
+            listOf(waiting, cooling, bought, rejected, parked),
             mapOf(waiting.id to COMPLETE_REFLECTION),
             Savings.NONE,
             AFTER_COOLING,
             zone
         )
 
-        assertEquals(2, home.activeCount)
+        assertEquals(3, home.activeCount)
     }
 
     @Test
@@ -108,9 +120,10 @@ class HomeOverviewTest {
         val later = wish(1, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
         val sooner = wish(2, endsAt = Instant.parse("2026-11-14T10:00:00Z"))
         val ended = wish(3, endsAt = Instant.parse("2026-10-20T10:00:00Z"))
+        val parked = parkedWish(4)
 
         val next = homeOverviewOf(
-            listOf(later, ended, sooner),
+            listOf(later, ended, sooner, parked),
             emptyMap(),
             Savings.NONE,
             AFTER_COOLING,
@@ -131,7 +144,7 @@ class HomeOverviewTest {
     @Test
     fun `saving for lists up to three wants without priorities, most set aside first, never needs`() {
         val allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 10, 1))
-        val wants = (1L..5L).map { wish(it) }
+        val wants = (1L..5L).map { parkedWish(it) }
         val need = wish(9, kind = ItemKind.NEED)
         val active = wants + need
         fun put(item: Item, minor: Long) = Allocation(item.id, Money(minor, "EUR"), COOLING_ENDS)
@@ -153,7 +166,7 @@ class HomeOverviewTest {
         val allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 10, 1))
         val second = wish(1).copy(prioritySlot = 2)
         val first = wish(2).copy(prioritySlot = 1)
-        val other = wish(3)
+        val other = parkedWish(3)
         val active = listOf(second, first, other)
         val savings = savingsOf(allowance, listOf(Allocation(second.id, Money(3_000, "EUR"), COOLING_ENDS)), active)
 

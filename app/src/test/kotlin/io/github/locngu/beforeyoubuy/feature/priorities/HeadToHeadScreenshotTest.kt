@@ -44,7 +44,7 @@ abstract class HeadToHeadScreenshotTest(private val german: Boolean) {
     private val now = Instant.parse("2026-10-24T10:00:00Z")
 
     private fun item(id: Long, name: String, euros: Long, slot: Int? = null) =
-        Item(ItemId(id), name, Money(euros * 100, "EUR"), now, now, prioritySlot = slot)
+        Item(ItemId(id), name, Money(euros * 100, "EUR"), now, coolingOffDays = 30, prioritySlot = slot)
 
     private val camera = item(1, t("Mirrorless camera", "Systemkamera"), 1_199, slot = 1)
     private val laptop = item(2, t("Laptop", "Laptop"), 1_400, slot = 2)

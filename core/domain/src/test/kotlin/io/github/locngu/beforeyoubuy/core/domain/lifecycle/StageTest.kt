@@ -1,10 +1,12 @@
 package io.github.locngu.beforeyoubuy.core.domain.lifecycle
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.startWait
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import java.time.ZoneOffset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -13,6 +15,34 @@ import org.junit.Test
 
 class StageTest {
     // Brief §5 stage table, one test per row; earlier unmet conditions win over later ones.
+
+    @Test
+    fun `parked wins over every other stage, however long the want has waited`() {
+        assertEquals(Stage.PARKED, stageOf(parked(), null, UNFUNDED, DURING_COOLING))
+        assertEquals(Stage.PARKED, stageOf(parked(waitedDays = 40), COMPLETE_REFLECTION, FUNDED, AFTER_COOLING))
+        assertTrue(isCooledOff(parked(waitedDays = 30), DURING_COOLING))
+        assertFalse(isCooledOff(parked(waitedDays = 29), AFTER_COOLING))
+    }
+
+    @Test
+    fun `a want promoted after waiting its full period is ready at once`() {
+        val promoted = startWait(parked(waitedDays = 30).copy(prioritySlot = 1), AFTER_COOLING, ZoneOffset.UTC)
+
+        assertEquals(Stage.READY, stageOf(promoted, COMPLETE_REFLECTION, FUNDED, AFTER_COOLING))
+        assertEquals(Stage.NEEDS_REFLECTION, stageOf(promoted, null, FUNDED, AFTER_COOLING))
+    }
+
+    @Test
+    fun `a need is never parked, with or without a slot`() {
+        assertFalse(item(ItemKind.NEED).isParked)
+        assertFalse(parked().copy(status = ItemStatus.PURCHASED).isParked)
+        assertEquals(Stage.READY, stageOf(item(ItemKind.NEED), null, UNFUNDED, DURING_COOLING))
+    }
+
+    @Test
+    fun `a parked want is never due for a decision`() {
+        assertFalse(isDueForDecision(parked(waitedDays = 40), COMPLETE_REFLECTION, FUNDED, AFTER_COOLING))
+    }
 
     @Test
     fun `cooling off while the timer runs, whatever else is true`() {
@@ -127,5 +157,14 @@ class StageTest {
     fun `an item can't have a negative price or a priority slot below 1`() {
         assertThrows(IllegalArgumentException::class.java) { item().copy(price = Money(-1, "EUR")) }
         assertThrows(IllegalArgumentException::class.java) { item().copy(prioritySlot = 0) }
+    }
+
+    @Test
+    fun `a running wait has both a start and an end, the end not before the start, and days aren't negative`() {
+        assertThrows(IllegalArgumentException::class.java) { item().copy(waitingSince = null) }
+        assertThrows(IllegalArgumentException::class.java) { parked().copy(coolingEndsAt = COOLING_ENDS) }
+        assertThrows(IllegalArgumentException::class.java) { item().copy(coolingEndsAt = ADDED.minusSeconds(1)) }
+        assertThrows(IllegalArgumentException::class.java) { item().copy(waitedDays = -1) }
+        assertThrows(IllegalArgumentException::class.java) { item().copy(coolingOffDays = -1) }
     }
 }

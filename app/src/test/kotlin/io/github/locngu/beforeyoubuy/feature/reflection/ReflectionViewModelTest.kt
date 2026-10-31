@@ -17,6 +17,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.reflection.Onward
 import io.github.locngu.beforeyoubuy.core.domain.reflection.ReflectionStep
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailViewModel
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
@@ -63,8 +64,8 @@ class ReflectionViewModelTest {
                 name = "Camera",
                 price = Money(12_000, "EUR"),
                 addedAt = start.minus(Duration.ofDays(10)),
-                coolingEndsAt = start.plus(Duration.ofHours(endsInHours))
-            )
+                coolingOffDays = 30
+            ).asPriority(start.plus(Duration.ofHours(endsInHours)))
         )
         return items.stored.single { it.id == id }
     }

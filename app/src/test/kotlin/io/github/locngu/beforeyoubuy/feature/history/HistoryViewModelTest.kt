@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -57,8 +58,8 @@ class HistoryViewModelTest {
                 name = name,
                 price = Money(euros * 100, "EUR"),
                 addedAt = Instant.parse("2026-09-01T10:00:00Z"),
-                coolingEndsAt = Instant.parse("2026-09-15T10:00:00Z")
-            )
+                coolingOffDays = 30
+            ).asPriority(Instant.parse("2026-09-15T10:00:00Z"))
         )
         return items.stored.single { it.id == id }
     }

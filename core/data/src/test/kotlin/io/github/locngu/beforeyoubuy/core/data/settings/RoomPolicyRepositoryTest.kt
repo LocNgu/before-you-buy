@@ -16,7 +16,8 @@ import io.github.locngu.beforeyoubuy.core.data.testing.assertThrowsIllegalArgume
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRulesResult
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffTier
-import io.github.locngu.beforeyoubuy.core.domain.coolingoff.initialCoolingEnd
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.coolingOffDaysFor
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.startWait
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
@@ -52,17 +53,22 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
         items = RoomItemRepository(database)
     }
 
-    /** A want or need added at [addedAt], its end set by the default tiers like quick add would. */
+    /**
+     * A want or need added at [addedAt] with the days the default tiers call for. A want is a priority whose wait runs
+     * from [addedAt] unless [parked] (ADR-0049).
+     */
     private suspend fun add(
         name: String,
         addedAt: String,
         price: Money = Money(12_000, "EUR"),
-        kind: ItemKind = ItemKind.WANT
+        kind: ItemKind = ItemKind.WANT,
+        parked: Boolean = false
     ): Item {
         val added = Instant.parse(addedAt)
-        val end = initialCoolingEnd(added, price, kind, CoolingOffRules.defaults(price.currency), zone)
-        val id = items.add(Item(ItemId.NEW, name, price, added, end, kind))
-        return items.observeById(id).first()!!
+        val days = coolingOffDaysFor(price, CoolingOffRules.defaults(price.currency))
+        val captured = Item(ItemId.NEW, name, price, added, coolingOffDays = days, kind = kind)
+        val item = if (parked) captured else startWait(captured.copy(prioritySlot = 1), added, zone)
+        return items.observeById(items.add(item)).first()!!
     }
 
     private suspend fun stored(item: Item): Item = items.observeById(item.id).first()!!
@@ -103,15 +109,19 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
         val need = add("Fridge", "2026-10-01T10:00:00Z", kind = ItemKind.NEED)
         val ended = add("Bike", "2026-10-01T10:00:00Z")
         decide(ended, reject(Instant.parse("2026-10-05T10:00:00Z")))
+        val parked = add("Tent", "2026-10-01T10:00:00Z", parked = true)
         val threeDays = rules("EUR", 0L to 3)
 
         policies.changeCoolingOffRules(threeDays, changedAt, zone)
 
         assertEquals(threeDays, policies.policy.first().coolingOffRules)
         assertEquals(Instant.parse("2026-10-04T10:00:00Z"), stored(waiting).coolingEndsAt) // already passed: cooled off
-        assertEquals(cooled.coolingEndsAt, stored(cooled).coolingEndsAt)
-        assertEquals(need.coolingEndsAt, stored(need).coolingEndsAt)
-        assertEquals(ended.coolingEndsAt, stored(ended).coolingEndsAt)
+        assertEquals(3, stored(waiting).coolingOffDays)
+        assertEquals(cooled, stored(cooled))
+        assertEquals(need, stored(need))
+        assertEquals(stored(ended).copy(coolingOffDays = 30), stored(ended))
+        // A parked want gets the new days too; it has waited nothing, so it still has 3 to go (ADR-0049).
+        assertEquals(parked.copy(coolingOffDays = 3), stored(parked))
     }
 
     @Test
@@ -222,7 +232,7 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
 
     @Test
     fun `items must be in the app's currency`() = runTest {
-        val dollars = Item(ItemId.NEW, "Camera", Money(12_000, "USD"), changedAt, changedAt)
+        val dollars = Item(ItemId.NEW, "Camera", Money(12_000, "USD"), changedAt, coolingOffDays = 30)
         assertThrowsIllegalArgument { items.add(dollars) }
 
         val euros = add("Camera", "2026-10-01T10:00:00Z")

@@ -11,11 +11,31 @@ import io.github.locngu.beforeyoubuy.core.domain.reflection.isAnswered
 import io.github.locngu.beforeyoubuy.core.domain.reflection.isRequired
 import java.time.Instant
 
-/** The displayed stage of an active item: derived, never stored (brief §5, ADR-0007). */
-enum class Stage { COOLING_OFF, NEEDS_REFLECTION, SAVING, READY }
+/** The displayed stage of an active item: derived, never stored (brief §5, ADR-0049). */
+enum class Stage {
+    /** A want without a priority slot: nothing runs for it, and it's never Ready (ADR-0049). Shown as "Wishlist". */
+    PARKED,
+    COOLING_OFF,
+    NEEDS_REFLECTION,
+    SAVING,
+    READY
+}
 
-/** Brief §4.2 and §5 `cooledOff`: the cooling-off period has ended. Always true for a `NEED` (ADR-0008). */
-fun isCooledOff(item: Item, now: Instant): Boolean = item.kind == ItemKind.NEED || now >= item.coolingEndsAt
+/**
+ * Brief §5 `parked`: an active want that holds no priority slot (ADR-0049). Its wait doesn't run and it can't be
+ * Ready, however long it has waited. Never true for a `NEED`, which can't hold a slot (ADR-0047).
+ */
+val Item.isParked: Boolean get() = status == ItemStatus.ACTIVE && kind == ItemKind.WANT && prioritySlot == null
+
+/**
+ * Brief §4.2 and §5 `cooledOff`: the want has waited its full period, in earlier stretches in a slot or in the running
+ * one ([Item.coolingEndsAt]). A parked want can be cooled off too; [stageOf] still shows it as [Stage.PARKED]. Always
+ * true for a `NEED` (ADR-0008).
+ */
+fun isCooledOff(item: Item, now: Instant): Boolean =
+    item.kind == ItemKind.NEED ||
+        item.waitedDays >= item.coolingOffDays ||
+        item.coolingEndsAt.let { it != null && now >= it }
 
 /**
  * Brief §4.3 and §5 `reflected`: the required answers are there (ADR-0009). That is every [ReflectionStep] that
@@ -54,14 +74,15 @@ fun coversPrice(allocated: Money, price: Money): Boolean {
 }
 
 /**
- * The stage of an active item, per the table in brief §5. The first unmet condition wins: cooled off, then
- * reflected, then funded. Purchased and rejected items have no stage, and [Funding.allocated] must be in the item's
- * currency; anything else is a programming error and throws.
+ * The stage of an active item, per the table in brief §5. [Stage.PARKED] wins over every other stage (ADR-0049); after
+ * that the first unmet condition wins: cooled off, then reflected, then funded. Purchased and rejected items have no
+ * stage, and [Funding.allocated] must be in the item's currency; anything else is a programming error and throws.
  */
 fun stageOf(item: Item, reflection: Reflection?, funding: Funding, now: Instant): Stage {
     require(item.status == ItemStatus.ACTIVE) { "Only active items have a stage; ${item.id} is ${item.status}" }
     requireSameCurrency(item, funding.allocated)
     return when {
+        item.isParked -> Stage.PARKED
         !isCooledOff(item, now) -> Stage.COOLING_OFF
         !isReflected(item, reflection) -> Stage.NEEDS_REFLECTION
         !isFunded(item, funding) -> Stage.SAVING
@@ -70,7 +91,8 @@ fun stageOf(item: Item, reflection: Reflection?, funding: Funding, now: Instant)
 }
 
 /**
- * Whether the item should be offered for a decision now (brief §5): it is active and Ready, and a `WAIT`
+ * Whether the item should be offered for a decision now (brief §5): it is active and Ready (so a priority or a need,
+ * never a parked want, ADR-0049), and a `WAIT`
  * decision's re-check date, if any, has come. False for purchased and rejected items. Like [stageOf], throws if
  * [Funding.allocated] isn't in the item's currency.
  */

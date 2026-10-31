@@ -268,6 +268,8 @@ private fun Header(overview: DecisionOverview) {
         when {
             item.kind == ItemKind.NEED -> SecondaryText(stringResource(R.string.item_need))
 
+            overview.stage == Stage.PARKED -> SecondaryText(stringResource(R.string.stage_not_priority))
+
             overview.stage == Stage.COOLING_OFF ->
                 CountdownText(overview.daysLeft, style = MaterialTheme.typography.bodyMedium)
 
@@ -324,6 +326,9 @@ private fun BuyStep(state: DecisionUiState, overview: DecisionOverview, form: De
         if (early) {
             SecondaryText(
                 when {
+                    // Not a priority: its wait doesn't run, so there are no days left to show (ADR-0049).
+                    overview.stage == Stage.PARKED -> stringResource(R.string.stage_not_priority)
+
                     overview.stage == Stage.COOLING_OFF ->
                         pluralStringResource(R.plurals.decision_early_days_left, overview.daysLeft, overview.daysLeft)
 

@@ -59,6 +59,7 @@
     <string name="stage_cooling_off">Wartezeit</string>
     <string name="stage_needs_reflection">Zum Überdenken</string>
     <string name="stage_saving">Sparen</string>
+    <string name="stage_not_priority">Keine deiner Prioritäten</string>
     <string name="stage_ready">Bereit</string>
 
     <!-- Relative Datumsangaben, in Kalendertagen. -->
@@ -179,8 +180,6 @@
     <!-- Artikel bearbeiten. Eine Preisänderung verlängert die Wartezeit höchstens (ADR-0005). -->
     <!-- %1$s: das neue Enddatum -->
     <string name="item_edit_wait_extended">Wartezeit verlängert bis %1$s</string>
-    <!-- %1$s: das Enddatum, wenn Notwendiges zum Wunsch wird -->
-    <string name="item_edit_wait_starts">Wartezeit bis %1$s</string>
     <string name="item_edit_conflict">Der Artikel hat sich inzwischen geändert, daher wurde nichts gespeichert. Prüf deine Änderungen und speichere noch einmal.</string>
 
     <!-- Artikelfotos (ADR-0013, ADR-0038): klein während der Wartezeit, zum Ansehen antippen. -->

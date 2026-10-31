@@ -11,6 +11,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
@@ -55,12 +56,12 @@ class HistoryItemViewModelTest {
                 name = "Camera",
                 price = Money(120_000, "EUR"),
                 addedAt = Instant.parse("2026-10-01T10:00:00Z"),
-                coolingEndsAt = Instant.parse("2026-10-31T10:00:00Z"),
+                coolingOffDays = 30,
                 kind = kind,
                 link = "https://shop.example/camera",
                 imageRef = "camera.jpg",
                 notes = "The silver one"
-            )
+            ).asPriority(Instant.parse("2026-10-31T10:00:00Z"))
         )
         items.reflect(id, reflection)
         return items.stored.single { it.id == id }
@@ -119,7 +120,7 @@ class HistoryItemViewModelTest {
     }
 
     @Test
-    fun `want it again adds a new want that cools off from now, and the entry stays`() =
+    fun `want it again adds a new want parked on the wishlist, and the entry stays`() =
         runTest(UnconfinedTestDispatcher()) {
             val old = rejected(ItemKind.NEED)
             val viewModel = viewModelFor(old.id)
@@ -133,14 +134,11 @@ class HistoryItemViewModelTest {
                 assertEquals(ItemStatus.ACTIVE, again.status)
                 assertEquals(ItemKind.WANT, again.kind)
                 assertEquals(now, again.addedAt)
-                assertTrue(again.coolingEndsAt > now)
+                assertNull(again.prioritySlot)
+                assertNull(again.coolingEndsAt)
                 assertEquals(
                     old.copy(id = added, status = ItemStatus.ACTIVE),
-                    again.copy(
-                        kind = old.kind,
-                        addedAt = old.addedAt,
-                        coolingEndsAt = old.coolingEndsAt
-                    )
+                    again.copy(kind = old.kind, addedAt = old.addedAt, coolingOffDays = old.coolingOffDays)
                 )
             }
             assertEquals(old, items.stored.single { it.id == old.id })

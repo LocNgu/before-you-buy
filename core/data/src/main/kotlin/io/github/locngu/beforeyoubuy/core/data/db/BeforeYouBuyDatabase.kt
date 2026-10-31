@@ -6,6 +6,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.wholeDaysBetween
+import java.time.Clock
+import java.time.Instant
 
 /**
  * The app's database. Every version's schema is committed in `core/data/schemas/`; from the first public release on,
@@ -23,7 +26,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PoolEntryEntity::class,
         AllocationEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
@@ -42,10 +45,13 @@ internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
     companion object {
         const val NAME = "before-you-buy.db"
 
-        /** [defaultCurrency] is asked once, when the database is first created, to fix the app's currency. */
-        fun create(context: Context, defaultCurrency: () -> String): BeforeYouBuyDatabase =
+        /**
+         * [defaultCurrency] is asked once, when the database is first created, to fix the app's currency. [clock] is
+         * "now" for migrations that need it ([migration6To7]).
+         */
+        fun create(context: Context, clock: Clock, defaultCurrency: () -> String): BeforeYouBuyDatabase =
             Room.databaseBuilder(context, BeforeYouBuyDatabase::class.java, NAME)
-                .addMigrations(*MIGRATIONS)
+                .addMigrations(*migrations(clock))
                 .withPolicyRow(defaultCurrency)
                 .build()
     }
@@ -125,9 +131,53 @@ internal val MIGRATION_5_6: Migration = object : Migration(5, 6) {
     }
 }
 
-/** Every migration, oldest first. A new schema version adds its own here, with a test in `MigrationTest`. */
-internal val MIGRATIONS: Array<Migration> =
-    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+/**
+ * 6 → 7 (issue #82, ADR-0049, ADR-0050): the wait runs only while a want holds a priority slot, so each item gets
+ * `cooling_off_days`, `waited_days` and `waiting_since`.
+ *
+ * - The days each item waits are those from when it was added to its stored end, rounded to whole days (a
+ *   daylight-saving change moves the end by an hour). They keep any extension from a price edit or a tier change.
+ * - Priorities keep their slot and their end: their wait has run since they were added.
+ * - Every other active want is parked and isn't Ready any more. The whole calendar days since it was added, in
+ *   [clock]'s zone, count as waited, so promoting it later loses nothing. A want that became a need keeps the days it
+ *   waited as a want, should it become a want again.
+ * - Nothing runs for parked wants, needs and ended items: their `cooling_ends_at` becomes `added_at`, as the app
+ *   writes it, so each row reads back as it is stored (ADR-0032).
+ */
+internal fun migration6To7(clock: Clock): Migration = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE items ADD COLUMN `cooling_off_days` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE items ADD COLUMN `waited_days` INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE items ADD COLUMN `waiting_since` INTEGER")
+        db.execSQL("UPDATE items SET cooling_off_days = MAX(0, (cooling_ends_at - added_at + 43200000) / 86400000)")
+        db.execSQL(
+            "UPDATE items SET waiting_since = added_at " +
+                "WHERE status = 'ACTIVE' AND kind = 'WANT' AND priority_slot IS NOT NULL"
+        )
+        val now = clock.instant()
+        db.query(
+            "SELECT id, added_at, kind, marked_as_need_at FROM items " +
+                "WHERE status = 'ACTIVE' AND waiting_since IS NULL AND (kind = 'WANT' OR marked_as_need_at IS NOT NULL)"
+        ).use { rows ->
+            while (rows.moveToNext()) {
+                val added = Instant.ofEpochMilli(rows.getLong(1))
+                val waitedUntil = if (rows.getString(2) == "WANT") now else Instant.ofEpochMilli(rows.getLong(3))
+                db.execSQL(
+                    "UPDATE items SET waited_days = ? WHERE id = ?",
+                    arrayOf<Any>(wholeDaysBetween(added, waitedUntil, clock.zone), rows.getLong(0))
+                )
+            }
+        }
+        db.execSQL("UPDATE items SET cooling_ends_at = added_at WHERE waiting_since IS NULL")
+    }
+}
+
+/**
+ * Every migration, oldest first, with [clock] for those that need "now". A new schema version adds its own here, with
+ * a test in `MigrationTest`.
+ */
+internal fun migrations(clock: Clock): Array<Migration> =
+    arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, migration6To7(clock))
 
 /**
  * Makes sure the policy row exists whenever the database opens, before anything reads it: the currency is fixed

@@ -264,7 +264,8 @@ private fun WishlistRow(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StageChip(entry.stage, waiting = entry.recheckOn != null)
+                // A parked want's group heading already says "Wishlist" (ADR-0049).
+                if (entry.stage != Stage.PARKED) StageChip(entry.stage, waiting = entry.recheckOn != null)
                 StageStatus(entry.stage, entry.daysLeft, entry.recheckOn, entry.savings?.shownToGo)
             }
             // How far the savings are, once something is set aside; detail has the amounts (brief §4.6).
@@ -319,7 +320,8 @@ private fun RowMenu(name: String, onMakePriority: () -> Unit) {
 
 /**
  * A countdown while cooling off, otherwise what the item is waiting for: after "Wait", the date to look again
- * ([recheckOn]); while saving, what is still to set aside ([toGo]). Informational, never urgent.
+ * ([recheckOn]); while saving, what is still to set aside ([toGo]); for a parked want, that it isn't a priority
+ * (ADR-0049). Informational, never urgent.
  */
 @Composable
 internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = null, toGo: Money? = null) {
@@ -333,6 +335,13 @@ internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = nu
         return
     }
     when (stage) {
+        Stage.PARKED ->
+            Text(
+                text = stringResource(R.string.stage_not_priority),
+                style = style,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
         Stage.COOLING_OFF -> CountdownText(daysLeft, style = style)
 
         Stage.NEEDS_REFLECTION -> CountdownText(0, style = style)
@@ -371,6 +380,8 @@ internal fun StageChip(stage: Stage, waiting: Boolean = false) {
 @Composable
 internal fun stageLabel(stage: Stage): String = stringResource(
     when (stage) {
+        // What the screen calls the wants without a slot (ADR-0049).
+        Stage.PARKED -> R.string.wishlist_title
         Stage.COOLING_OFF -> R.string.stage_cooling_off
         Stage.NEEDS_REFLECTION -> R.string.stage_needs_reflection
         Stage.SAVING -> R.string.stage_saving

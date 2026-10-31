@@ -17,6 +17,7 @@ import io.github.locngu.beforeyoubuy.core.domain.notifications.ItemNotifications
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationKind
 import io.github.locngu.beforeyoubuy.core.domain.settings.AppPreferences
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakeNotificationLogRepository
 import io.github.locngu.beforeyoubuy.testing.FakePreferencesRepository
@@ -58,9 +59,9 @@ class NotificationCheckTest {
                 name = name,
                 price = Money(12_000, "EUR"),
                 addedAt = Instant.parse("2026-10-01T10:00:00Z"),
-                coolingEndsAt = Instant.parse(endsAt),
+                coolingOffDays = 30,
                 kind = kind
-            )
+            ).asPriority(Instant.parse(endsAt))
         )
 
     /** What the shade shows, oldest first. */

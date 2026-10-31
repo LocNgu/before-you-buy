@@ -20,14 +20,18 @@ internal val ADDED: Instant = Instant.parse("2026-10-01T10:00:00.123Z")
 internal val COOLING_ENDS: Instant = Instant.parse("2026-10-31T10:00:00.456Z")
 internal val DECIDED: Instant = Instant.parse("2026-11-02T09:30:00Z")
 
-/** A want with only the required fields, not stored yet. */
+/** A want with only the required fields, not stored yet: parked, as quick add captures it (ADR-0049). */
 internal fun newItem(name: String = "Camera", addedAt: Instant = ADDED) = Item(
     id = ItemId.NEW,
     name = name,
     price = Money(12_000, "EUR"),
     addedAt = addedAt,
-    coolingEndsAt = COOLING_ENDS
+    coolingOffDays = 30
 )
+
+/** [newItem] as a priority (slot 1) whose wait runs from [addedAt] until [COOLING_ENDS] (ADR-0049). */
+internal fun newPriority(name: String = "Camera", addedAt: Instant = ADDED) = newItem(name, addedAt)
+    .copy(prioritySlot = 1, waitingSince = addedAt, coolingEndsAt = maxOf(addedAt, COOLING_ENDS))
 
 /** Every optional field set. */
 internal val FULL_ITEM = Item(
@@ -35,6 +39,9 @@ internal val FULL_ITEM = Item(
     name = "Fridge",
     price = Money(89_900, "EUR"),
     addedAt = ADDED,
+    coolingOffDays = 60,
+    waitedDays = 3,
+    waitingSince = ADDED,
     coolingEndsAt = COOLING_ENDS,
     kind = ItemKind.NEED,
     status = ItemStatus.ACTIVE,

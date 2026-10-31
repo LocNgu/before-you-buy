@@ -12,7 +12,7 @@ paths:
 ## Rules (`:core:domain` `capture/`)
 
 - `CaptureForm` holds the fields as typed. `checkCapture(form, currency, locale)` says whether the name is missing and how the price reads (`parseMoney`, so both `1.234,56` and `1,234.56` work, ADR-0027). `capturedItem(form, policy, locale, addedAt, zone)` builds the new item: trimmed text, blank optional fields → null, `ItemId.NEW`, cooling-off end from `initialCoolingEnd` (a `NEED` ends at `addedAt`). It throws for an invalid form.
-- `coolingOffDays(item, zone)` is what the snackbar says: calendar days from `addedAt` to `coolingEndsAt` (0 for a need).
+- `capturedItem(form, policy, locale, addedAt)` gives a **parked** want: `coolingOffDays` from the tiers, no slot, no running wait (ADR-0049). `capturedWaitDays(item)` is what the snackbar says: the days it waits once it's a priority (0 for a need). The UI PR replaces that snackbar with "Added to your wishlist.".
 - **No reflection questions in capture** (ADR-0009). "More details" is only category, notes, target date.
 - `parseSharedText(text, subject)` (`SharedText.kt`) reads a share offline into `SharedItemDraft(name, url)`: first `http(s)` link (text, else subject) without tracking parameters, name = the rest without links, boilerplate and the shop's name, else from the subject; `shop` is the readable host for the fallback name. It never throws. A new shop or phrase: add it to the lists **and** a fixture in `SharedTextTest`. Never read a price from the text (ADR-0036).
 

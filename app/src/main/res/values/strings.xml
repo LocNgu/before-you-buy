@@ -59,6 +59,7 @@
     <string name="stage_cooling_off">Cooling off</string>
     <string name="stage_needs_reflection">Needs reflection</string>
     <string name="stage_saving">Saving</string>
+    <string name="stage_not_priority">Not one of your priorities</string>
     <string name="stage_ready">Ready</string>
 
     <!-- Relative dates, in calendar days. -->
@@ -179,8 +180,6 @@
     <!-- Editing an item. A price change only ever extends the waiting period (ADR-0005). -->
     <!-- %1$s: the new end date -->
     <string name="item_edit_wait_extended">Waiting period extended to %1$s</string>
-    <!-- %1$s: the end date, when a need becomes a want -->
-    <string name="item_edit_wait_starts">Waiting period until %1$s</string>
     <string name="item_edit_conflict">This item changed in the meantime, so nothing was saved. Check your changes and save again.</string>
 
     <!-- Item photos (ADR-0013, ADR-0038): small while cooling off, tap to view. -->
