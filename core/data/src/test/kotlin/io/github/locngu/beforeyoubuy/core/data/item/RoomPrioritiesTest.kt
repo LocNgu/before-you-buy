@@ -12,6 +12,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
+import java.time.Duration
 import java.time.ZoneOffset
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -25,7 +26,9 @@ import org.junit.Test
 internal class RoomPrioritiesTest : DatabaseTest() {
     private lateinit var items: RoomItemRepository
     private lateinit var policies: RoomPolicyRepository
-    private val at = DECIDED
+
+    // Promoted when added, so a priority's 30-day wait is over by DECIDED and a plain Buy works.
+    private val at = ADDED
     private val utc = ZoneOffset.UTC
 
     @Before
@@ -74,6 +77,35 @@ internal class RoomPrioritiesTest : DatabaseTest() {
     }
 
     @Test
+    fun `getting a slot starts the wait in the same write, losing it pauses the wait`() = runTest {
+        val (camera, laptop, bike, printer) = threePriorities()
+        assertEquals(at, stored(camera).waitingSince)
+        val later = at.plus(Duration.ofDays(10))
+
+        val before = listOf(camera.id, laptop.id, bike.id)
+        assertTrue(items.setPriorities(before, listOf(camera.id, printer.id, laptop.id), later, utc))
+
+        assertEquals(later, stored(printer).waitingSince)
+        assertEquals(later.plus(Duration.ofDays(30)), stored(printer).coolingEndsAt)
+        assertEquals(stored(camera).coolingEndsAt, camera.coolingEndsAt) // moved nowhere, still running
+        val paused = stored(bike)
+        assertEquals(null, paused.waitingSince)
+        assertEquals(10, paused.waitedDays)
+    }
+
+    @Test
+    fun `fewer slots pause the waits of the priorities that go back`() = runTest {
+        val (camera, laptop, bike) = threePriorities()
+
+        assertTrue(
+            policies.changePrioritySlots(1, listOf(camera.id, laptop.id, bike.id), at.plus(Duration.ofDays(4)), utc)
+        )
+
+        assertEquals(listOf(4, 4), listOf(stored(laptop), stored(bike)).map { it.waitedDays })
+        assertEquals(listOf(null, null), listOf(stored(laptop), stored(bike)).map { it.coolingEndsAt })
+    }
+
+    @Test
     fun `a ranking based on stale priorities writes nothing`() = runTest {
         val (camera, laptop, bike, printer) = threePriorities()
         assertTrue(decide(laptop, reject()))
@@ -90,7 +122,7 @@ internal class RoomPrioritiesTest : DatabaseTest() {
         val expected = listOf(camera.id, laptop.id, bike.id)
         val need = add("Fridge", ItemKind.NEED)
         val lamp = add("Lamp")
-        assertTrue(decide(printer, buy()))
+        assertTrue(decide(printer, buyEarly())) // not a priority: bought early
 
         assertFalse(items.setPriorities(expected, listOf(camera.id, need.id, laptop.id), at, utc))
         assertFalse(items.setPriorities(expected, listOf(camera.id, printer.id, laptop.id), at, utc))

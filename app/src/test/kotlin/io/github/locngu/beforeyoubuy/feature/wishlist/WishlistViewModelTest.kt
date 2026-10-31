@@ -8,12 +8,12 @@ import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
-import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +67,11 @@ class WishlistViewModelTest {
 
     private val groups get() = viewModel.uiState.value.groups
 
+    /** Every listed entry: the priorities by rank, then the stage groups. */
+    private val entries get() = viewModel.uiState.value.let { state ->
+        state.priorities.map { it.entry } + state.groups.orEmpty().flatMap { it.entries }
+    }
+
     /** Moves the clock and the coroutine time together, as real time does. */
     private fun kotlinx.coroutines.test.TestScope.pass(duration: Duration) {
         clock.advance(duration)
@@ -90,44 +95,45 @@ class WishlistViewModelTest {
         add("Cooling", endsInHours = 24 * 5)
         items.reflect(ready.id, reflection)
 
-        assertEquals(listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), groups!!.map { it.stage })
-        assertEquals(unreflected.id, groups!![1].entries.single().item.id)
-        assertEquals(5, groups!![2].entries.single().daysLeft)
+        // All three are priorities (ADR-0049), listed by rank.
+        assertEquals(listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), entries.map { it.stage })
+        assertEquals(unreflected.id, entries[1].item.id)
+        assertEquals(5, entries[2].daysLeft)
     }
 
     @Test
     fun `an item moves up when its reflection is completed`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.uiState.launchIn(backgroundScope)
         val item = add("Camera", endsInHours = -1)
-        assertEquals(Stage.NEEDS_REFLECTION, groups!!.single().stage)
+        assertEquals(Stage.NEEDS_REFLECTION, entries.single().stage)
 
         items.reflect(item.id, reflection)
 
-        assertEquals(Stage.READY, groups!!.single().stage)
+        assertEquals(Stage.READY, entries.single().stage)
     }
 
     @Test
     fun `an item regroups when its cooling off ends while the screen is open`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.uiState.launchIn(backgroundScope)
         add("Camera", endsInHours = 3)
-        assertEquals(Stage.COOLING_OFF, groups!!.single().stage)
+        assertEquals(Stage.COOLING_OFF, entries.single().stage)
 
         pass(Duration.ofHours(2))
-        assertEquals(Stage.COOLING_OFF, groups!!.single().stage)
+        assertEquals(Stage.COOLING_OFF, entries.single().stage)
 
         pass(Duration.ofHours(1))
-        assertEquals(Stage.NEEDS_REFLECTION, groups!!.single().stage)
+        assertEquals(Stage.NEEDS_REFLECTION, entries.single().stage)
     }
 
     @Test
     fun `the days left drop at midnight with no change in the database`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.uiState.launchIn(backgroundScope)
         add("Camera", endsInHours = 24 * 3)
-        assertEquals(3, groups!!.single().entries.single().daysLeft)
+        assertEquals(3, entries.single().daysLeft)
 
         pass(Duration.ofHours(14)) // midnight
 
-        assertEquals(2, groups!!.single().entries.single().daysLeft)
+        assertEquals(2, entries.single().daysLeft)
     }
 
     @Test

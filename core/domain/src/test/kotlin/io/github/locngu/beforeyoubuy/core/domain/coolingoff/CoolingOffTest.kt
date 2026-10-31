@@ -42,12 +42,11 @@ class CoolingOffTest {
     )
 
     /** A want at [price] that got priority slot 1 when it was added, so its wait runs from [added]. */
-    private fun item(price: Money, kind: ItemKind = ItemKind.WANT): Item =
-        if (kind == ItemKind.NEED) {
-            parked(price, kind)
-        } else {
-            startWait(parked(price).copy(prioritySlot = 1), added, utc)
-        }
+    private fun item(price: Money, kind: ItemKind = ItemKind.WANT): Item = if (kind == ItemKind.NEED) {
+        parked(price, kind)
+    } else {
+        startWait(parked(price).copy(prioritySlot = 1), added, utc)
+    }
 
     @Test
     fun `each default tier boundary`() {

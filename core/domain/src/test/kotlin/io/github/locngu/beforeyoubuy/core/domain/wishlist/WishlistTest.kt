@@ -96,6 +96,22 @@ class WishlistTest {
     }
 
     @Test
+    fun `a need sorts among the priorities by the day it was added`() {
+        val august = Instant.parse("2026-08-01T10:00:00Z")
+        val longReady = wish(
+            1
+        ).copy(addedAt = august, waitingSince = august, coolingEndsAt = august.plus(Duration.ofDays(30)))
+        val need = wish(2, kind = ItemKind.NEED) // added 1 Oct
+        val recentlyReady = wish(3, endsAt = Instant.parse("2026-10-20T10:00:00Z"))
+        val answered = listOf(longReady, recentlyReady).associate { it.id to COMPLETE_REFLECTION }
+
+        val ready = wishlistOf(listOf(recentlyReady, need, longReady), answered, Savings.NONE, AFTER_COOLING, zone)
+            .single().entries.map { it.item }
+
+        assertEquals(listOf(longReady, need, recentlyReady), ready)
+    }
+
+    @Test
     fun `parked wants come last, after the waiting group, oldest first`() {
         val newer = parkedWish(1).copy(addedAt = ADDED.plusSeconds(60))
         val older = parkedWish(2)

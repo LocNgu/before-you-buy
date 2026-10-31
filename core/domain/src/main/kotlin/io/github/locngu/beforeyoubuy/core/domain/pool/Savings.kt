@@ -95,6 +95,13 @@ data class SavingsProgress(val allocated: Money, val price: Money) {
 fun Savings.progressOf(item: Item): SavingsProgress? =
     if (item.kind == ItemKind.NEED) null else SavingsProgress(allocatedFor(item), item.price)
 
+/**
+ * Whether money can be set aside for [this]: an active want that is a priority (ADR-0046, ADR-0049). [setAside] says
+ * why when it can't.
+ */
+val Item.canBeSavedFor: Boolean
+    get() = status == ItemStatus.ACTIVE && kind == ItemKind.WANT && prioritySlot != null
+
 /** Outcome of [setAside] and [takeBack]. A refusal says why, so the screen can explain it. */
 sealed interface AllocationResult {
     /** Allowed: store [allocation]. */

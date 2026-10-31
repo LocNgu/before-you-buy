@@ -11,12 +11,12 @@ import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
-import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Duration
 import java.time.Instant
 import java.util.Locale
@@ -156,7 +156,9 @@ class ItemDetailViewModelTest {
         val stored = items.stored.single()
         assertEquals(ItemKind.NEED, stored.kind)
         assertEquals(start, stored.markedAsNeedAt)
-        assertEquals(item.coolingEndsAt, stored.coolingEndsAt)
+        // It leaves the priorities and its wait pauses, keeping the 3 days it waited (ADR-0049).
+        assertEquals(null, stored.coolingEndsAt)
+        assertEquals(3, stored.waitedDays)
         assertEquals(Stage.READY, viewModel.uiState.value.detail!!.stage)
     }
 

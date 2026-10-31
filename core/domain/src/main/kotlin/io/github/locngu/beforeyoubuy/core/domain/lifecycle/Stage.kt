@@ -32,10 +32,9 @@ val Item.isParked: Boolean get() = status == ItemStatus.ACTIVE && kind == ItemKi
  * one ([Item.coolingEndsAt]). A parked want can be cooled off too; [stageOf] still shows it as [Stage.PARKED]. Always
  * true for a `NEED` (ADR-0008).
  */
-fun isCooledOff(item: Item, now: Instant): Boolean =
-    item.kind == ItemKind.NEED ||
-        item.waitedDays >= item.coolingOffDays ||
-        item.coolingEndsAt.let { it != null && now >= it }
+fun isCooledOff(item: Item, now: Instant): Boolean = item.kind == ItemKind.NEED ||
+    item.waitedDays >= item.coolingOffDays ||
+    item.coolingEndsAt.let { it != null && now >= it }
 
 /**
  * Brief §4.3 and §5 `reflected`: the required answers are there (ADR-0009). That is every [ReflectionStep] that

@@ -17,7 +17,6 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
-import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isParked
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
@@ -27,6 +26,7 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.AmountProblem
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.canBeSavedFor
 import io.github.locngu.beforeyoubuy.core.domain.pool.checkAmount
 import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.quickAmounts
@@ -196,10 +196,10 @@ class ItemDetailViewModel @AssistedInject constructor(
             val balance = (money as? FunMoney.SetUp)?.balance
             val currency = state.detail?.savings?.price?.currency
             // Only a priority can be saved for (ADR-0049); "Take back" stays for money a parked want still holds.
-            val priority = state.detail?.item?.isParked == false
+            val canBeSavedFor = state.detail?.item?.canBeSavedFor == true
             state.copy(
                 sheet = editor?.let { sheetOf(it, state.detail, money, locale) },
-                canSetAside = priority && balance != null && currency != null &&
+                canSetAside = canBeSavedFor && balance != null && currency != null &&
                     setAsideLimit(balance, currency).minorUnits > 0
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ItemDetailUiState())

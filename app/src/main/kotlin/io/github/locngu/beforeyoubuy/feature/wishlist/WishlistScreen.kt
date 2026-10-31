@@ -382,9 +382,13 @@ internal fun stageLabel(stage: Stage): String = stringResource(
     when (stage) {
         // What the screen calls the wants without a slot (ADR-0049).
         Stage.PARKED -> R.string.wishlist_title
+
         Stage.COOLING_OFF -> R.string.stage_cooling_off
+
         Stage.NEEDS_REFLECTION -> R.string.stage_needs_reflection
+
         Stage.SAVING -> R.string.stage_saving
+
         Stage.READY -> R.string.stage_ready
     }
 )

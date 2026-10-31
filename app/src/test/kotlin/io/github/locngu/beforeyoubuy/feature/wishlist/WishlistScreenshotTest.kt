@@ -16,6 +16,7 @@ import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistSectionsOf
 import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.testing.parked
 import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
@@ -132,10 +133,18 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
         )
     }
 
-    /** Two of three slots used: the priorities by rank at the top, out of their stage groups (ADR-0047). */
+    /**
+     * Two of three slots used: the priorities by rank at the top, out of their stage groups (ADR-0047), the other wants
+     * parked in the last group (ADR-0049).
+     */
     @Test
     fun priorities() {
-        val active = listOf(coolingLater.copy(prioritySlot = 1), unreflected, coolingSoon, ready.copy(prioritySlot = 2))
+        val active = listOf(
+            coolingLater.copy(prioritySlot = 1),
+            unreflected.parked(),
+            coolingSoon.parked(),
+            ready.copy(prioritySlot = 2)
+        )
         val sections = wishlistSectionsOf(
             wishlistOf(active, mapOf(ready.id to reflection), Savings.NONE, now, ZoneOffset.UTC)
         )

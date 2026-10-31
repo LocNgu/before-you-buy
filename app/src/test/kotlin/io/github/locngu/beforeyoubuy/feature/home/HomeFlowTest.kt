@@ -58,13 +58,13 @@ class HomeFlowTest {
     }
 
     @Test
-    fun `a new want is considered, with its countdown, and not yet to decide`() {
+    fun `a new want is considered, has no countdown until it's a priority, and isn't to decide`() {
         add("Headphones", "50")
 
         waitFor("1 item on your wishlist")
-        waitFor("Next waiting period to end")
-        waitFor("Headphones")
-        waitFor("7 days left")
+        // Parked: no waiting period runs for it (ADR-0049).
+        composeRule.onNodeWithText("Next waiting period to end").assertDoesNotExist()
+        composeRule.onNodeWithText("7 days left").assertDoesNotExist()
         composeRule.onNodeWithText("To decide").assertDoesNotExist()
     }
 

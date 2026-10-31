@@ -78,6 +78,9 @@ class DecisionFlowTest {
 
     @Test
     fun `a want that isn't ready offers no buy and no wait, only not buying and deciding early`() {
+        // A priority still cooling off (ADR-0049).
+        tap("Make priority")
+        waitFor("7 days left")
         openDecision("Decide now")
 
         waitFor("7 days left")
@@ -92,7 +95,8 @@ class DecisionFlowTest {
         openDecision("Decide now")
         tap("Decide early…")
         waitFor("Buy before it’s ready?")
-        waitFor("7 days of the waiting period are left.")
+        // A new want isn't a priority: "Decide early…" is the only way to buy it (ADR-0049).
+        waitFor("Not one of your priorities")
         button("Buy anyway").assertIsNotEnabled()
 
         composeRule.onNode(hasSetTextAction() and hasText("Why buy it now?")).performTextInput("Old ones broke")

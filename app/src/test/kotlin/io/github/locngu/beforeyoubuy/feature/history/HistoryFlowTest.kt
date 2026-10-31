@@ -98,15 +98,15 @@ class HistoryFlowTest {
     }
 
     @Test
-    fun `want it again adds a new item that waits again, and the entry stays in history`() {
+    fun `want it again adds a new item to the wishlist, and the entry stays in history`() {
         tap("Headphones")
         tap("Want it again?")
         waitFor("Put it back on your wishlist?")
         tapInDialog("Add to wishlist")
 
-        // The new item's detail: cooling off again, no answers yet.
+        // The new item's detail: parked like a new capture (ADR-0049), no answers yet.
         waitFor("Why do you want this?")
-        waitFor("7 days left")
+        waitFor("Not one of your priorities")
         Espresso.pressBack()
 
         waitFor("You decided against €50 of purchases")

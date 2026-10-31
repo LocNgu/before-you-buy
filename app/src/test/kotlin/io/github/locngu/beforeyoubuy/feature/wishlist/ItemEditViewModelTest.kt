@@ -7,12 +7,12 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
-import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -313,6 +313,10 @@ class ItemEditViewModelTest {
     @Test
     fun `making a want without savings a need saves at once`() = runTest(UnconfinedTestDispatcher()) {
         pool.setUp(Money(30_000, "EUR"), 1, Money(20_000, "EUR"), true, clock.instant(), clock.zone)
+        // A want without a slot: nothing to give back and no priority to leave, so nothing to ask.
+        items.replace(item.copy(prioritySlot = null, waitingSince = null, coolingEndsAt = null))
+        viewModel = ItemEditViewModel(item.id.value, items, pool, policies, images, clock)
+        viewModel.setLocale(Locale.GERMANY)
         viewModel.onNeedChange(true)
 
         viewModel.saved.test {

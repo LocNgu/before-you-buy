@@ -46,22 +46,34 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
 
     private val now = Instant.parse("2026-10-16T10:00:00Z")
 
-    private fun item(id: Long, name: String, euros: Long, endsInDays: Long, kind: ItemKind = ItemKind.WANT) = Item(
-        id = ItemId(id),
-        name = name,
-        price = Money(euros * 100, "EUR"),
-        addedAt = now.minusSeconds(40L * 24 * 3600),
-        coolingOffDays = 30,
-        kind = kind
-    ).asPriority(now.plusSeconds(endsInDays * 24 * 3600))
+    /** A priority in [slot] whose wait ends [endsInDays] from now, a want without a slot, or a need (ADR-0049). */
+    private fun item(
+        id: Long,
+        name: String,
+        euros: Long,
+        endsInDays: Long,
+        kind: ItemKind = ItemKind.WANT,
+        slot: Int? = null
+    ): Item {
+        val captured = Item(
+            id = ItemId(id),
+            name = name,
+            price = Money(euros * 100, "EUR"),
+            addedAt = now.minusSeconds(40L * 24 * 3600),
+            coolingOffDays = 30,
+            kind = kind
+        )
+        return if (slot == null) captured else captured.asPriority(now.plusSeconds(endsInDays * 24 * 3600), slot)
+    }
 
     private val reflection =
         Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))
 
-    private val ready = item(1, t("Mirrorless camera", "Systemkamera"), 1_199, endsInDays = -10)
-    private val unreflected = item(2, t("Standing desk", "Stehschreibtisch"), 449, endsInDays = -2)
+    // Three priorities fill the slots; the tent is parked, with money set aside before it lost its slot.
+    private val ready = item(1, t("Mirrorless camera", "Systemkamera"), 1_199, endsInDays = -10, slot = 1)
+    private val unreflected = item(2, t("Standing desk", "Stehschreibtisch"), 449, endsInDays = -2, slot = 2)
     private val need = item(3, t("Winter boots", "Winterstiefel"), 129, endsInDays = -40, kind = ItemKind.NEED)
-    private val coolingSoon = item(4, t("Road bike", "Rennrad"), 1_890, endsInDays = 12)
+    private val coolingSoon = item(4, t("Road bike", "Rennrad"), 1_890, endsInDays = 12, slot = 3)
     private val coolingLater = item(5, t("Tent", "Zelt"), 320, endsInDays = 60)
 
     private val funMoney = FunMoney.SetUp(
@@ -98,14 +110,9 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
     @Test
     fun nothingToDecide() = capture(state(listOf(coolingLater, coolingSoon), funMoney))
 
-    /** "Saving for" becomes the priorities by rank (ADR-0047). */
+    /** Without fun money, each priority shows its price instead of what is set aside (ADR-0047). */
     @Test
-    fun priorities() = capture(
-        state(
-            listOf(coolingLater.copy(prioritySlot = 2), unreflected, coolingSoon.copy(prioritySlot = 1), need, ready),
-            funMoney
-        )
-    )
+    fun priorities() = capture(state(listOf(coolingLater, unreflected, coolingSoon, need, ready)))
 
     @Test
     fun loading() = capture(HomeUiState(null))

@@ -68,7 +68,7 @@ val DAILY_CHECK_TIME: LocalTime = LocalTime.of(10, 0)
  *   slot isn't notified: the user has just chosen it (ADR-0050). Items the user already chose to "Wait" on are left
  *   out.
  * - **Reflection nudge** (if [NotificationPrefs.reflectionReminders]): priorities still cooling off, without the
- *   required answers, added at least [REFLECTION_NUDGE_AFTER_DAYS] calendar days ago and never nudged. Once cooling
+ *   required answers, whose wait started at least [REFLECTION_NUDGE_AFTER_DAYS] calendar days ago and never nudged. Once cooling
  *   off has ended, the waiting-period notification leads to the questions instead.
  * - Waiting periods come first; nudges that lose to them stay due for the next day. Several items of the kind make
  *   one digest; items are ordered by cooling-off end (waiting periods) or added date (nudges), then id.
@@ -104,7 +104,9 @@ fun planNotifications(
 
     val nudges = if (prefs.reflectionReminders) {
         priorities.filter { item ->
-            val nudgeDay = item.addedAt.atZone(zone).toLocalDate().plusDays(REFLECTION_NUDGE_AFTER_DAYS)
+            // Counted from when its wait started (ADR-0050): a want promoted after weeks isn't nudged at once.
+            val started = item.waitingSince ?: item.addedAt
+            val nudgeDay = started.atZone(zone).toLocalDate().plusDays(REFLECTION_NUDGE_AFTER_DAYS)
             !isCooledOff(item, now) &&
                 !isReflected(item, reflections[item.id]) &&
                 !today.isBefore(nudgeDay) &&

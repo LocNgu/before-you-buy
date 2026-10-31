@@ -6,9 +6,9 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.locngu.beforeyoubuy.core.data.item.toDomain
 import io.github.locngu.beforeyoubuy.core.data.item.toEntity
+import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isParked
-import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import java.io.File
 import java.time.Clock
 import java.time.Instant
@@ -262,7 +262,7 @@ internal class MigrationTest {
 
             val active = items.getByStatus("ACTIVE").map { it.toDomain() }
             assertEquals(listOf(1L), active.filter { !it.isParked && it.kind == ItemKind.WANT }.map { it.id.value })
-            assertEquals(listOf(2L, 3L), active.filter { it.isParked }.map { it.id.value })
+            assertEquals(listOf(2L, 3L), active.filter { it.isParked }.map { it.id.value }.sorted())
             assertEquals(Instant.parse("2026-10-31T09:00:00Z"), active.first { it.id.value == 1L }.coolingEndsAt)
             // Every row reads back as it is stored, so compare-and-set writes still match (ADR-0032).
             items.getAll().forEach { assertEquals(it, it.toDomain().toEntity()) }

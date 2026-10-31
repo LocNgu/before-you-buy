@@ -50,7 +50,8 @@ val WISHLIST_STAGE_ORDER: List<Stage> = listOf(Stage.READY, Stage.NEEDS_REFLECTI
 
 /**
  * The wishlist (brief §6.3): the active [items] grouped by derived stage in [WISHLIST_STAGE_ORDER], empty groups
- * left out. Within a group the soonest [Item.coolingEndsAt] comes first, then the oldest, so the order is stable.
+ * left out. Within a group the soonest [Item.coolingEndsAt] comes first (a need, which has none, by the day it was
+ * added), then the oldest, so the order is stable.
  * Ready items with a "Wait" re-check date still ahead ([isWaiting]) form a [WishlistGroup.waiting] group instead of
  * being Ready, soonest re-check first. The [Stage.PARKED] wants come last, oldest first (ADR-0049).
  *
@@ -84,7 +85,9 @@ fun wishlistOf(
         val group = byStage[stage] ?: return@mapNotNull null
         WishlistGroup(
             stage,
-            group.sortedWith(compareBy({ it.item.coolingEndsAt }, { it.item.addedAt }, { it.item.id.value }))
+            group.sortedWith(
+                compareBy({ it.item.coolingEndsAt ?: it.item.addedAt }, { it.item.addedAt }, { it.item.id.value })
+            )
         )
     }
     val waitingGroup = WishlistGroup(

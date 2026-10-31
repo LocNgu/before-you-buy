@@ -105,18 +105,17 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
         ranking: List<ItemId>,
         at: Instant,
         zone: ZoneId
-    ): Boolean =
-        database.withTransaction {
-            val active = activeItems()
-            if (prioritiesOf(active).map { it.id } != expected) return@withTransaction false
-            val wants = active.filter { it.kind == ItemKind.WANT }.map { it.id }.toSet()
-            if (!wants.containsAll(ranking) || ranking.distinct().size != ranking.size) return@withTransaction false
-            val slots = policies.get()?.toDomain()?.prioritySlots ?: DEFAULT_PRIORITY_SLOTS
-            if (ranking.size > slots) return@withTransaction false
-            // A want that gets a slot starts waiting, one that loses it pauses (ADR-0049).
-            items.setSlotsAndWaits(withSlots(active, slotChanges(active, ranking), at, zone))
-            true
-        }
+    ): Boolean = database.withTransaction {
+        val active = activeItems()
+        if (prioritiesOf(active).map { it.id } != expected) return@withTransaction false
+        val wants = active.filter { it.kind == ItemKind.WANT }.map { it.id }.toSet()
+        if (!wants.containsAll(ranking) || ranking.distinct().size != ranking.size) return@withTransaction false
+        val slots = policies.get()?.toDomain()?.prioritySlots ?: DEFAULT_PRIORITY_SLOTS
+        if (ranking.size > slots) return@withTransaction false
+        // A want that gets a slot starts waiting, one that loses it pauses (ADR-0049).
+        items.setSlotsAndWaits(withSlots(active, slotChanges(active, ranking), at, zone))
+        true
+    }
 
     /**
      * Gives the priorities ranks 1…n again after one left ([compactedSlots]); inside the caller's transaction. Every

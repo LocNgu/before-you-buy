@@ -26,7 +26,7 @@ class WishlistFlowTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun `an item added from the wishlist shows up under cooling off, with its snackbar`() {
+    fun `an item added from the wishlist shows up on the wishlist, not yet a priority, with its snackbar`() {
         // Home loads its sections from the database off the main thread.
         composeRule.waitUntilExactlyOneExists(hasText("Open wishlist"), timeoutMillis = 5_000)
         composeRule.onNodeWithText("Open wishlist").performClick()
@@ -41,7 +41,9 @@ class WishlistFlowTest {
         composeRule.onNodeWithText("Added. You can decide in 90 days.").assertIsDisplayed()
         composeRule.waitUntilExactlyOneExists(hasText("Headphones"))
         composeRule.onNodeWithText("Headphones").assertIsDisplayed()
-        composeRule.onNodeWithText("90 days left").assertIsDisplayed()
+        // Parked: its wait starts only once it's made a priority (ADR-0049).
+        composeRule.onNodeWithText("Not one of your priorities").assertIsDisplayed()
+        composeRule.onNodeWithText("90 days left").assertDoesNotExist()
         composeRule.onNodeWithText("Your wishlist is empty").assertDoesNotExist()
     }
 }

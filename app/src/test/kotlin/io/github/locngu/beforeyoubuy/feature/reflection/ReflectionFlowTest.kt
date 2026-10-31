@@ -74,8 +74,8 @@ class ReflectionFlowTest {
         composeRule.onNodeWithText("Weekly").assertIsDisplayed()
         composeRule.onNodeWithText("• I have earbuds").assertIsDisplayed()
         composeRule.onNodeWithText("Start").assertDoesNotExist()
-        // Answers never change the wait.
-        composeRule.onNodeWithText("7 days left").assertIsDisplayed()
+        // Answers never change the wait, nor make it a priority.
+        composeRule.onNodeWithText("Not one of your priorities").assertIsDisplayed()
     }
 
     @Test

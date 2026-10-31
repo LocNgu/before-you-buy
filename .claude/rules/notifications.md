@@ -14,7 +14,7 @@ paths:
 ## Rules (`:core:domain` `notifications/`)
 
 - `planNotifications(items, reflections, notified, now, zone, prefs)` returns the **one** `NotificationPlan` to send now, or null. Pure; the rules and their order are in its KDoc and ADR-0042: one a day (anything in `notified` sent on today's date blocks), waiting periods before nudges, a digest when several items qualify, **only priorities** (parked wants, needs and ended items never, ADR-0049), "Wait"ed items never get "waiting period over", and neither does a want whose wait was already complete when it got its slot (its end equals its start, ADR-0050).
-- `ItemNotifications` is the per-item record (when each kind was sent). "Waiting period over" is due again only if `coolingEndsAt` moved past the record (a price edit, or the wait paused and ran out again in the slot). The nudge is once per item, ever.
+- `ItemNotifications` is the per-item record (when each kind was sent). "Waiting period over" is due again only if `coolingEndsAt` moved past the record (a price edit, or the wait paused and ran out again in the slot). The nudge is once per item, ever, from the second calendar day after the wait started (`waitingSince`, ADR-0050), so a want promoted late isn't nudged at once.
 - `recordSent(plan, current, sentAt)` gives the records to store; `untilNextDailyCheck(now, zone)` the first run's delay (next `DAILY_CHECK_TIME`, calendar arithmetic).
 - `prefs` passed to the planner must already be false for kinds the system won't show, so nothing unseen is recorded.
 - Never add a notification about money, deals, prices or suggestions (ADR-0014). New kinds need an ADR and their own channel.

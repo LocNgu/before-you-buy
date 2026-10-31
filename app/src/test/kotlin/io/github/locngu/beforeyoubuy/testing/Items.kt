@@ -13,3 +13,6 @@ fun Item.asPriority(endsAt: Instant, slot: Int = 1): Item = if (kind == ItemKind
 } else {
     copy(prioritySlot = slot, waitingSince = minOf(addedAt, endsAt), coolingEndsAt = endsAt)
 }
+
+/** [this] without a slot and with its wait not running: parked on the wishlist (ADR-0049). */
+fun Item.parked(): Item = copy(prioritySlot = null, waitingSince = null, coolingEndsAt = null)

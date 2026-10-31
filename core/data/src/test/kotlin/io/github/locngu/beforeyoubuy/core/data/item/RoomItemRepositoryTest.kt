@@ -41,7 +41,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     private suspend fun stored(id: ItemId): Item = repository.observeById(id).first()!!
 
-    private suspend fun addAndRead(item: Item = newPriority()): Item = stored(repository.add(item))
+    private suspend fun addAndRead(item: Item = newItem()): Item = stored(repository.add(item))
 
     /** Records [decision] as the app would: checked by `applyDecision` against the stored state. */
     private suspend fun decide(current: Item, decision: Decision): Boolean {
@@ -64,9 +64,9 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `imageRefs names the photo of every item, active or ended`() = runTest {
-        val active = addAndRead(newPriority().copy(imageRef = "a.jpg"))
-        val ended = addAndRead(newPriority().copy(imageRef = "b.jpg"))
-        addAndRead(newPriority().copy(imageRef = null))
+        val active = addAndRead(newItem().copy(imageRef = "a.jpg"))
+        val ended = addAndRead(newItem().copy(imageRef = "b.jpg"))
+        addAndRead(newItem().copy(imageRef = null))
         decide(ended, reject())
 
         assertEquals(setOf("a.jpg", "b.jpg"), repository.imageRefs())
@@ -75,7 +75,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `add refuses an item that already ended`() = runTest {
-        assertThrowsIllegalArgument { repository.add(newPriority().copy(status = ItemStatus.PURCHASED)) }
+        assertThrowsIllegalArgument { repository.add(newItem().copy(status = ItemStatus.PURCHASED)) }
     }
 
     @Test
@@ -93,7 +93,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `update saves edits`() = runTest {
-        val item = addAndRead()
+        val item = addAndRead(newPriority())
         val edited =
             item.copy(price = Money(60_000, "EUR"), coolingOffDays = 60, coolingEndsAt = DECIDED, notes = "Lens too")
 
@@ -124,7 +124,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `update writes nothing for a missing item or a status this version can't read`() = runTest {
-        val missing = newPriority().copy(id = ItemId(999))
+        val missing = newItem().copy(id = ItemId(999))
         assertFalse(repository.update(missing, missing.copy(name = "Edited")))
 
         val item = addAndRead()
@@ -138,8 +138,8 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `observeActive lists active items oldest first and follows changes`() = runTest {
-        val newer = addAndRead(newPriority("Newer", ADDED.plusSeconds(60)))
-        val older = addAndRead(newPriority("Older"))
+        val newer = addAndRead(newItem("Newer", ADDED.plusSeconds(60)))
+        val older = addAndRead(newItem("Older"))
 
         repository.observeActive().test {
             assertEquals(listOf(older, newer), awaitItem())
@@ -150,7 +150,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `setReflection stores and replaces the answers`() = runTest {
-        val id = repository.add(newPriority())
+        val id = repository.add(newItem())
         assertNull(repository.observeReflection(id).first())
 
         repository.setReflection(id, Reflection(why = "Hikes"))
@@ -162,8 +162,8 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `observeReflections holds the answers of every item that has some and follows changes`() = runTest {
-        val withAnswers = repository.add(newPriority("Camera"))
-        val without = repository.add(newPriority("Tent"))
+        val withAnswers = repository.add(newItem("Camera"))
+        val without = repository.add(newItem("Tent"))
 
         repository.observeReflections().test {
             assertEquals(emptyMap<ItemId, Reflection>(), awaitItem())
@@ -185,7 +185,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `recordDecision stores the applied item and appends the decision`() = runTest {
-        val item = addAndRead()
+        val item = addAndRead(newPriority()) // a plain Buy needs a priority (ADR-0049)
         val reflection = Reflection("Hikes", UsageFrequency.WEEKLY, listOf("Heavy"))
         repository.setReflection(item.id, reflection)
         val decision = buy()
@@ -216,7 +216,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `recordDecision writes nothing for an item that already ended`() = runTest {
-        val item = addAndRead()
+        val item = addAndRead(newPriority())
         assertTrue(decide(item, reject()))
 
         // e.g. "Buy" in the app confirmed just after "Let it go" in the notification.
@@ -232,7 +232,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
         val items = List(20) { addAndRead() }
 
         val results = withContext(Dispatchers.IO) {
-            items.map { item -> listOf(async { decide(item, reject()) }, async { decide(item, buy()) }) }
+            items.map { item -> listOf(async { decide(item, reject()) }, async { decide(item, buyEarly()) }) }
                 .map { it.awaitAll() }
         }
 
@@ -242,7 +242,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `a decision checked against an older state writes nothing`() = runTest {
-        val item = addAndRead()
+        val item = addAndRead(newPriority())
         val repriced = item.copy(
             price = Money(150_000, "EUR"),
             coolingOffDays = 90,
@@ -259,7 +259,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `recordDecision writes nothing for a missing item and refuses inconsistent arguments`() = runTest {
-        val missing = newPriority().copy(id = ItemId(999))
+        val missing = newItem().copy(id = ItemId(999))
         assertFalse(decide(missing, reject()))
         assertEquals(emptyList<String>(), queryStrings("SELECT id FROM decisions"))
 
@@ -283,12 +283,12 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `history lists ended items with their ending decision, most recently decided first`() = runTest {
-        val camera = addAndRead(newPriority("Camera"))
-        val bike = addAndRead(newPriority("Bike"))
-        val lamp = addAndRead(newPriority("Lamp"))
-        repository.add(newPriority("Still active"))
-        val earlier = buy(DECIDED.minusSeconds(3_600))
-        val later = buy(DECIDED)
+        val camera = addAndRead(newItem("Camera"))
+        val bike = addAndRead(newItem("Bike"))
+        val lamp = addAndRead(newItem("Lamp"))
+        repository.add(newItem("Still active"))
+        val earlier = buyEarly(DECIDED.minusSeconds(3_600))
+        val later = buyEarly(DECIDED)
         decide(camera, earlier)
         decide(bike, later)
         decide(lamp, reject())
@@ -332,7 +332,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
     @Test
     fun `delete removes an ended item with its answers and decisions, and nothing else`() = runTest {
         val item = addAndRead()
-        val other = addAndRead(newPriority("Bike"))
+        val other = addAndRead(newItem("Bike"))
         repository.setReflection(item.id, FULL_REFLECTION)
         repository.setReflection(other.id, FULL_REFLECTION)
         decide(item, reject())

@@ -70,6 +70,18 @@ class NotificationsTest {
         assertEquals(listOf(1L), plan(listOf(resumed), Instant.parse("2026-11-04T10:00:00Z")).ids())
     }
 
+    @Test
+    fun `the nudge counts from when the wait started, so a want promoted late isn't nudged at once`() {
+        val promotedAt = Instant.parse("2026-10-20T09:00:00Z")
+        val promoted = startWait(parked().copy(id = ItemId(1), prioritySlot = 1), promotedAt, zone)
+
+        assertNull(plan(listOf(promoted), Instant.parse("2026-10-21T10:00:00Z")))
+        assertEquals(
+            NotificationKind.REFLECTION_NUDGE,
+            plan(listOf(promoted), Instant.parse("2026-10-22T10:00:00Z"))?.kind
+        )
+    }
+
     // Waiting period over
 
     @Test

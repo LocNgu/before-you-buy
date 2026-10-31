@@ -152,6 +152,14 @@ class SavingsTest {
     }
 
     @Test
+    fun `only an active priority can be saved for`() {
+        assertTrue(camera.canBeSavedFor)
+        assertFalse(parked().canBeSavedFor)
+        assertFalse(camera.copy(kind = ItemKind.NEED).canBeSavedFor)
+        assertFalse(camera.copy(status = ItemStatus.REJECTED).canBeSavedFor)
+    }
+
+    @Test
     fun `setting aside is refused for a need, an ended item, a parked want, nothing, or without fun money`() {
         val enough = balance(100_000)
         assertEquals(

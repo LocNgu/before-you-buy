@@ -77,6 +77,15 @@ internal fun ItemEntity.toDomain(): Item {
     )
 }
 
+/** Writes [item]'s wait (`waitAfterRulesChange`), targeted so other columns survive. */
+internal suspend fun ItemDao.setWait(item: Item) = setWait(
+    item.id.value,
+    item.coolingOffDays,
+    item.waitedDays,
+    item.waitingSince?.toEpochMilli(),
+    item.storedCoolingEnd()
+)
+
 /** Writes the slot and wait of each item in [changed] (from `withSlots`), targeted so other columns survive. */
 internal suspend fun ItemDao.setSlotsAndWaits(changed: List<Item>) = changed.forEach {
     setSlotAndWait(it.id.value, it.prioritySlot, it.waitedDays, it.waitingSince?.toEpochMilli(), it.storedCoolingEnd())

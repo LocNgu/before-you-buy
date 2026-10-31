@@ -4,7 +4,7 @@ import androidx.room.withTransaction
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
 import io.github.locngu.beforeyoubuy.core.data.db.PolicyEntity
 import io.github.locngu.beforeyoubuy.core.data.item.setSlotsAndWaits
-import io.github.locngu.beforeyoubuy.core.data.item.storedCoolingEnd
+import io.github.locngu.beforeyoubuy.core.data.item.setWait
 import io.github.locngu.beforeyoubuy.core.data.item.toDomain
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitAfterRulesChange
@@ -49,15 +49,7 @@ internal class RoomPolicyRepository(private val database: BeforeYouBuyDatabase) 
             items.getByStatus(ItemStatus.ACTIVE.name).forEach { entity ->
                 val item = entity.toDomain()
                 val changed = waitAfterRulesChange(item, rules, changedAt, zone)
-                if (changed != item) {
-                    items.setWait(
-                        entity.id,
-                        changed.coolingOffDays,
-                        changed.waitedDays,
-                        changed.waitingSince?.toEpochMilli(),
-                        changed.storedCoolingEnd()
-                    )
-                }
+                if (changed != item) items.setWait(changed)
             }
         }
 

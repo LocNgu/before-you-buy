@@ -17,11 +17,11 @@ import io.github.locngu.beforeyoubuy.core.domain.notifications.ItemNotifications
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationKind
 import io.github.locngu.beforeyoubuy.core.domain.settings.AppPreferences
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
-import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakeNotificationLogRepository
 import io.github.locngu.beforeyoubuy.testing.FakePreferencesRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.test.runTest

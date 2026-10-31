@@ -69,6 +69,15 @@ internal val FULL_REFLECTION = Reflection(
 internal fun buy(at: Instant = DECIDED, source: DecisionSource = DecisionSource.APP) =
     Decision(DecisionType.BUY, at, source, actualPrice = Money(11_500, "EUR"))
 
+/** Buying a want early (ADR-0006): allowed whether or not it's a priority or Ready. */
+internal fun buyEarly(at: Instant = DECIDED) = Decision(
+    DecisionType.BUY_EARLY,
+    at,
+    DecisionSource.APP,
+    actualPrice = Money(11_500, "EUR"),
+    earlyReason = "On sale"
+)
+
 internal fun reject(at: Instant = DECIDED) = Decision(DecisionType.REJECT, at, DecisionSource.NOTIFICATION)
 
 internal fun waitAWeek(at: Instant = DECIDED) =

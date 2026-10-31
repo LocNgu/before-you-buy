@@ -22,6 +22,7 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.quickAmounts
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
 import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.testing.parked
 import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.io.File
@@ -174,13 +175,14 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
      */
     @Test
     fun opportunityCost() {
-        val ready = camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600))
+        // The camera is priority #2, behind the bike; the headphones and the lamp are parked (ADR-0049).
+        val ready = camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600), prioritySlot = 2)
         val savings = setAside(65_000)
         val bike = camera.copy(id = ItemId(2), name = t("Road bike", "Rennrad"), price = Money(160_000, "EUR"))
         val others = listOf(
             bike.copy(prioritySlot = 1),
-            bike.copy(id = ItemId(3), name = t("Headphones", "Kopfhörer"), price = Money(24_900, "EUR")),
-            bike.copy(id = ItemId(4), name = t("Lamp", "Lampe"), price = Money(8_900, "EUR"))
+            bike.copy(id = ItemId(3), name = t("Headphones", "Kopfhörer"), price = Money(24_900, "EUR")).parked(),
+            bike.copy(id = ItemId(4), name = t("Lamp", "Lampe"), price = Money(8_900, "EUR")).parked()
         )
         val funMoney = FunMoney.SetUp(
             allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 9, 1)),

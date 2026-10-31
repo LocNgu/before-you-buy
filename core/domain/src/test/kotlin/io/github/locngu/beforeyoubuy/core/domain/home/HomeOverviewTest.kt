@@ -64,7 +64,7 @@ class HomeOverviewTest {
             zone
         )
 
-        // A need has no end, so it comes first in the Ready group; a parked want is never to decide (ADR-0049).
+        // A need sorts by the day it was added; a parked want is never to decide (ADR-0049).
         assertEquals(listOf(need, ready, unreflected), home.toDecide.map { it.item })
         assertEquals(listOf(Stage.READY, Stage.READY, Stage.NEEDS_REFLECTION), home.toDecide.map { it.stage })
     }

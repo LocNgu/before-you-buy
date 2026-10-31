@@ -67,7 +67,8 @@ internal class RoomPolicyRepositoryTest : DatabaseTest() {
         val added = Instant.parse(addedAt)
         val days = coolingOffDaysFor(price, CoolingOffRules.defaults(price.currency))
         val captured = Item(ItemId.NEW, name, price, added, coolingOffDays = days, kind = kind)
-        val item = if (parked) captured else startWait(captured.copy(prioritySlot = 1), added, zone)
+        val priority = !parked && kind == ItemKind.WANT
+        val item = if (priority) startWait(captured.copy(prioritySlot = 1), added, zone) else captured
         return items.observeById(items.add(item)).first()!!
     }
 

@@ -11,6 +11,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -50,16 +51,29 @@ class ItemDetailFlowTest {
         composeRule.waitUntilExactlyOneExists(hasText("Why do you want this?"))
     }
 
+    /** "Make priority" on the open item, which starts its 7-day wait (ADR-0049). */
+    private fun makePriority() {
+        composeRule.onNodeWithText("Make priority").performScrollTo().performClick()
+        composeRule.waitUntilExactlyOneExists(hasText("7 days left"))
+    }
+
     @Test
-    fun `detail leads with the reasons and the countdown`() {
+    fun `detail leads with the reasons, and the countdown starts once it's a priority`() {
         composeRule.onNodeWithText("Headphones").assertIsDisplayed()
-        composeRule.onNodeWithText("7 days left").assertIsDisplayed()
+        composeRule.onNodeWithText("Not one of your priorities").assertIsDisplayed()
+        composeRule.onNodeWithText("7 days left").assertDoesNotExist()
         composeRule.onNodeWithText("Added today").assertIsDisplayed()
         composeRule.onNodeWithText("Why do you want this?").assertIsDisplayed()
+
+        makePriority()
+
+        composeRule.onNodeWithText("7 days left").assertIsDisplayed()
+        composeRule.onNodeWithText("Not one of your priorities").assertDoesNotExist()
     }
 
     @Test
     fun `a higher price says it extends the wait, and the new price shows after saving`() {
+        makePriority()
         composeRule.onNodeWithText("Edit").performClick()
         composeRule.waitUntilExactlyOneExists(hasSetTextAction() and hasText("50"))
 
@@ -67,7 +81,7 @@ class ItemDetailFlowTest {
         composeRule.onNode(hasText("Waiting period extended to", substring = true)).assertIsDisplayed()
         composeRule.onNodeWithText("Save").performClick()
 
-        // Back on detail: 600 € is in the 60-day tier, counted from the day it was added.
+        // Back on detail: 600 € is in the 60-day tier, counted from when it became a priority (today).
         composeRule.waitUntilExactlyOneExists(hasText("60 days left"))
         composeRule.onNode(hasText("600", substring = true)).assertIsDisplayed()
     }
