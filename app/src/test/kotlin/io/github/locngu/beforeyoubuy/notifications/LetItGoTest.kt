@@ -16,6 +16,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -39,8 +40,8 @@ class LetItGoTest {
             name = "Camera",
             price = Money(12_000, "EUR"),
             addedAt = Instant.parse("2026-10-01T10:00:00Z"),
-            coolingEndsAt = Instant.parse("2026-10-31T10:00:00Z")
-        )
+            coolingOffDays = 30
+        ).asPriority(Instant.parse("2026-10-31T10:00:00Z"))
     )
 
     @Test

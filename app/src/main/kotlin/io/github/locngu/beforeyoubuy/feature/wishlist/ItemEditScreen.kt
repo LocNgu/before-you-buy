@@ -188,5 +188,4 @@ private fun PhotoField(state: ItemEditUiState, actions: ItemEditActions, onPickP
 @Composable
 private fun waitNoteText(note: WaitNote): String = when (note) {
     is WaitNote.Extended -> stringResource(R.string.item_edit_wait_extended, formattedDate(note.endsOn))
-    is WaitNote.Starts -> stringResource(R.string.item_edit_wait_starts, formattedDate(note.endsOn))
 }

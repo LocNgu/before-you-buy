@@ -7,6 +7,7 @@ import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
 import io.github.locngu.beforeyoubuy.core.domain.priorities.promote
 import io.github.locngu.beforeyoubuy.core.domain.priorities.rankingWithout
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
+import java.time.Clock
 import kotlinx.coroutines.flow.first
 
 /** What "Make priority" or "Remove from priorities" did, for the screen to say or do (brief §4.7). */
@@ -29,16 +30,18 @@ sealed interface PriorityEvent {
  * the caller opens the head-to-head, the only way into full slots. The rule is `promote` in `:core:domain`;
  * [ItemRepository.setPriorities] checks it again against the stored priorities.
  */
-suspend fun makePriority(id: ItemId, items: ItemRepository, policies: PolicyRepository): PriorityEvent {
+suspend fun makePriority(id: ItemId, items: ItemRepository, policies: PolicyRepository, clock: Clock): PriorityEvent {
     val active = items.observeActive().first()
     val item = active.find { it.id == id } ?: return PriorityEvent.ChangedMeanwhile
     return when (val promotion = promote(item, active, policies.policy.first().prioritySlots)) {
-        is Promotion.Promoted ->
-            if (items.setPriorities(prioritiesOf(active).map { it.id }, promotion.ranking)) {
+        is Promotion.Promoted -> {
+            val expected = prioritiesOf(active).map { it.id }
+            if (items.setPriorities(expected, promotion.ranking, clock.instant(), clock.zone)) {
                 PriorityEvent.Promoted(item.name, promotion.rank)
             } else {
                 PriorityEvent.ChangedMeanwhile
             }
+        }
 
         is Promotion.Compare -> PriorityEvent.Compare(id)
 
@@ -46,12 +49,12 @@ suspend fun makePriority(id: ItemId, items: ItemRepository, policies: PolicyRepo
     }
 }
 
-/** "Remove from priorities" for [id]: the ones below move up (ADR-0047). */
-suspend fun removePriority(id: ItemId, items: ItemRepository): PriorityEvent {
+/** "Remove from priorities" for [id]: the ones below move up (ADR-0047); its wait pauses (ADR-0049). */
+suspend fun removePriority(id: ItemId, items: ItemRepository, clock: Clock): PriorityEvent {
     val active = items.observeActive().first()
     val expected = prioritiesOf(active).map { it.id }
     val item = active.find { it.id == id }?.takeIf { it.id in expected } ?: return PriorityEvent.ChangedMeanwhile
-    return if (items.setPriorities(expected, rankingWithout(active, id))) {
+    return if (items.setPriorities(expected, rankingWithout(active, id), clock.instant(), clock.zone)) {
         PriorityEvent.Removed(item.name)
     } else {
         PriorityEvent.ChangedMeanwhile

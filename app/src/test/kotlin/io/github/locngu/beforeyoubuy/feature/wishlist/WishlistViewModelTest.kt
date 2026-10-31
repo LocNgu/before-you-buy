@@ -13,6 +13,7 @@ import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
@@ -51,21 +52,25 @@ class WishlistViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private suspend fun add(name: String, endsInHours: Long, price: Long = 12_000): Item {
-        val id =
-            items.add(
-                Item(
-                    id = ItemId.NEW,
-                    name = name,
-                    price = Money(price, "EUR"),
-                    addedAt = start,
-                    coolingEndsAt = start.plus(Duration.ofHours(endsInHours))
-                )
-            )
+    /** A priority whose wait ends [endsInHours] from now, or a want without a slot if [parked] (ADR-0049). */
+    private suspend fun add(name: String, endsInHours: Long, price: Long = 12_000, parked: Boolean = false): Item {
+        val captured = Item(
+            id = ItemId.NEW,
+            name = name,
+            price = Money(price, "EUR"),
+            addedAt = start,
+            coolingOffDays = 30
+        )
+        val id = items.add(if (parked) captured else captured.asPriority(start.plus(Duration.ofHours(endsInHours))))
         return items.stored.first { it.id == id }
     }
 
     private val groups get() = viewModel.uiState.value.groups
+
+    /** Every listed entry: the priorities by rank, then the stage groups. */
+    private val entries get() = viewModel.uiState.value.let { state ->
+        state.priorities.map { it.entry } + state.groups.orEmpty().flatMap { it.entries }
+    }
 
     /** Moves the clock and the coroutine time together, as real time does. */
     private fun kotlinx.coroutines.test.TestScope.pass(duration: Duration) {
@@ -90,44 +95,45 @@ class WishlistViewModelTest {
         add("Cooling", endsInHours = 24 * 5)
         items.reflect(ready.id, reflection)
 
-        assertEquals(listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), groups!!.map { it.stage })
-        assertEquals(unreflected.id, groups!![1].entries.single().item.id)
-        assertEquals(5, groups!![2].entries.single().daysLeft)
+        // All three are priorities (ADR-0049), listed by rank.
+        assertEquals(listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), entries.map { it.stage })
+        assertEquals(unreflected.id, entries[1].item.id)
+        assertEquals(5, entries[2].daysLeft)
     }
 
     @Test
     fun `an item moves up when its reflection is completed`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.uiState.launchIn(backgroundScope)
         val item = add("Camera", endsInHours = -1)
-        assertEquals(Stage.NEEDS_REFLECTION, groups!!.single().stage)
+        assertEquals(Stage.NEEDS_REFLECTION, entries.single().stage)
 
         items.reflect(item.id, reflection)
 
-        assertEquals(Stage.READY, groups!!.single().stage)
+        assertEquals(Stage.READY, entries.single().stage)
     }
 
     @Test
     fun `an item regroups when its cooling off ends while the screen is open`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.uiState.launchIn(backgroundScope)
         add("Camera", endsInHours = 3)
-        assertEquals(Stage.COOLING_OFF, groups!!.single().stage)
+        assertEquals(Stage.COOLING_OFF, entries.single().stage)
 
         pass(Duration.ofHours(2))
-        assertEquals(Stage.COOLING_OFF, groups!!.single().stage)
+        assertEquals(Stage.COOLING_OFF, entries.single().stage)
 
         pass(Duration.ofHours(1))
-        assertEquals(Stage.NEEDS_REFLECTION, groups!!.single().stage)
+        assertEquals(Stage.NEEDS_REFLECTION, entries.single().stage)
     }
 
     @Test
     fun `the days left drop at midnight with no change in the database`() = runTest(UnconfinedTestDispatcher()) {
         viewModel.uiState.launchIn(backgroundScope)
         add("Camera", endsInHours = 24 * 3)
-        assertEquals(3, groups!!.single().entries.single().daysLeft)
+        assertEquals(3, entries.single().daysLeft)
 
         pass(Duration.ofHours(14)) // midnight
 
-        assertEquals(2, groups!!.single().entries.single().daysLeft)
+        assertEquals(2, entries.single().daysLeft)
     }
 
     @Test
@@ -154,10 +160,10 @@ class WishlistViewModelTest {
     @Test
     fun `priorities come first by rank, out of their stage group, with the slot count`() =
         runTest(UnconfinedTestDispatcher()) {
-            val camera = add("Camera", endsInHours = 10)
-            val bike = add("Bike", endsInHours = 20)
-            add("Lamp", endsInHours = 30)
-            items.setPriorities(emptyList(), listOf(bike.id, camera.id))
+            val camera = add("Camera", endsInHours = 10, parked = true)
+            val bike = add("Bike", endsInHours = 20, parked = true)
+            add("Lamp", endsInHours = 30, parked = true)
+            items.setPriorities(emptyList(), listOf(bike.id, camera.id), clock.instant(), clock.zone)
             viewModel.uiState.launchIn(backgroundScope)
 
             val state = viewModel.uiState.value
@@ -168,7 +174,7 @@ class WishlistViewModelTest {
 
     @Test
     fun `make priority with a free slot stores it at once and says so`() = runTest(UnconfinedTestDispatcher()) {
-        val camera = add("Camera", endsInHours = 10)
+        val camera = add("Camera", endsInHours = 10, parked = true)
 
         viewModel.makePriority(camera.id)
 
@@ -179,10 +185,10 @@ class WishlistViewModelTest {
     @Test
     fun `make priority with full slots asks for the head-to-head and writes nothing`() =
         runTest(UnconfinedTestDispatcher()) {
-            val camera = add("Camera", endsInHours = 10)
-            val bike = add("Bike", endsInHours = 20)
-            policies.changePrioritySlots(1, emptyList())
-            items.setPriorities(emptyList(), listOf(camera.id))
+            val camera = add("Camera", endsInHours = 10, parked = true)
+            val bike = add("Bike", endsInHours = 20, parked = true)
+            policies.changePrioritySlots(1, emptyList(), clock.instant(), clock.zone)
+            items.setPriorities(emptyList(), listOf(camera.id), clock.instant(), clock.zone)
 
             viewModel.makePriority(bike.id)
 
@@ -192,9 +198,9 @@ class WishlistViewModelTest {
 
     @Test
     fun `fewer slots move the lowest-ranked back to the wishlist`() = runTest(UnconfinedTestDispatcher()) {
-        val camera = add("Camera", endsInHours = 10)
-        val bike = add("Bike", endsInHours = 20)
-        items.setPriorities(emptyList(), listOf(camera.id, bike.id))
+        val camera = add("Camera", endsInHours = 10, parked = true)
+        val bike = add("Bike", endsInHours = 20, parked = true)
+        items.setPriorities(emptyList(), listOf(camera.id, bike.id), clock.instant(), clock.zone)
         viewModel.uiState.launchIn(backgroundScope)
 
         viewModel.changePrioritySlots(1)
@@ -207,9 +213,9 @@ class WishlistViewModelTest {
     @Test
     fun `fewer slots based on priorities that changed meanwhile write nothing and say so`() =
         runTest(UnconfinedTestDispatcher()) {
-            val camera = add("Camera", endsInHours = 10)
-            val bike = add("Bike", endsInHours = 20)
-            items.setPriorities(emptyList(), listOf(camera.id, bike.id))
+            val camera = add("Camera", endsInHours = 10, parked = true)
+            val bike = add("Bike", endsInHours = 20, parked = true)
+            items.setPriorities(emptyList(), listOf(camera.id, bike.id), clock.instant(), clock.zone)
             // The state isn't collected, so what the dialog listed from (no priorities) is behind the stored ones.
 
             viewModel.changePrioritySlots(1)

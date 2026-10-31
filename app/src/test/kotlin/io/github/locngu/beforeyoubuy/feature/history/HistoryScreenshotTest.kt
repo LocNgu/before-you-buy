@@ -18,6 +18,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
@@ -53,9 +54,9 @@ abstract class HistoryScreenshotTest(private val german: Boolean) {
         name = name,
         price = Money(euros * 100, "EUR"),
         addedAt = now.minusSeconds(addedDaysAgo * 24 * 3600),
-        coolingEndsAt = now.minusSeconds((addedDaysAgo - 14) * 24 * 3600),
+        coolingOffDays = 30,
         status = status
-    )
+    ).asPriority(now.minusSeconds((addedDaysAgo - 14) * 24 * 3600))
 
     private fun daysAgo(days: Long) = now.minusSeconds(days * 24 * 3600)
 

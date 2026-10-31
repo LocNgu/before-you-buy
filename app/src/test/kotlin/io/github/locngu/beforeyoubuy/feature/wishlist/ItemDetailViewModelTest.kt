@@ -16,6 +16,7 @@ import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Duration
 import java.time.Instant
 import java.util.Locale
@@ -56,16 +57,16 @@ class ItemDetailViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private suspend fun add(endsInHours: Long): Item {
-        val id = items.add(
-            Item(
-                id = ItemId.NEW,
-                name = "Camera",
-                price = Money(12_000, "EUR"),
-                addedAt = start.minus(Duration.ofDays(3)),
-                coolingEndsAt = start.plus(Duration.ofHours(endsInHours))
-            )
+    /** A priority whose wait ends [endsInHours] from now, or a want without a slot if [parked] (ADR-0049). */
+    private suspend fun add(endsInHours: Long, parked: Boolean = false): Item {
+        val captured = Item(
+            id = ItemId.NEW,
+            name = "Camera",
+            price = Money(12_000, "EUR"),
+            addedAt = start.minus(Duration.ofDays(3)),
+            coolingOffDays = 30
         )
+        val id = items.add(if (parked) captured else captured.asPriority(start.plus(Duration.ofHours(endsInHours))))
         return items.stored.single { it.id == id }
     }
 
@@ -155,7 +156,9 @@ class ItemDetailViewModelTest {
         val stored = items.stored.single()
         assertEquals(ItemKind.NEED, stored.kind)
         assertEquals(start, stored.markedAsNeedAt)
-        assertEquals(item.coolingEndsAt, stored.coolingEndsAt)
+        // It leaves the priorities and its wait pauses, keeping the 3 days it waited (ADR-0049).
+        assertEquals(null, stored.coolingEndsAt)
+        assertEquals(3, stored.waitedDays)
         assertEquals(Stage.READY, viewModel.uiState.value.detail!!.stage)
     }
 
@@ -363,7 +366,7 @@ class ItemDetailViewModelTest {
 
     @Test
     fun `make priority takes a free slot, remove from priorities gives it up`() = runTest(UnconfinedTestDispatcher()) {
-        val item = add(endsInHours = 2)
+        val item = add(endsInHours = 2, parked = true)
         val viewModel = viewModelFor(item)
 
         viewModel.makePriority()
@@ -377,11 +380,11 @@ class ItemDetailViewModelTest {
 
     @Test
     fun `make priority with full slots opens the head-to-head instead`() = runTest(UnconfinedTestDispatcher()) {
-        val first = add(endsInHours = 2)
-        val second = add(endsInHours = 2)
+        val first = add(endsInHours = 2, parked = true)
+        val second = add(endsInHours = 2, parked = true)
         items.prioritySlots = 1
-        policies.changePrioritySlots(1, emptyList())
-        items.setPriorities(emptyList(), listOf(first.id))
+        policies.changePrioritySlots(1, emptyList(), clock.instant(), clock.zone)
+        items.setPriorities(emptyList(), listOf(first.id), clock.instant(), clock.zone)
         val viewModel = viewModelFor(second)
 
         viewModel.makePriority()
@@ -392,7 +395,7 @@ class ItemDetailViewModelTest {
 
     @Test
     fun `a double tap on make priority writes once and says so once`() = runTest(UnconfinedTestDispatcher()) {
-        val item = add(endsInHours = 2)
+        val item = add(endsInHours = 2, parked = true)
         val viewModel = viewModelFor(item)
         val gate = CompletableDeferred<Unit>()
         items.priorityGate = gate
@@ -411,7 +414,7 @@ class ItemDetailViewModelTest {
 
     @Test
     fun `priorities that changed meanwhile write nothing and say so`() = runTest(UnconfinedTestDispatcher()) {
-        val item = add(endsInHours = 2)
+        val item = add(endsInHours = 2, parked = true)
         val viewModel = viewModelFor(item)
         items.conflictOnNextPriorities = true
 
@@ -423,9 +426,9 @@ class ItemDetailViewModelTest {
 
     @Test
     fun `marking a priority as a need takes it out of the priorities`() = runTest(UnconfinedTestDispatcher()) {
-        val first = add(endsInHours = 2)
-        val second = add(endsInHours = 2)
-        items.setPriorities(emptyList(), listOf(first.id, second.id))
+        val first = add(endsInHours = 2, parked = true)
+        val second = add(endsInHours = 2, parked = true)
+        items.setPriorities(emptyList(), listOf(first.id, second.id), clock.instant(), clock.zone)
         val viewModel = viewModelFor(items.stored.first())
         viewModel.uiState.launchIn(backgroundScope)
 

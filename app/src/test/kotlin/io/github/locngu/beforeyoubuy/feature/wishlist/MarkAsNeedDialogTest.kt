@@ -15,6 +15,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.itemDetailOf
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
 import java.time.ZoneOffset
@@ -40,8 +41,8 @@ class MarkAsNeedDialogTest {
         name = "Camera",
         price = Money(12_000, "EUR"),
         addedAt = now.minusSeconds(10L * 24 * 3600),
-        coolingEndsAt = now.plusSeconds(10L * 24 * 3600)
-    )
+        coolingOffDays = 30
+    ).asPriority(now.plusSeconds(10L * 24 * 3600))
 
     private fun show(savings: Savings, onMarkAsNeed: () -> Unit) = composeRule.setContent {
         BeforeYouBuyTheme {

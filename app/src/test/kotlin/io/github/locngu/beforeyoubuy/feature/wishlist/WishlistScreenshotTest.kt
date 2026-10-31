@@ -14,7 +14,9 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistSectionsOf
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.testing.parked
 import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
@@ -53,9 +55,9 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
         name = name,
         price = Money(euros * 100, "EUR"),
         addedAt = now.minusSeconds(40L * 24 * 3600),
-        coolingEndsAt = now.plusSeconds(endsInDays * 24 * 3600),
+        coolingOffDays = 30,
         kind = kind
-    )
+    ).asPriority(now.plusSeconds(endsInDays * 24 * 3600))
 
     private val reflection =
         Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))
@@ -131,10 +133,18 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
         )
     }
 
-    /** Two of three slots used: the priorities by rank at the top, out of their stage groups (ADR-0047). */
+    /**
+     * Two of three slots used: the priorities by rank at the top, out of their stage groups (ADR-0047), the other wants
+     * parked in the last group (ADR-0049).
+     */
     @Test
     fun priorities() {
-        val active = listOf(coolingLater.copy(prioritySlot = 1), unreflected, coolingSoon, ready.copy(prioritySlot = 2))
+        val active = listOf(
+            coolingLater.copy(prioritySlot = 1),
+            unreflected.parked(),
+            coolingSoon.parked(),
+            ready.copy(prioritySlot = 2)
+        )
         val sections = wishlistSectionsOf(
             wishlistOf(active, mapOf(ready.id to reflection), Savings.NONE, now, ZoneOffset.UTC)
         )

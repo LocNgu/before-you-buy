@@ -94,7 +94,7 @@ class WishlistViewModel @Inject constructor(
     private var writingPriorities = false
 
     /** "Make priority" on a row (brief §4.7). */
-    fun makePriority(id: ItemId) = writePriorities { makePriority(id, items, policies) }
+    fun makePriority(id: ItemId) = writePriorities { makePriority(id, items, policies, clock) }
 
     /**
      * The slots dialog's Save: fewer slots send the lowest-ranked back, which the dialog listed from [uiState]
@@ -103,7 +103,8 @@ class WishlistViewModel @Inject constructor(
     fun changePrioritySlots(slots: Int) {
         val shown = prioritiesOf(uiState.value.active).map { it.id }
         writePriorities {
-            if (policies.changePrioritySlots(slots, shown)) null else PriorityEvent.ChangedMeanwhile
+            val changed = policies.changePrioritySlots(slots, shown, clock.instant(), clock.zone)
+            if (changed) null else PriorityEvent.ChangedMeanwhile
         }
     }
 

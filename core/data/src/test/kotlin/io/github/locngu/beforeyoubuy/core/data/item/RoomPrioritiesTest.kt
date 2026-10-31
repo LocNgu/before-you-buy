@@ -12,6 +12,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DecisionResult
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Funding
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.applyDecision
 import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
+import java.time.Duration
 import java.time.ZoneOffset
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -25,6 +26,10 @@ import org.junit.Test
 internal class RoomPrioritiesTest : DatabaseTest() {
     private lateinit var items: RoomItemRepository
     private lateinit var policies: RoomPolicyRepository
+
+    // Promoted when added, so a priority's 30-day wait is over by DECIDED and a plain Buy works.
+    private val at = ADDED
+    private val utc = ZoneOffset.UTC
 
     @Before
     fun createRepositories() {
@@ -49,7 +54,7 @@ internal class RoomPrioritiesTest : DatabaseTest() {
     /** Camera #1, Laptop #2, Bike #3, and a Printer that isn't a priority. */
     private suspend fun threePriorities(): List<Item> {
         val all = listOf(add("Camera"), add("Laptop"), add("Bike"), add("Printer"))
-        assertTrue(items.setPriorities(emptyList(), all.take(3).map { it.id }))
+        assertTrue(items.setPriorities(emptyList(), all.take(3).map { it.id }, at, utc))
         return all.map { stored(it) }
     }
 
@@ -65,10 +70,39 @@ internal class RoomPrioritiesTest : DatabaseTest() {
         val (camera, laptop, bike, printer) = threePriorities()
 
         val before = listOf(camera.id, laptop.id, bike.id)
-        assertTrue(items.setPriorities(before, listOf(camera.id, printer.id, laptop.id)))
+        assertTrue(items.setPriorities(before, listOf(camera.id, printer.id, laptop.id), at, utc))
 
         assertEquals(listOf("Camera" to 1, "Printer" to 2, "Laptop" to 3), ranking())
         assertEquals(null, stored(bike).prioritySlot)
+    }
+
+    @Test
+    fun `getting a slot starts the wait in the same write, losing it pauses the wait`() = runTest {
+        val (camera, laptop, bike, printer) = threePriorities()
+        assertEquals(at, stored(camera).waitingSince)
+        val later = at.plus(Duration.ofDays(10))
+
+        val before = listOf(camera.id, laptop.id, bike.id)
+        assertTrue(items.setPriorities(before, listOf(camera.id, printer.id, laptop.id), later, utc))
+
+        assertEquals(later, stored(printer).waitingSince)
+        assertEquals(later.plus(Duration.ofDays(30)), stored(printer).coolingEndsAt)
+        assertEquals(stored(camera).coolingEndsAt, camera.coolingEndsAt) // moved nowhere, still running
+        val paused = stored(bike)
+        assertEquals(null, paused.waitingSince)
+        assertEquals(10, paused.waitedDays)
+    }
+
+    @Test
+    fun `fewer slots pause the waits of the priorities that go back`() = runTest {
+        val (camera, laptop, bike) = threePriorities()
+
+        assertTrue(
+            policies.changePrioritySlots(1, listOf(camera.id, laptop.id, bike.id), at.plus(Duration.ofDays(4)), utc)
+        )
+
+        assertEquals(listOf(4, 4), listOf(stored(laptop), stored(bike)).map { it.waitedDays })
+        assertEquals(listOf(null, null), listOf(stored(laptop), stored(bike)).map { it.coolingEndsAt })
     }
 
     @Test
@@ -77,7 +111,7 @@ internal class RoomPrioritiesTest : DatabaseTest() {
         assertTrue(decide(laptop, reject()))
 
         val before = listOf(camera.id, laptop.id, bike.id)
-        assertFalse(items.setPriorities(before, listOf(printer.id, camera.id, bike.id)))
+        assertFalse(items.setPriorities(before, listOf(printer.id, camera.id, bike.id), at, utc))
 
         assertEquals(listOf("Camera" to 1, "Bike" to 2), ranking())
     }
@@ -88,12 +122,12 @@ internal class RoomPrioritiesTest : DatabaseTest() {
         val expected = listOf(camera.id, laptop.id, bike.id)
         val need = add("Fridge", ItemKind.NEED)
         val lamp = add("Lamp")
-        assertTrue(decide(printer, buy()))
+        assertTrue(decide(printer, buyEarly())) // not a priority: bought early
 
-        assertFalse(items.setPriorities(expected, listOf(camera.id, need.id, laptop.id)))
-        assertFalse(items.setPriorities(expected, listOf(camera.id, printer.id, laptop.id)))
-        assertFalse(items.setPriorities(expected, listOf(camera.id, camera.id)))
-        assertFalse(items.setPriorities(expected, listOf(camera.id, laptop.id, bike.id, lamp.id)))
+        assertFalse(items.setPriorities(expected, listOf(camera.id, need.id, laptop.id), at, utc))
+        assertFalse(items.setPriorities(expected, listOf(camera.id, printer.id, laptop.id), at, utc))
+        assertFalse(items.setPriorities(expected, listOf(camera.id, camera.id), at, utc))
+        assertFalse(items.setPriorities(expected, listOf(camera.id, laptop.id, bike.id, lamp.id), at, utc))
         assertEquals(listOf("Camera" to 1, "Laptop" to 2, "Bike" to 3), ranking())
     }
 
@@ -133,7 +167,7 @@ internal class RoomPrioritiesTest : DatabaseTest() {
     fun `remove from priorities moves the ones below up`() = runTest {
         val (camera, laptop, bike) = threePriorities()
 
-        assertTrue(items.setPriorities(listOf(camera.id, laptop.id, bike.id), listOf(camera.id, bike.id)))
+        assertTrue(items.setPriorities(listOf(camera.id, laptop.id, bike.id), listOf(camera.id, bike.id), at, utc))
 
         assertEquals(listOf("Camera" to 1, "Bike" to 2), ranking())
     }
@@ -143,11 +177,11 @@ internal class RoomPrioritiesTest : DatabaseTest() {
         val (camera, laptop, bike) = threePriorities()
         val shown = listOf(camera.id, laptop.id, bike.id)
 
-        assertTrue(policies.changePrioritySlots(5, shown))
+        assertTrue(policies.changePrioritySlots(5, shown, at, utc))
         assertEquals(5, policies.policy.first().prioritySlots)
         assertEquals(listOf("Camera" to 1, "Laptop" to 2, "Bike" to 3), ranking())
 
-        assertTrue(policies.changePrioritySlots(1, shown))
+        assertTrue(policies.changePrioritySlots(1, shown, at, utc))
         assertEquals(1, policies.policy.first().prioritySlots)
         assertEquals(listOf("Camera" to 1), ranking())
     }
@@ -157,7 +191,7 @@ internal class RoomPrioritiesTest : DatabaseTest() {
         val (camera, laptop, bike) = threePriorities()
         assertTrue(decide(laptop, reject()))
 
-        assertFalse(policies.changePrioritySlots(1, listOf(camera.id, laptop.id, bike.id)))
+        assertFalse(policies.changePrioritySlots(1, listOf(camera.id, laptop.id, bike.id), at, utc))
 
         assertEquals(3, policies.policy.first().prioritySlots)
         assertEquals(listOf("Camera" to 1, "Bike" to 2), ranking())
@@ -166,10 +200,10 @@ internal class RoomPrioritiesTest : DatabaseTest() {
     @Test
     fun `the slot count is 3 at first, refuses anything outside 1 to 5 and survives a currency change`() = runTest {
         assertEquals(3, policies.policy.first().prioritySlots)
-        assertThrowsIllegalArgument { policies.changePrioritySlots(0, emptyList()) }
-        assertThrowsIllegalArgument { policies.changePrioritySlots(6, emptyList()) }
+        assertThrowsIllegalArgument { policies.changePrioritySlots(0, emptyList(), at, utc) }
+        assertThrowsIllegalArgument { policies.changePrioritySlots(6, emptyList(), at, utc) }
 
-        assertTrue(policies.changePrioritySlots(2, emptyList()))
+        assertTrue(policies.changePrioritySlots(2, emptyList(), at, utc))
         policies.changeCurrency("USD")
 
         assertEquals(2, policies.policy.first().prioritySlots)
@@ -185,8 +219,8 @@ internal class RoomPrioritiesTest : DatabaseTest() {
     @Test
     fun `more priorities than slots can't be stored`() = runTest {
         val (camera, laptop, bike) = threePriorities()
-        assertTrue(policies.changePrioritySlots(2, listOf(camera.id, laptop.id, bike.id)))
+        assertTrue(policies.changePrioritySlots(2, listOf(camera.id, laptop.id, bike.id), at, utc))
 
-        assertFalse(items.setPriorities(listOf(camera.id, laptop.id), listOf(camera.id, laptop.id, bike.id)))
+        assertFalse(items.setPriorities(listOf(camera.id, laptop.id), listOf(camera.id, laptop.id, bike.id), at, utc))
     }
 }

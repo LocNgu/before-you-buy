@@ -14,6 +14,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.coversPrice
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isFunded
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.parked
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import java.time.Instant
@@ -151,7 +152,15 @@ class SavingsTest {
     }
 
     @Test
-    fun `setting aside is refused for a need, an ended item, nothing, or without fun money`() {
+    fun `only an active priority can be saved for`() {
+        assertTrue(camera.canBeSavedFor)
+        assertFalse(parked().canBeSavedFor)
+        assertFalse(camera.copy(kind = ItemKind.NEED).canBeSavedFor)
+        assertFalse(camera.copy(status = ItemStatus.REJECTED).canBeSavedFor)
+    }
+
+    @Test
+    fun `setting aside is refused for a need, an ended item, a parked want, nothing, or without fun money`() {
         val enough = balance(100_000)
         assertEquals(
             AllocationResult.IsNeed,
@@ -160,6 +169,10 @@ class SavingsTest {
         assertEquals(
             AllocationResult.NotActive,
             setAside(camera.copy(status = ItemStatus.REJECTED), eur(1_000), enough, at)
+        )
+        assertEquals(
+            AllocationResult.NotAPriority,
+            setAside(parked(), eur(1_000), enough, at)
         )
         assertEquals(AllocationResult.NotPositive, setAside(camera, eur(0), enough, at))
         assertEquals(AllocationResult.NotPositive, setAside(camera, eur(-100), enough, at))

@@ -5,6 +5,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isParked
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isReflected
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
@@ -21,7 +22,8 @@ import java.time.temporal.ChronoUnit
  * @property daysLeft as in [WishlistEntry.daysLeft].
  * @property wantedForDays calendar days since the item was added (ADR-0018); 0 on the day it was added.
  * @property reflected the required reflection answers are there; if not, detail asks for them.
- * @property linkProminent the shop link may show as a normal button. False while cooling off: browsing during the
+ * @property linkProminent the shop link may show as a normal button. False while cooling off and for a parked want:
+ *   browsing during the
  *   delay defeats it, so the link is only in the overflow menu then (ADR-0013).
  * @property imageProminent the photo may show large. While cooling off it's a small thumbnail to tap (ADR-0013).
  * @property recheckOn as in [WishlistEntry.recheckOn]: the date a "Wait" decision set, while the item waits for it.
@@ -56,8 +58,9 @@ fun itemDetailOf(item: Item, reflection: Reflection?, savings: Savings, now: Ins
         wantedForDays = wantedForDays(item, now, zone),
         // A need skips reflection (ADR-0008), so it's never asked for one.
         reflected = isReflected(item, reflection),
-        linkProminent = isCooledOff(item, now),
-        imageProminent = isCooledOff(item, now),
+        // A parked want isn't one the user chose, so its shop link and photo stay quiet too (ADR-0013, ADR-0049).
+        linkProminent = isCooledOff(item, now) && !item.isParked,
+        imageProminent = isCooledOff(item, now) && !item.isParked,
         recheckOn = recheckOnOf(item, stage, now, zone),
         savings = savings.progressOf(item),
         funMoneySetUp = savings.setUp

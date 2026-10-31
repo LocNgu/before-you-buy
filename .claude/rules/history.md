@@ -15,7 +15,7 @@ paths:
 - `DecidedAgainst.total` is the exact sum of the listed prices (`total(currency)`), zero when empty; display rounds once (ADR-0034).
 - `HistoryPeriod` (`THIS_MONTH`, `THIS_YEAR`, `ALL`) compares calendar month/year of the decision date in the zone with today's. `untilHistoryChanges` is the time to the next midnight.
 - `historyDetailOf(item, decisions, reflection, zone)`: the entry by the **last** decision, or null for an active item or one whose ending decision doesn't fit.
-- `wantedAgain(item, policy, now, zone)`: rejected items only. A new `WANT` (`ItemId.NEW`) with name, price, link, photo, category, notes and a still-future target date, `addedAt = now`, cooling-off from `initialCoolingEnd`. Never copies answers, kind, `recheckAt`, priority or `markedAsNeedAt`.
+- `wantedAgain(item, policy, now, zone)`: rejected items only. A new `WANT` (`ItemId.NEW`) with name, price, link, photo, category, notes and a still-future target date, `addedAt = now`, `coolingOffDays` from the tiers, parked like a new capture (ADR-0049). Never copies answers, kind, `recheckAt`, priority or `markedAsNeedAt`.
 
 ## Screens and view models (`:app` `feature/history/`)
 

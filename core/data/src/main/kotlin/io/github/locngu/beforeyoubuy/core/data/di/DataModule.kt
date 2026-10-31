@@ -23,6 +23,7 @@ import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.PreferencesRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.defaultCurrency
 import java.io.File
+import java.time.Clock
 import javax.inject.Singleton
 
 /**
@@ -34,8 +35,8 @@ import javax.inject.Singleton
 internal object DataModule {
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): BeforeYouBuyDatabase =
-        BeforeYouBuyDatabase.create(context) {
+    fun provideDatabase(@ApplicationContext context: Context, clock: Clock): BeforeYouBuyDatabase =
+        BeforeYouBuyDatabase.create(context, clock) {
             // The device's region decides the first currency. Not Locale.getDefault(): a per-app language replaces
             // it, often without a region.
             defaultCurrency(Resources.getSystem().configuration.locales[0])

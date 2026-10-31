@@ -95,6 +95,13 @@ data class SavingsProgress(val allocated: Money, val price: Money) {
 fun Savings.progressOf(item: Item): SavingsProgress? =
     if (item.kind == ItemKind.NEED) null else SavingsProgress(allocatedFor(item), item.price)
 
+/**
+ * Whether money can be set aside for [this]: an active want that is a priority (ADR-0046, ADR-0049). [setAside] says
+ * why when it can't.
+ */
+val Item.canBeSavedFor: Boolean
+    get() = status == ItemStatus.ACTIVE && kind == ItemKind.WANT && prioritySlot != null
+
 /** Outcome of [setAside] and [takeBack]. A refusal says why, so the screen can explain it. */
 sealed interface AllocationResult {
     /** Allowed: store [allocation]. */
@@ -111,6 +118,9 @@ sealed interface AllocationResult {
     /** Needs never hold fun money (ADR-0044). */
     data object IsNeed : Refused
 
+    /** Money is set aside only for priorities, the wants the user chose (ADR-0049). */
+    data object NotAPriority : Refused
+
     /** Zero or less. */
     data object NotPositive : Refused
 
@@ -125,8 +135,8 @@ sealed interface AllocationResult {
  * Sets [amount] aside for [item] at [at] (brief §4.6): an active want, at most what [balance] hasn't set aside yet.
  * More than the price is fine (a holiday with a minimum budget, ADR-0046); buying returns what isn't spent. An amount
  * that reads the same as that limit sets aside exactly the limit ([withinShown]). [balance] is null while fun money
- * isn't set up. Saving can start on day 1, while the item still cools off. [amount] must be in the item's currency;
- * anything else throws.
+ * isn't set up. Only a priority can be saved for (ADR-0049); saving can start as soon as it holds its slot, while it
+ * still cools off. [amount] must be in the item's currency; anything else throws.
  */
 fun setAside(item: Item, amount: Money, balance: PoolBalance?, at: Instant): AllocationResult {
     require(amount.currency == item.price.currency) { "$amount isn't in the item's currency ${item.price.currency}" }
@@ -135,6 +145,7 @@ fun setAside(item: Item, amount: Money, balance: PoolBalance?, at: Instant): All
     return when {
         item.status != ItemStatus.ACTIVE -> AllocationResult.NotActive
         item.kind == ItemKind.NEED -> AllocationResult.IsNeed
+        item.prioritySlot == null -> AllocationResult.NotAPriority
         amount.minorUnits <= 0 -> AllocationResult.NotPositive
         moved == null -> AllocationResult.MoreThanNotSetAside
         else -> AllocationResult.Allowed(Allocation(item.id, moved, at))

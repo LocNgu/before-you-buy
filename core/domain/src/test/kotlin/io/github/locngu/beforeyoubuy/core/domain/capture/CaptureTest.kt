@@ -4,12 +4,12 @@ import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isParked
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -22,12 +22,10 @@ class CaptureTest {
     private val policy = Policy("EUR", CoolingOffRules.defaults("EUR"))
     private val german = Locale.GERMANY
     private val english = Locale.US
-    private val berlin: ZoneId = ZoneId.of("Europe/Berlin")
 
-    // The evening before the clocks go back (25 Oct 2026): a calendar day isn't always 24 hours.
     private val added = Instant.parse("2026-10-24T20:00:00Z")
 
-    private fun capture(form: CaptureForm, locale: Locale = german) = capturedItem(form, policy, locale, added, berlin)
+    private fun capture(form: CaptureForm, locale: Locale = german) = capturedItem(form, policy, locale, added)
 
     @Test
     fun `name and price are required`() {
@@ -66,7 +64,7 @@ class CaptureTest {
     }
 
     @Test
-    fun `a captured want waits for its tier, counted in calendar days`() {
+    fun `a captured want waits for its tier once it's a priority`() {
         val item = capture(CaptureForm(name = "  Camera ", price = "1.200"))
 
         assertEquals(ItemId.NEW, item.id)
@@ -75,8 +73,8 @@ class CaptureTest {
         assertEquals(Money(120_000, "EUR"), item.price)
         assertEquals(added, item.addedAt)
         assertEquals(ItemKind.WANT, item.kind)
-        // 90 days later at the same wall-clock time in Berlin, one hour more than 90 × 24 h.
-        assertEquals(Instant.parse("2027-01-22T21:00:00Z"), item.coolingEndsAt)
+        assertEquals(90, item.coolingOffDays)
+        assertNull("no end until it's a priority (ADR-0049)", item.coolingEndsAt)
     }
 
     @Test
@@ -84,7 +82,8 @@ class CaptureTest {
         val item = capture(CaptureForm(name = "Fridge", price = "600", kind = ItemKind.NEED))
 
         assertEquals(ItemKind.NEED, item.kind)
-        assertEquals(added, item.coolingEndsAt)
+        assertNull(item.coolingEndsAt)
+        assertNull(item.waitingSince)
         assertNull(item.markedAsNeedAt)
     }
 
@@ -123,13 +122,25 @@ class CaptureTest {
         val cases = listOf("0" to 7, "99,99" to 7, "100" to 30, "499,99" to 30, "500" to 60, "1.000" to 90)
         for ((price, days) in cases) {
             val item = capture(CaptureForm(name = "Thing", price = price))
-            assertEquals("price $price", days, coolingOffDays(item, berlin))
+            assertEquals("price $price", days, item.coolingOffDays)
+            assertEquals("price $price", days, capturedWaitDays(item))
         }
+    }
+
+    @Test
+    fun `a new want is parked, its wait not started`() {
+        val item = capture(CaptureForm(name = "Thing", price = "100"))
+        assertNull(item.prioritySlot)
+        assertNull(item.waitingSince)
+        assertNull(item.coolingEndsAt)
+        assertEquals(0, item.waitedDays)
+        assertTrue(item.isParked)
     }
 
     @Test
     fun `a need has no cooling-off days`() {
         val item = capture(CaptureForm(name = "Fridge", price = "600", kind = ItemKind.NEED))
-        assertEquals(0, coolingOffDays(item, berlin))
+        assertEquals(0, capturedWaitDays(item))
+        assertFalse(item.isParked)
     }
 }

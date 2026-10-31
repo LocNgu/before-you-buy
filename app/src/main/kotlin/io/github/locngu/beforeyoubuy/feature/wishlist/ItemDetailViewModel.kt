@@ -26,6 +26,7 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.AmountProblem
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
 import io.github.locngu.beforeyoubuy.core.domain.pool.PoolRepository
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.pool.canBeSavedFor
 import io.github.locngu.beforeyoubuy.core.domain.pool.checkAmount
 import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.quickAmounts
@@ -194,9 +195,12 @@ class ItemDetailViewModel @AssistedInject constructor(
         combine(details, sheetEditor, funMoney, locale) { state, editor, money, locale ->
             val balance = (money as? FunMoney.SetUp)?.balance
             val currency = state.detail?.savings?.price?.currency
+            // Only a priority can be saved for (ADR-0049); "Take back" stays for money a parked want still holds.
+            val canBeSavedFor = state.detail?.item?.canBeSavedFor == true
             state.copy(
                 sheet = editor?.let { sheetOf(it, state.detail, money, locale) },
-                canSetAside = balance != null && currency != null && setAsideLimit(balance, currency).minorUnits > 0
+                canSetAside = canBeSavedFor && balance != null && currency != null &&
+                    setAsideLimit(balance, currency).minorUnits > 0
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ItemDetailUiState())
 
@@ -212,10 +216,10 @@ class ItemDetailViewModel @AssistedInject constructor(
     private var writingPriorities = false
 
     /** "Make priority" (brief §4.7): a free slot at once, full slots through the head-to-head. */
-    fun makePriority() = writePriorities { makePriority(id, items, policies) }
+    fun makePriority() = writePriorities { makePriority(id, items, policies, clock) }
 
     /** "Remove from priorities" (ADR-0047): the ones below move up. */
-    fun removePriority() = writePriorities { removePriority(id, items) }
+    fun removePriority() = writePriorities { removePriority(id, items, clock) }
 
     private fun writePriorities(write: suspend () -> PriorityEvent) {
         if (writingPriorities) return

@@ -38,9 +38,19 @@ internal interface ItemDao {
     @Query("SELECT DISTINCT image_ref FROM items WHERE image_ref IS NOT NULL")
     suspend fun getImageRefs(): List<String>
 
-    /** Changes only the cooling-off end, so columns this version can't read are kept as stored. */
-    @Query("UPDATE items SET cooling_ends_at = :coolingEndsAt WHERE id = :id")
-    suspend fun setCoolingEnd(id: Long, coolingEndsAt: Long)
+    /** Changes only the wait's columns (ADR-0050), so columns this version can't read are kept as stored. */
+    @Query(
+        "UPDATE items SET cooling_off_days = :coolingOffDays, waited_days = :waitedDays, " +
+            "waiting_since = :waitingSince, cooling_ends_at = :coolingEndsAt WHERE id = :id"
+    )
+    suspend fun setWait(id: Long, coolingOffDays: Int, waitedDays: Int, waitingSince: Long?, coolingEndsAt: Long)
+
+    /** Changes only the slot and the wait's columns, like [setWait]. */
+    @Query(
+        "UPDATE items SET priority_slot = :slot, waited_days = :waitedDays, waiting_since = :waitingSince, " +
+            "cooling_ends_at = :coolingEndsAt WHERE id = :id"
+    )
+    suspend fun setSlotAndWait(id: Long, slot: Int?, waitedDays: Int, waitingSince: Long?, coolingEndsAt: Long)
 
     /** Changes only the price, for a currency relabel (ADR-0033). */
     @Query("UPDATE items SET price_minor = :priceMinor, currency = :currency WHERE id = :id")

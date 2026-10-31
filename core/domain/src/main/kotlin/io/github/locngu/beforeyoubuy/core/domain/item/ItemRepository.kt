@@ -1,5 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.domain.item
 
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -14,7 +16,7 @@ interface ItemRepository {
     suspend fun add(item: Item): ItemId
 
     /**
-     * Replaces [current], the item as the caller read it, with [edited] (name, price, cooling-off end, kind, …).
+     * Replaces [current], the item as the caller read it, with [edited] (name, price, wait, kind, …).
      * The id and status can't change here: status changes go through [recordDecision]; anything else throws.
      *
      * Writes only if the stored item still equals [current]. Returns false and writes nothing if it changed
@@ -70,7 +72,9 @@ interface ItemRepository {
     /**
      * Makes [ranking] the priorities, rank 1 first (brief §4.7): the n-th item gets slot n, every other active item
      * none ([io.github.locngu.beforeyoubuy.core.domain.priorities.slotChanges]). Used by "Make priority", the
-     * head-to-head and "Remove from priorities" (ADR-0047).
+     * head-to-head and "Remove from priorities" (ADR-0047). In the same write, a want that gets a slot starts waiting
+     * at [at] and one that loses it pauses, counted in calendar days in [zone]
+     * ([io.github.locngu.beforeyoubuy.core.domain.priorities.withSlots], ADR-0049).
      *
      * Writes only if the stored priorities are still [expected] (ids, rank 1 first), every id in [ranking] is an
      * active want and [ranking] fits the priority slots. Returns false and writes nothing otherwise, e.g. a priority
@@ -80,7 +84,7 @@ interface ItemRepository {
      * below it move up in the same transaction
      * ([io.github.locngu.beforeyoubuy.core.domain.priorities.compactedSlots]).
      */
-    suspend fun setPriorities(expected: List<ItemId>, ranking: List<ItemId>): Boolean
+    suspend fun setPriorities(expected: List<ItemId>, ranking: List<ItemId>, at: Instant, zone: ZoneId): Boolean
 
     /**
      * Deletes [current], a purchased or rejected item as the caller read it, with its reflection answers and

@@ -84,8 +84,10 @@ class QuickAddViewModelTest {
         assertEquals("Camera", item.name)
         assertEquals(Money(12_000, "EUR"), item.price)
         assertEquals(now, item.addedAt)
-        // 30 calendar days at the same wall-clock time in Berlin: noon CEST to noon CET, across the clock change.
-        assertEquals(Instant.parse("2026-11-15T11:00:00Z"), item.coolingEndsAt)
+        // Parked on the wishlist: 30 days to wait once it's a priority, no end yet (ADR-0049).
+        assertEquals(30, item.coolingOffDays)
+        assertNull(item.coolingEndsAt)
+        assertNull(item.prioritySlot)
         assertEquals(ItemKind.WANT, item.kind)
         assertFalse(state.visible)
     }
@@ -127,7 +129,7 @@ class QuickAddViewModelTest {
             assertEquals(QuickAddSaved(ItemKind.NEED, 0), awaitItem())
         }
         assertEquals(ItemKind.NEED, items.stored.single().kind)
-        assertEquals(now, items.stored.single().coolingEndsAt)
+        assertNull(items.stored.single().coolingEndsAt)
     }
 
     @Test

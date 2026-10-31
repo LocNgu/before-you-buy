@@ -1,7 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.domain.history
 
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
-import io.github.locngu.beforeyoubuy.core.domain.coolingoff.initialCoolingEnd
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.coolingOffDaysFor
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.HistoryEntry
@@ -281,7 +281,7 @@ class HistoryTest {
                 name = old.name,
                 price = old.price,
                 addedAt = now,
-                coolingEndsAt = initialCoolingEnd(now, old.price, ItemKind.WANT, policy.coolingOffRules, zone),
+                coolingOffDays = coolingOffDaysFor(old.price, policy.coolingOffRules),
                 link = "https://shop.example/camera",
                 imageRef = "photo.jpg",
                 category = "Hobby",
@@ -290,7 +290,7 @@ class HistoryTest {
             ),
             again
         )
-        assertTrue(again.coolingEndsAt > now)
+        assertNull("parked, like a new want", again.prioritySlot)
     }
 
     @Test
@@ -304,7 +304,8 @@ class HistoryTest {
         assertEquals(ItemKind.WANT, again.kind)
         assertNull(again.markedAsNeedAt)
         assertNull(again.targetDate)
-        assertTrue(again.coolingEndsAt > now)
+        assertEquals(0, again.waitedDays)
+        assertNull(again.coolingEndsAt)
     }
 
     @Test

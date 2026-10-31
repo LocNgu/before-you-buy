@@ -22,6 +22,9 @@ import io.github.locngu.beforeyoubuy.core.domain.priorities.DEFAULT_PRIORITY_SLO
 import io.github.locngu.beforeyoubuy.core.domain.priorities.compactedSlots
 import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
 import io.github.locngu.beforeyoubuy.core.domain.priorities.slotChanges
+import io.github.locngu.beforeyoubuy.core.domain.priorities.withSlots
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -97,26 +100,32 @@ internal class RoomItemRepository(private val database: BeforeYouBuyDatabase) : 
         }
     }
 
-    override suspend fun setPriorities(expected: List<ItemId>, ranking: List<ItemId>): Boolean =
-        database.withTransaction {
-            val active = activeItems()
-            if (prioritiesOf(active).map { it.id } != expected) return@withTransaction false
-            val wants = active.filter { it.kind == ItemKind.WANT }.map { it.id }.toSet()
-            if (!wants.containsAll(ranking) || ranking.distinct().size != ranking.size) return@withTransaction false
-            val slots = policies.get()?.toDomain()?.prioritySlots ?: DEFAULT_PRIORITY_SLOTS
-            if (ranking.size > slots) return@withTransaction false
-            writeSlots(slotChanges(active, ranking))
-            true
-        }
+    override suspend fun setPriorities(
+        expected: List<ItemId>,
+        ranking: List<ItemId>,
+        at: Instant,
+        zone: ZoneId
+    ): Boolean = database.withTransaction {
+        val active = activeItems()
+        if (prioritiesOf(active).map { it.id } != expected) return@withTransaction false
+        val wants = active.filter { it.kind == ItemKind.WANT }.map { it.id }.toSet()
+        if (!wants.containsAll(ranking) || ranking.distinct().size != ranking.size) return@withTransaction false
+        val slots = policies.get()?.toDomain()?.prioritySlots ?: DEFAULT_PRIORITY_SLOTS
+        if (ranking.size > slots) return@withTransaction false
+        // A want that gets a slot starts waiting, one that loses it pauses (ADR-0049).
+        items.setSlotsAndWaits(withSlots(active, slotChanges(active, ranking), at, zone))
+        true
+    }
 
-    /** Gives the priorities ranks 1…n again after one left ([compactedSlots]); inside the caller's transaction. */
-    private suspend fun compactPriorities() = writeSlots(compactedSlots(activeItems()))
+    /**
+     * Gives the priorities ranks 1…n again after one left ([compactedSlots]); inside the caller's transaction. Every
+     * priority keeps a slot, so no wait starts or pauses: only ranks move, and a need or ended item loses a stored
+     * slot. Targeted writes, so columns this version can't read survive (ADR-0032).
+     */
+    private suspend fun compactPriorities() =
+        compactedSlots(activeItems()).forEach { (id, slot) -> items.setPrioritySlot(id.value, slot) }
 
     private suspend fun activeItems(): List<Item> = items.getByStatus(ItemStatus.ACTIVE.name).map { it.toDomain() }
-
-    /** Targeted writes, so columns this version can't read survive (ADR-0032). */
-    private suspend fun writeSlots(changes: Map<ItemId, Int?>) =
-        changes.forEach { (id, slot) -> items.setPrioritySlot(id.value, slot) }
 
     /** What is set aside for [item] in its currency, from the stored allocations. */
     private suspend fun allocatedFor(item: Item): Money {

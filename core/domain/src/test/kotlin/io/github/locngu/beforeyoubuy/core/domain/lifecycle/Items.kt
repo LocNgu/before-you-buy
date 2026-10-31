@@ -8,7 +8,10 @@ import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import java.time.Instant
 
-/** Shared fixtures: a 120 € item added on [ADDED] that cools off until [COOLING_ENDS]. */
+/**
+ * Shared fixtures: a 120 € want added on [ADDED] that has held priority slot 1 since then, so its 30-day wait runs
+ * until [COOLING_ENDS] (ADR-0049). [parked] is the same want without a slot.
+ */
 internal val ADDED: Instant = Instant.parse("2026-10-01T10:00:00Z")
 internal val COOLING_ENDS: Instant = Instant.parse("2026-10-31T10:00:00Z")
 internal val DURING_COOLING: Instant = Instant.parse("2026-10-15T10:00:00Z")
@@ -25,8 +28,28 @@ internal val UNFUNDED = Funding(Money(11_949, "EUR"), required = true)
 /** Money condition off: without fun money, or with its switch off (ADR-0046). */
 internal fun notRequired(price: Money = PRICE) = Funding(Money(0, price.currency), required = false)
 
-internal fun item(kind: ItemKind = ItemKind.WANT) =
-    Item(id = ItemId(1), name = "Camera", price = PRICE, addedAt = ADDED, coolingEndsAt = COOLING_ENDS, kind = kind)
+/** Days the fixture waits: [ADDED] to [COOLING_ENDS]. */
+internal const val COOLING_OFF_DAYS = 30
+
+/** The priority fixture, or a need, which holds no slot and doesn't wait (ADR-0008, ADR-0047). */
+internal fun item(kind: ItemKind = ItemKind.WANT): Item {
+    val want = kind == ItemKind.WANT
+    return Item(
+        id = ItemId(1),
+        name = "Camera",
+        price = PRICE,
+        addedAt = ADDED,
+        coolingOffDays = COOLING_OFF_DAYS,
+        waitingSince = ADDED.takeIf { want },
+        coolingEndsAt = COOLING_ENDS.takeIf { want },
+        kind = kind,
+        prioritySlot = 1.takeIf { want }
+    )
+}
+
+/** The want parked on the wishlist: no slot, its wait not running, [waitedDays] waited so far. */
+internal fun parked(waitedDays: Int = 0) =
+    item().copy(prioritySlot = null, waitingSince = null, coolingEndsAt = null, waitedDays = waitedDays)
 
 internal val COMPLETE_REFLECTION = Reflection(
     why = "Better photos on hikes",

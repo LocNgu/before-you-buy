@@ -10,7 +10,7 @@ paths:
 
 ## Rules (`:core:domain` `home/`)
 
-- `homeOverviewOf(items, reflections, savings, now, zone)` is derived from `wishlistOf`, never a second set of stage rules. `toDecide`: the Ready group that isn't waiting (exactly `isDueForDecision`, needs included), then the Needs-reflection group. `activeCount`: every active item, waiting ones included. `nextCoolingEnd`: the first entry of the Cooling-off group (soonest end), or null. `priorities`: every priority by rank (`prioritiesIn`, entries carry `savings` with fun money). `savingFor`: only without priorities, up to `SAVING_FOR_SHOWN` (3) active wants with their `SavingsProgress`, the highest fraction set aside first, then oldest; never needs; empty without fun money (ADR-0046, ADR-0047).
+- `homeOverviewOf(items, reflections, savings, now, zone)` is derived from `wishlistOf`, never a second set of stage rules. `toDecide`: the Ready group that isn't waiting (exactly `isDueForDecision`, needs included), then the Needs-reflection group; a parked want is in neither (ADR-0049). `activeCount`: every active item, waiting and parked ones included. `nextCoolingEnd`: the first entry of the Cooling-off group (soonest end; only priorities wait), or null. `priorities`: every priority by rank (`prioritiesIn`, entries carry `savings` with fun money). `savingFor`: only without priorities, up to `SAVING_FOR_SHOWN` (3) active wants with their `SavingsProgress`, the highest fraction set aside first, then oldest; never needs; empty without fun money (ADR-0046, ADR-0047).
 - Nothing from history goes into the overview: the decided-against total never sits next to Ready items (moral licensing, ADR-0012).
 
 ## Screen and view model (`:app` `feature/home/`)

@@ -60,6 +60,14 @@ class ApplyDecisionTest {
     }
 
     @Test
+    fun `a parked want is never bought plainly, only early`() {
+        val waitedOut = parked(waitedDays = 40)
+        assertEquals(DecisionResult.NotReady, decide(waitedOut, DecisionType.BUY))
+        val bought = applied(decide(waitedOut, DecisionType.BUY_EARLY, earlyReason = "On sale"))
+        assertEquals(ItemStatus.PURCHASED, bought.status)
+    }
+
+    @Test
     fun `buying early needs a non-blank reason`() {
         val bought = applied(decide(ready, DecisionType.BUY_EARLY, at = DURING_COOLING, earlyReason = "On sale"))
         assertEquals(ItemStatus.PURCHASED, bought.status)

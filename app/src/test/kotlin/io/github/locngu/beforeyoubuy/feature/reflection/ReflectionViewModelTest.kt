@@ -22,6 +22,7 @@ import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
+import io.github.locngu.beforeyoubuy.testing.asPriority
 import java.time.Duration
 import java.time.Instant
 import kotlinx.coroutines.CompletableDeferred
@@ -63,8 +64,8 @@ class ReflectionViewModelTest {
                 name = "Camera",
                 price = Money(12_000, "EUR"),
                 addedAt = start.minus(Duration.ofDays(10)),
-                coolingEndsAt = start.plus(Duration.ofHours(endsInHours))
-            )
+                coolingOffDays = 30
+            ).asPriority(start.plus(Duration.ofHours(endsInHours)))
         )
         return items.stored.single { it.id == id }
     }

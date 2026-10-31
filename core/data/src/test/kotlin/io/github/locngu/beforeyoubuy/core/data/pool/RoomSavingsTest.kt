@@ -3,6 +3,7 @@ package io.github.locngu.beforeyoubuy.core.data.pool
 import io.github.locngu.beforeyoubuy.core.data.db.DatabaseTest
 import io.github.locngu.beforeyoubuy.core.data.item.RoomItemRepository
 import io.github.locngu.beforeyoubuy.core.data.item.newItem
+import io.github.locngu.beforeyoubuy.core.data.item.newPriority
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
@@ -54,7 +55,7 @@ internal class RoomSavingsTest : DatabaseTest() {
         assertTrue(pool.setUp(eur(30_000), 1, eur(starting), wantsNeedFunding, now, zone))
     }
 
-    private suspend fun add(item: Item = newItem()): Item = items.observeById(items.add(item)).first()!!
+    private suspend fun add(item: Item = newPriority()): Item = items.observeById(items.add(item)).first()!!
 
     private suspend fun stored(item: Item): Item = items.observeById(item.id).first()!!
 
@@ -94,7 +95,7 @@ internal class RoomSavingsTest : DatabaseTest() {
     fun `setting aside never takes what isn't set aside below zero`() = runTest {
         setUp(starting = 10_000)
         val camera = add()
-        val bike = add(newItem("Bike"))
+        val bike = add(newPriority("Bike"))
         pool.setAside(camera.id, eur(6_000), now)
 
         assertEquals(AllocationResult.MoreThanNotSetAside, pool.setAside(bike.id, eur(4_100), now))
@@ -105,7 +106,7 @@ internal class RoomSavingsTest : DatabaseTest() {
     @Test
     fun `two at once can't both use the same money`() = runTest {
         setUp(starting = 10_000)
-        val all = (1..4).map { add(newItem("Item $it")) }
+        val all = (1..4).map { add(newPriority("Item $it")) }
 
         val results = withContext(Dispatchers.IO) {
             all.map { async { pool.setAside(it.id, eur(6_000), now) } }.awaitAll()
@@ -187,7 +188,7 @@ internal class RoomSavingsTest : DatabaseTest() {
         assertEquals(eur(0), funMoney().balance.unallocated)
 
         // The app asked first; the purchase itself is the only record.
-        val bike = add(newItem("Bike"))
+        val bike = add(newPriority("Bike"))
         assertTrue(decide(bike, buy(paid = 5_000)))
         assertEquals(eur(-5_000), funMoney().balance.unallocated)
         assertEquals(2, pool.entries.first().filterIsInstance<PoolEntry.Purchase>().size)

@@ -1,6 +1,6 @@
 package io.github.locngu.beforeyoubuy.core.domain.capture
 
-import io.github.locngu.beforeyoubuy.core.domain.coolingoff.initialCoolingEnd
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.coolingOffDaysFor
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
@@ -9,8 +9,6 @@ import io.github.locngu.beforeyoubuy.core.domain.money.parseMoney
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /**
@@ -41,13 +39,14 @@ fun checkCapture(form: CaptureForm, currency: String, locale: Locale): CaptureCh
 
 /**
  * The new, active item for [form], added at [addedAt] (brief §4.1): text trimmed, blank optional fields left out,
- * the price in the policy's currency, and the cooling-off end from the policy's tiers in [zone] (a `NEED` doesn't
- * wait, ADR-0008). Its id is [ItemId.NEW]; store it with
+ * the price in the policy's currency, and the days to wait from the policy's tiers. A new want is always parked on
+ * the wishlist, even with a free slot: its wait starts only once it's made a priority (ADR-0049). A `NEED` doesn't
+ * wait (ADR-0008). Its id is [ItemId.NEW]; store it with
  * [io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository.add].
  *
  * Only call it for a form that [checkCapture] accepts; anything else is a programming error and throws.
  */
-fun capturedItem(form: CaptureForm, policy: Policy, locale: Locale, addedAt: Instant, zone: ZoneId): Item {
+fun capturedItem(form: CaptureForm, policy: Policy, locale: Locale, addedAt: Instant): Item {
     val check = checkCapture(form, policy.currency, locale)
     val price = (check.price as? MoneyParseResult.Success)?.money
     require(!check.nameMissing && price != null) { "Only a valid form can be captured: $check" }
@@ -56,7 +55,7 @@ fun capturedItem(form: CaptureForm, policy: Policy, locale: Locale, addedAt: Ins
         name = form.name.trim(),
         price = price,
         addedAt = addedAt,
-        coolingEndsAt = initialCoolingEnd(addedAt, price, form.kind, policy.coolingOffRules, zone),
+        coolingOffDays = coolingOffDaysFor(price, policy.coolingOffRules),
         kind = form.kind,
         link = form.link.trimmedOrNull(),
         category = form.category.trimmedOrNull(),
@@ -66,13 +65,9 @@ fun capturedItem(form: CaptureForm, policy: Policy, locale: Locale, addedAt: Ins
 }
 
 /**
- * How many calendar days in [zone] the item waits from capture to the end of its cooling-off: what "You can decide
- * in 30 days" says right after adding it. 0 for a `NEED`.
+ * How many calendar days a captured item waits once it's a priority: what the snackbar says right after adding it.
+ * 0 for a `NEED`, which doesn't wait (ADR-0008).
  */
-fun coolingOffDays(item: Item, zone: ZoneId): Int {
-    val added = item.addedAt.atZone(zone).toLocalDate()
-    val ends = item.coolingEndsAt.atZone(zone).toLocalDate()
-    return ChronoUnit.DAYS.between(added, ends).toInt()
-}
+fun capturedWaitDays(item: Item): Int = if (item.kind == ItemKind.NEED) 0 else item.coolingOffDays
 
 private fun String.trimmedOrNull(): String? = trim().ifEmpty { null }

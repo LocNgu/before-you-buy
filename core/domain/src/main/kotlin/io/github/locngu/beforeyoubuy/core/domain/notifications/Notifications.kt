@@ -2,11 +2,10 @@ package io.github.locngu.beforeyoubuy.core.domain.notifications
 
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
-import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
-import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isReflected
+import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wantedForDays
 import java.time.Duration
@@ -62,11 +61,14 @@ val DAILY_CHECK_TIME: LocalTime = LocalTime.of(10, 0)
  * with [ItemNotifications] and passes it back as [notified] next time.
  *
  * - **At most one a day**: nothing if anything in [notified] was sent on today's date.
- * - **Waiting period over** (if [NotificationPrefs.waitingPeriods]): active wants whose cooling-off has ended and that
- *   weren't notified for this end yet. Items the user already chose to "Wait" on are left out; needs never have a
+ * - **Only priorities** are notified about (ADR-0049): a parked want is left alone on purpose, and needs never have a
  *   waiting period (ADR-0008).
- * - **Reflection nudge** (if [NotificationPrefs.reflectionReminders]): active wants still cooling off, without the
- *   required answers, added at least [REFLECTION_NUDGE_AFTER_DAYS] calendar days ago and never nudged. Once cooling
+ * - **Waiting period over** (if [NotificationPrefs.waitingPeriods]): priorities whose running wait has ended in their
+ *   slot and that weren't notified for this end yet. A want that had already waited its full period when it got its
+ *   slot isn't notified: the user has just chosen it (ADR-0050). Items the user already chose to "Wait" on are left
+ *   out.
+ * - **Reflection nudge** (if [NotificationPrefs.reflectionReminders]): priorities still cooling off, without the
+ *   required answers, whose wait started at least [REFLECTION_NUDGE_AFTER_DAYS] calendar days ago and never nudged. Once cooling
  *   off has ended, the waiting-period notification leads to the questions instead.
  * - Waiting periods come first; nudges that lose to them stay due for the next day. Several items of the kind make
  *   one digest; items are ordered by cooling-off end (waiting periods) or added date (nudges), then id.
@@ -84,12 +86,16 @@ fun planNotifications(
 ): NotificationPlan? {
     val today = now.atZone(zone).toLocalDate()
     if (notified.values.any { record -> record.sentAt.any { it.atZone(zone).toLocalDate() == today } }) return null
-    val wants = items.filter { it.status == ItemStatus.ACTIVE && it.kind == ItemKind.WANT }
+    val priorities = prioritiesOf(items)
 
     val waitingOver = if (prefs.waitingPeriods) {
-        wants.filter { item ->
+        priorities.filter { item ->
             val sent = notified[item.id]?.waitingPeriodOverAt
-            isCooledOff(item, now) && item.recheckAt == null && (sent == null || sent < item.coolingEndsAt)
+            val start = item.waitingSince
+            val end = item.coolingEndsAt
+            // A wait that was already complete when the slot came ends where it starts: it didn't end in the slot.
+            start != null && end != null && end > start && now >= end && item.recheckAt == null &&
+                (sent == null || sent < end)
         }.sortedWith(compareBy({ it.coolingEndsAt }, { it.id.value }))
     } else {
         emptyList()
@@ -97,8 +103,10 @@ fun planNotifications(
     if (waitingOver.isNotEmpty()) return plan(NotificationKind.WAITING_PERIOD_OVER, waitingOver, now, zone)
 
     val nudges = if (prefs.reflectionReminders) {
-        wants.filter { item ->
-            val nudgeDay = item.addedAt.atZone(zone).toLocalDate().plusDays(REFLECTION_NUDGE_AFTER_DAYS)
+        priorities.filter { item ->
+            // Counted from when its wait started (ADR-0050): a want promoted after weeks isn't nudged at once.
+            val started = item.waitingSince ?: item.addedAt
+            val nudgeDay = started.atZone(zone).toLocalDate().plusDays(REFLECTION_NUDGE_AFTER_DAYS)
             !isCooledOff(item, now) &&
                 !isReflected(item, reflections[item.id]) &&
                 !today.isBefore(nudgeDay) &&

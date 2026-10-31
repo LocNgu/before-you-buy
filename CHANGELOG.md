@@ -4,6 +4,10 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### Changed
+
+- Only your priorities wait. A want you add goes onto your wishlist without its waiting period running; the wait starts when you make it a priority, and only priorities can become ready to decide, have money set aside for them and get notifications. When a want stops being a priority (you remove it, it loses a comparison, or you choose fewer slots), its wait pauses: it keeps the days it has already waited and continues from there if it becomes a priority again. A want that has already waited its full period is ready as soon as it's a priority and your reasons (and money, if needed) are in. Your current priorities keep their waiting periods when you update; every other want moves to the wishlist, and the time since you added it counts as waited. You can still buy a want that isn't a priority with "Decide early…", and let it go any time.
+
 ## [0.5.0] - 2026-10-26
 
 ### Added

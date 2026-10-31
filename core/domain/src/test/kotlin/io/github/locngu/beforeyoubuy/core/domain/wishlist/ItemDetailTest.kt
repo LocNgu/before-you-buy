@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COMPLETE_REFLECTION
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.DURING_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.item
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.parked
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import java.time.Instant
 import java.time.LocalDate
@@ -45,6 +46,15 @@ class ItemDetailTest {
         assertTrue(detail.reflected)
         assertTrue(detail.linkProminent)
         assertTrue(detail.imageProminent)
+    }
+
+    @Test
+    fun `a parked want keeps its link and photo quiet, even with its wait complete`() {
+        val detail = itemDetailOf(parked(waitedDays = 40), COMPLETE_REFLECTION, Savings.NONE, AFTER_COOLING, zone)
+
+        assertEquals(Stage.PARKED, detail.stage)
+        assertFalse(detail.linkProminent)
+        assertFalse(detail.imageProminent)
     }
 
     @Test

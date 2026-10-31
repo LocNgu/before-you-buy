@@ -1,9 +1,13 @@
 package io.github.locngu.beforeyoubuy.core.domain.priorities
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.pauseWait
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.startWait
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
+import java.time.Instant
+import java.time.ZoneId
 
 /** The fewest priority slots the user can choose (brief §4.7, ADR-0011). */
 const val MIN_PRIORITY_SLOTS = 1
@@ -44,12 +48,31 @@ fun slotChanges(active: List<Item>, ranking: List<ItemId>): Map<ItemId, Int?> {
 }
 
 /**
+ * The [active] items whose slot [changes] (from [slotChanges] or [demotedBySlots]) change, with the change applied at
+ * [at] in [zone]: a want that gets a slot starts waiting, one that loses it pauses, keeping the time it has waited;
+ * one that only moves to another rank keeps waiting (ADR-0049). Store all of them, slot and wait together.
+ */
+fun withSlots(active: List<Item>, changes: Map<ItemId, Int?>, at: Instant, zone: ZoneId): List<Item> =
+    active.filter { it.id in changes }.map { item ->
+        val slot = changes.getValue(item.id)
+        val moved = item.copy(prioritySlot = slot)
+        when {
+            slot == null -> pauseWait(moved, at, zone)
+            item.prioritySlot == null -> startWait(moved, at, zone)
+            else -> moved
+        }
+    }
+
+/**
  * Closes the gaps once a priority leaves (bought, decided against, made a need, removed): the remaining priorities
  * keep their order and move up to 1…n; any other active item that still has a slot loses it (brief §4.7).
  */
 fun compactedSlots(active: List<Item>): Map<ItemId, Int?> = slotChanges(active, prioritiesOf(active).map { it.id })
 
-/** The priorities that go back to the wishlist when the slots become [slots]: the lowest-ranked beyond it. */
+/**
+ * The priorities that go back to the wishlist when the slots become [slots]: the lowest-ranked beyond it. Their wait
+ * pauses ([withSlots]).
+ */
 fun demotedBySlots(active: List<Item>, slots: Int): List<Item> {
     require(slots in MIN_PRIORITY_SLOTS..MAX_PRIORITY_SLOTS) { "Priority slots are 1–5, was $slots" }
     return prioritiesOf(active).drop(slots)

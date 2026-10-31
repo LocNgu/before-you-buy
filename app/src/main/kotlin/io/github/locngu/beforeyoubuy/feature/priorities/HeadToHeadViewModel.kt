@@ -21,6 +21,7 @@ import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
 import io.github.locngu.beforeyoubuy.core.domain.priorities.promote
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.feature.money.observeSavings
+import java.time.Clock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +61,8 @@ class HeadToHeadViewModel @AssistedInject constructor(
     @Assisted itemId: Long,
     private val items: ItemRepository,
     pool: PoolRepository,
-    policies: PolicyRepository
+    policies: PolicyRepository,
+    private val clock: Clock
 ) : ViewModel() {
     @AssistedFactory
     interface Factory {
@@ -120,7 +122,7 @@ class HeadToHeadViewModel @AssistedInject constructor(
     }
 
     private suspend fun store(expected: List<ItemId>, ranking: List<ItemId>, lines: List<OutcomeLine>) {
-        state.value = if (items.setPriorities(expected, ranking)) {
+        state.value = if (items.setPriorities(expected, ranking, clock.instant(), clock.zone)) {
             HeadToHeadUiState(summary = lines)
         } else {
             HeadToHeadUiState(changedMeanwhile = true)

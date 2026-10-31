@@ -93,8 +93,9 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `update saves edits`() = runTest {
-        val item = addAndRead()
-        val edited = item.copy(price = Money(60_000, "EUR"), coolingEndsAt = DECIDED, notes = "Lens too")
+        val item = addAndRead(newPriority())
+        val edited =
+            item.copy(price = Money(60_000, "EUR"), coolingOffDays = 60, coolingEndsAt = DECIDED, notes = "Lens too")
 
         assertTrue(repository.update(item, edited))
         assertEquals(edited, stored(item.id))
@@ -184,7 +185,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `recordDecision stores the applied item and appends the decision`() = runTest {
-        val item = addAndRead()
+        val item = addAndRead(newPriority()) // a plain Buy needs a priority (ADR-0049)
         val reflection = Reflection("Hikes", UsageFrequency.WEEKLY, listOf("Heavy"))
         repository.setReflection(item.id, reflection)
         val decision = buy()
@@ -215,7 +216,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `recordDecision writes nothing for an item that already ended`() = runTest {
-        val item = addAndRead()
+        val item = addAndRead(newPriority())
         assertTrue(decide(item, reject()))
 
         // e.g. "Buy" in the app confirmed just after "Let it go" in the notification.
@@ -231,7 +232,7 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
         val items = List(20) { addAndRead() }
 
         val results = withContext(Dispatchers.IO) {
-            items.map { item -> listOf(async { decide(item, reject()) }, async { decide(item, buy()) }) }
+            items.map { item -> listOf(async { decide(item, reject()) }, async { decide(item, buyEarly()) }) }
                 .map { it.awaitAll() }
         }
 
@@ -241,8 +242,12 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
 
     @Test
     fun `a decision checked against an older state writes nothing`() = runTest {
-        val item = addAndRead()
-        val repriced = item.copy(price = Money(150_000, "EUR"), coolingEndsAt = DECIDED.plusSeconds(3_600))
+        val item = addAndRead(newPriority())
+        val repriced = item.copy(
+            price = Money(150_000, "EUR"),
+            coolingOffDays = 90,
+            coolingEndsAt = DECIDED.plusSeconds(3_600)
+        )
         assertTrue(repository.update(item, repriced))
 
         // Ready under the old cooling-off end, not under the extended one.
@@ -282,8 +287,8 @@ internal class RoomItemRepositoryTest : DatabaseTest() {
         val bike = addAndRead(newItem("Bike"))
         val lamp = addAndRead(newItem("Lamp"))
         repository.add(newItem("Still active"))
-        val earlier = buy(DECIDED.minusSeconds(3_600))
-        val later = buy(DECIDED)
+        val earlier = buyEarly(DECIDED.minusSeconds(3_600))
+        val later = buyEarly(DECIDED)
         decide(camera, earlier)
         decide(bike, later)
         decide(lamp, reject())

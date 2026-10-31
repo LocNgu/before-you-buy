@@ -27,7 +27,11 @@ internal data class PolicyEntity(
     }
 }
 
-/** One row per item: the stored facts of `Item` (brief §4.1). */
+/**
+ * One row per item: the stored facts of `Item` (brief §4.1). The wait (ADR-0049, version 7, [migration6To7]):
+ * [coolingOffDays], [waitedDays], and [waitingSince] while it runs, with its end in [coolingEndsAt]. While the wait
+ * doesn't run, [coolingEndsAt] holds [addedAt], so the row reads back exactly as it was written (ADR-0032).
+ */
 @Entity(tableName = "items", indices = [Index("status")])
 internal data class ItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long,
@@ -45,7 +49,10 @@ internal data class ItemEntity(
     @ColumnInfo(name = "target_date") val targetDate: String?,
     @ColumnInfo(name = "recheck_at") val recheckAt: Long?,
     @ColumnInfo(name = "priority_slot") val prioritySlot: Int?,
-    @ColumnInfo(name = "marked_as_need_at") val markedAsNeedAt: Long?
+    @ColumnInfo(name = "marked_as_need_at") val markedAsNeedAt: Long?,
+    @ColumnInfo(name = "cooling_off_days", defaultValue = "0") val coolingOffDays: Int,
+    @ColumnInfo(name = "waited_days", defaultValue = "0") val waitedDays: Int,
+    @ColumnInfo(name = "waiting_since") val waitingSince: Long?
 )
 
 /** An item's reflection answers, 1:1 with the item (brief §4.3). [reasonsAgainst] is a JSON array of strings. */
