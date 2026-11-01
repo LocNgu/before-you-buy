@@ -25,4 +25,4 @@ Alternatives considered:
 - Home and the wishlist use the same heading and the same empty line, so a new user sees on both screens that a want has to become a priority to start waiting.
 - Home answers "What am I saving for?" (brief §6.1) with the priorities alone; there is no separate list of wants by progress any more.
 - Money left on a parked want is visible only on the wishlist and item detail, not on Home. Accepted: ADR-0049 keeps it there until it's taken back, and Home is about what the user chose.
-- Amends ADR-0046 (Home's "Saving for") and ADR-0047 ("Without priorities it stays as ADR-0046 says").
+- Amends ADR-0043 (the "Saving for" section), ADR-0046 (Home's "Saving for") and ADR-0047 ("Without priorities it stays as ADR-0046 says").

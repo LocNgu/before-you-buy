@@ -153,6 +153,10 @@ class HomeOverviewTest {
 
         assertEquals(emptyList<Any>(), overview.priorities)
         assertEquals(3, overview.activeCount)
+        assertEquals(
+            emptyList<Any>(),
+            homeOverviewOf(active, emptyMap(), Savings.NONE, AFTER_COOLING, zone).priorities
+        )
     }
 
     @Test
