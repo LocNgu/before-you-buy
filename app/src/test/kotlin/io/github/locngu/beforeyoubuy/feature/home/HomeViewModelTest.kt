@@ -14,6 +14,7 @@ import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import io.github.locngu.beforeyoubuy.testing.asPriority
+import io.github.locngu.beforeyoubuy.testing.parked
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -197,18 +198,27 @@ class HomeViewModelTest {
         pool.setAside(bike.id, Money(9_000, "EUR"), start)
         pool.setAside(camera.id, Money(3_000, "EUR"), start)
 
-        // Both are priorities (ADR-0049), so Home lists them by rank instead of "Saving for" (ADR-0047).
+        // Both are priorities (ADR-0049), so Home lists them by rank (ADR-0047).
         assertEquals(listOf("Camera", "Bike"), overview!!.priorities.map { it.entry.item.name })
         assertEquals(Money(9_000, "EUR"), overview!!.priorities[1].entry.savings?.allocated)
-        assertEquals(emptyList<Any>(), overview!!.savingFor)
         val money = viewModel.uiState.value.money as FunMoney.SetUp
         assertEquals(PoolBalance(Money(20_000, "EUR"), Money(12_000, "EUR")), money.balance)
     }
 
     @Test
-    fun `without fun money nothing is listed as saved for`() = runTest(UnconfinedTestDispatcher()) {
-        viewModel.uiState.launchIn(backgroundScope)
-        add("Camera", endsInHours = 24)
-        assertEquals(emptyList<Any>(), overview!!.savingFor)
-    }
+    fun `a want that loses its slot leaves Home's priorities but keeps its money in the fun money`() =
+        runTest(UnconfinedTestDispatcher()) {
+            viewModel.uiState.launchIn(backgroundScope)
+            pool.setUp(Money(30_000, "EUR"), 1, Money(20_000, "EUR"), true, start, clock.zone)
+            val camera = add("Camera", endsInHours = 24)
+            pool.setAside(camera.id, Money(5_000, "EUR"), start)
+
+            items.replace(camera.parked())
+
+            // Only priorities are saved for (ADR-0049, ADR-0052); the money stays set aside until taken back.
+            assertEquals(emptyList<Any>(), overview!!.priorities)
+            assertEquals(1, overview!!.activeCount)
+            val money = viewModel.uiState.value.money as FunMoney.SetUp
+            assertEquals(PoolBalance(Money(20_000, "EUR"), Money(5_000, "EUR")), money.balance)
+        }
 }

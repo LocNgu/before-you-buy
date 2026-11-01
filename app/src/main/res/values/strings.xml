@@ -11,8 +11,6 @@
     <string name="home_considering_empty">Nothing yet. Add something you’d like to buy. It waits on your wishlist while you think it over.</string>
     <!-- Above the item whose waiting period ends first, with its countdown. -->
     <string name="home_next_cooling_end">Next waiting period to end</string>
-    <!-- Home's "What am I saving for?" (ADR-0046): wants with what is set aside for them. -->
-    <string name="home_saving_title">Saving for</string>
     <!-- Fun money (brief §4.5, ADR-0045): plain amounts for wants, never "available to spend" (ADR-0014). -->
     <string name="home_money_title">Fun money</string>
     <string name="home_money_not_set_up">Choose a monthly amount for the things you want. It’s added each month by itself.</string>
@@ -324,8 +322,6 @@
     <!-- Savings per item (#23, ADR-0046): "set aside", never "saved" or "available". -->
     <string name="fun_money_wants_need_funding">Wants need their price set aside</string>
     <string name="fun_money_wants_need_funding_explained">A want is ready to decide on once its price is set aside. Off: the waiting period and your reasons are enough.</string>
-    <string name="home_saving_not_set_up">Set up fun money to set money aside for your wants.</string>
-    <string name="home_saving_empty">No wants to set money aside for yet.</string>
     <string name="savings_title">Set aside</string>
     <string name="savings_progress">%1$s of %2$s set aside · %3$s to go</string>
     <string name="savings_progress_complete">%1$s of %2$s set aside</string>

@@ -1,6 +1,6 @@
 # ADR-0047: Priorities: wants only, "Remove from priorities", slots stored with the policy, Home's "Saving for" becomes the priorities
 
-**Status**: accepted; amended by ADR-0049 (the wishlist is Priorities, Needs, Wishlist; a slot starts the wait), ADR-0051 (the label "Make it a priority")
+**Status**: accepted; amended by ADR-0049 (the wishlist is Priorities, Needs, Wishlist; a slot starts the wait), ADR-0051 (the label "Make it a priority"), ADR-0052 (Home shows "Priorities" also without priorities)
 **Type**: product
 **Date**: 2026-10-25
 

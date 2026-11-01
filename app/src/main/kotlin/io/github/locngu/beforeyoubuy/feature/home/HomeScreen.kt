@@ -30,7 +30,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.home.HomeOverview
-import io.github.locngu.beforeyoubuy.core.domain.home.SavingFor
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.pool.FunMoney
@@ -47,9 +46,9 @@ import io.github.locngu.beforeyoubuy.ui.components.MoneyText
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 
 /**
- * Home (brief §6.1): what can I decide on, what am I considering, what am I saving for and how much fun money there
- * is for wants. [onOpenFunMoney] sets it up or changes it; [onOpenItem] opens a want saved for. Quick add is hosted by
- * the navigation, so this only asks to open it with [onAdd].
+ * Home (brief §6.1): what can I decide on, what am I considering, what am I saving for (the priorities) and how much
+ * fun money there is for wants. [onOpenFunMoney] sets it up or changes it; [onOpenItem] opens a priority. Quick add is
+ * hosted by the navigation, so this only asks to open it with [onAdd].
  */
 @Composable
 fun HomeScreen(
@@ -139,26 +138,14 @@ private fun HomeSections(
         item(key = "considering") {
             Considering(overview.activeCount, overview.nextCoolingEnd, onOpenWishlist)
         }
-        if (overview.priorities.isNotEmpty()) {
-            // "What am I saving for?" is the priorities once there are some (brief §6.1, ADR-0047).
-            item(key = "priorities") { SectionHeader(stringResource(R.string.priorities_title)) }
+        // "What am I saving for?" is the priorities: only they wait and get money (brief §6.1, ADR-0049). Always
+        // shown, with the wishlist's hint while there are none (ADR-0051, ADR-0052).
+        item(key = "priorities") { SectionHeader(stringResource(R.string.priorities_title)) }
+        if (overview.priorities.isEmpty()) {
+            item(key = "priorities_empty") { QuietLine(stringResource(R.string.priorities_empty_hint)) }
+        } else {
             items(overview.priorities, key = { "priority_${it.entry.item.id.value}" }) { priority ->
                 PriorityRow(priority, onClick = { onOpenItem(priority.entry.item.id) })
-            }
-        } else {
-            item(key = "saving") { SectionHeader(stringResource(R.string.home_saving_title)) }
-        }
-        when {
-            money == null || overview.priorities.isNotEmpty() -> Unit
-
-            money == FunMoney.NotSetUp ->
-                item(key = "saving_not_set_up") { QuietLine(stringResource(R.string.home_saving_not_set_up)) }
-
-            overview.savingFor.isEmpty() ->
-                item(key = "saving_empty") { QuietLine(stringResource(R.string.home_saving_empty)) }
-
-            else -> items(overview.savingFor, key = { "saving_${it.item.id.value}" }) { saving ->
-                SavingForRow(saving, onClick = { onOpenItem(saving.item.id) })
             }
         }
         if (money != null) item(key = "money") { FunMoneySection(money, onOpenFunMoney) }
@@ -272,28 +259,6 @@ private fun FunMoneySection(money: FunMoney, onOpenFunMoney: () -> Unit) {
                 )
             )
         }
-    }
-}
-
-/**
- * A want saved for (brief §6.1 "What am I saving for?"): its name and what is set aside of its price. Tapping opens
- * it, where money is set aside.
- */
-@Composable
-private fun SavingForRow(saving: SavingFor, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = saving.item.name,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        SavingsProgressBar(saving.progress, Modifier.fillMaxWidth())
     }
 }
 

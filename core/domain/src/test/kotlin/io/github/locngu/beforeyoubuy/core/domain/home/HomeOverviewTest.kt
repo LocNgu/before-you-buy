@@ -142,39 +142,39 @@ class HomeOverviewTest {
     }
 
     @Test
-    fun `saving for lists up to three wants without priorities, most set aside first, never needs`() {
+    fun `without priorities nothing is listed as saved for, not even a parked want that still holds money`() {
         val allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 10, 1))
-        val wants = (1L..5L).map { parkedWish(it) }
-        val need = wish(9, kind = ItemKind.NEED)
-        val active = wants + need
-        fun put(item: Item, minor: Long) = Allocation(item.id, Money(minor, "EUR"), COOLING_ENDS)
-        val savings = savingsOf(allowance, listOf(put(wants[1], 6_000), put(wants[2], 9_000)), active)
+        val held = parkedWish(1)
+        val active = listOf(held, parkedWish(2), wish(3, kind = ItemKind.NEED))
+        // Set aside while it held a slot; it keeps the money after losing it (ADR-0049).
+        val savings = savingsOf(allowance, listOf(Allocation(held.id, Money(9_000, "EUR"), COOLING_ENDS)), active)
 
         val overview = homeOverviewOf(active, emptyMap(), savings, AFTER_COOLING, zone)
 
-        assertEquals(listOf(3L, 2L, 1L), overview.savingFor.map { it.item.id.value })
-        assertEquals(Money(9_000, "EUR"), overview.savingFor[0].progress.allocated)
         assertEquals(emptyList<Any>(), overview.priorities)
-        assertEquals(
-            emptyList<SavingFor>(),
-            homeOverviewOf(active, emptyMap(), Savings.NONE, AFTER_COOLING, zone).savingFor
-        )
+        assertEquals(3, overview.activeCount)
     }
 
     @Test
-    fun `with priorities, saving for becomes every priority by rank, with savings only once fun money is set up`() {
+    fun `saving for is every priority by rank, with savings only once fun money is set up, never a parked want`() {
         val allowance = AllowanceSettings(Money(30_000, "EUR"), 1, LocalDate.of(2026, 10, 1))
         val second = wish(1).copy(prioritySlot = 2)
         val first = wish(2).copy(prioritySlot = 1)
         val other = parkedWish(3)
         val active = listOf(second, first, other)
-        val savings = savingsOf(allowance, listOf(Allocation(second.id, Money(3_000, "EUR"), COOLING_ENDS)), active)
+        val savings = savingsOf(
+            allowance,
+            listOf(
+                Allocation(second.id, Money(3_000, "EUR"), COOLING_ENDS),
+                Allocation(other.id, Money(5_000, "EUR"), COOLING_ENDS)
+            ),
+            active
+        )
 
         val overview = homeOverviewOf(active, emptyMap(), savings, AFTER_COOLING, zone)
 
         assertEquals(listOf(1 to first.id, 2 to second.id), overview.priorities.map { it.rank to it.entry.item.id })
         assertEquals(Money(3_000, "EUR"), overview.priorities[1].entry.savings?.allocated)
-        assertEquals(emptyList<SavingFor>(), overview.savingFor)
         val withoutFunMoney = homeOverviewOf(active, emptyMap(), Savings.NONE, AFTER_COOLING, zone)
         assertEquals(2, withoutFunMoney.priorities.size)
         assertNull(withoutFunMoney.priorities[0].entry.savings)
