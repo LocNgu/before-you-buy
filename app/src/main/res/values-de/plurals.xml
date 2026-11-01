@@ -20,8 +20,8 @@
 
     <!-- Unter dem Preis beim Hinzufügen (Wunsch) und Bearbeiten (Wunsch ohne Platz): die Wartezeit seiner Stufe (ADR-0049). -->
     <plurals name="wait_once_priority">
-        <item quantity="one">Wartezeit: %d Tag, sobald es eine Priorität ist</item>
-        <item quantity="other">Wartezeit: %d Tage, sobald es eine Priorität ist</item>
+        <item quantity="one">Wartezeit als Priorität: %d Tag</item>
+        <item quantity="other">Wartezeit als Priorität: %d Tage</item>
     </plurals>
 
     <!-- Ein Wunsch ohne Platz, der noch keinen Tag gewartet hat: Seine ganze Wartezeit liegt noch vor ihm (ADR-0049). -->
