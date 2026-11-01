@@ -36,6 +36,35 @@ fun daysWaited(item: Item, now: Instant, zone: ZoneId): Int =
     item.waitedDays + (item.waitingSince?.let { wholeDaysBetween(it, now, zone) } ?: 0)
 
 /**
+ * How much of its waiting period a want has done, as a parked want shows it instead of days left: its wait doesn't
+ * run, so nothing counts down (ADR-0049).
+ */
+sealed interface WaitProgress {
+    /** It hasn't waited a whole day yet; it waits [days] once it's a priority. */
+    data class NotStarted(val days: Int) : WaitProgress
+
+    /** It has waited [waited] of its [days]. */
+    data class Partly(val waited: Int, val days: Int) : WaitProgress
+
+    /** It has waited its full period: as a priority it's past the wait at once. */
+    data object Done : WaitProgress
+}
+
+/**
+ * How much of its waiting period [item] has done at [now] in [zone] ([daysWaited] against [Item.coolingOffDays]).
+ * [WaitProgress.Done] for a need, which doesn't wait (ADR-0008), and for every cooled-off item.
+ */
+fun waitProgressOf(item: Item, now: Instant, zone: ZoneId): WaitProgress {
+    if (isCooledOff(item, now)) return WaitProgress.Done
+    val waited = daysWaited(item, now, zone)
+    return when {
+        waited >= item.coolingOffDays -> WaitProgress.Done
+        waited == 0 -> WaitProgress.NotStarted(item.coolingOffDays)
+        else -> WaitProgress.Partly(waited, item.coolingOffDays)
+    }
+}
+
+/**
  * The item with its wait running from [at] (ADR-0049): it got a priority slot. It ends once the days still to wait
  * have passed, in calendar days in [zone]; a want that has already waited its full period is complete at once. Only
  * active wants wait: anything else, or a wait already running, is returned unchanged.

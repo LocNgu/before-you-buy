@@ -178,7 +178,7 @@ class ItemEditTest {
         assertEquals(60, edited.coolingOffDays)
         assertNull(edited.prioritySlot)
         assertNull(edited.coolingEndsAt)
-        assertEquals(WaitChange.None, waitChange(need, edited, DURING_COOLING))
+        assertEquals(WaitChange.OncePriority(60), waitChange(need, edited, DURING_COOLING))
     }
 
     @Test
@@ -187,7 +187,20 @@ class ItemEditTest {
 
         assertEquals(60, edited.coolingOffDays)
         assertNull(edited.coolingEndsAt)
-        assertEquals(WaitChange.None, waitChange(parked(), edited, DURING_COOLING))
+        assertEquals(WaitChange.OncePriority(60), waitChange(parked(), edited, DURING_COOLING))
+    }
+
+    @Test
+    fun `a parked want whose days don't grow, or whose wait is done, gets no note`() {
+        val cheaper = edit(editFormOf(parked(), german).copy(price = "20"), parked())
+        val waitedOut = parked(waitedDays = COOLING_OFF_DAYS)
+        val pricier = edit(editFormOf(waitedOut, german).copy(price = "600"), waitedOut)
+
+        assertEquals(WaitChange.None, waitChange(parked(), cheaper, DURING_COOLING))
+        // 60 days now, but it had waited 30 before the price changed: still a note, as the wait isn't done.
+        assertEquals(WaitChange.OncePriority(60), waitChange(waitedOut, pricier, DURING_COOLING))
+        val renamed = edit(editFormOf(waitedOut, german).copy(name = "Lens"), waitedOut)
+        assertEquals(WaitChange.None, waitChange(waitedOut, renamed, DURING_COOLING))
     }
 
     @Test

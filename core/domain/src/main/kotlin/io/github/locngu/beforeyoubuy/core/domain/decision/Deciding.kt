@@ -1,5 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.domain.decision
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitProgressOf
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
@@ -61,6 +63,8 @@ enum class BuyPath(val type: DecisionType) {
  * @property savings what is set aside for a want while fun money is set up (brief §6.5 "amount saved"); null for a
  *   need and without fun money.
  * @property funding Ready's money condition, to check the decision against with `applyDecision`.
+ * @property waitProgress how much of its wait a parked want has done, which "Decide early…" shows instead of days
+ *   left (ADR-0049); null for priorities and needs.
  */
 data class DecisionOverview(
     val item: Item,
@@ -73,7 +77,8 @@ data class DecisionOverview(
     val opportunityCost: List<OpportunityCostLine>,
     val recheckOn: LocalDate?,
     val savings: SavingsProgress?,
-    val funding: Funding
+    val funding: Funding,
+    val waitProgress: WaitProgress? = null
 )
 
 /**
@@ -103,7 +108,8 @@ fun decisionOverviewOf(
         opportunityCost = opportunityCostOf(item, active, savings, funMoney),
         recheckOn = recheckOnOf(item, stage, now, zone),
         savings = savings.progressOf(item).takeIf { savings.setUp },
-        funding = funding
+        funding = funding,
+        waitProgress = waitProgressOf(item, now, zone).takeIf { stage == Stage.PARKED }
     )
 }
 

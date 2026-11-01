@@ -121,6 +121,18 @@ abstract class ItemDetailScreenshotTest(private val german: Boolean) {
     fun readyWithPhoto() =
         capture(camera.copy(coolingEndsAt = now.minusSeconds(5L * 24 * 3600)), reasons, testPhoto(folder.root))
 
+    /** Not one of the priorities, 12 of its 30 days waited: "Make it a priority" in the header (ADR-0049). */
+    @Test
+    fun parked() = capture(camera.parked().copy(waitedDays = 12), reasons)
+
+    /** Parked with money still set aside from when it had a slot: only "Take back", and why (ADR-0049). */
+    @Test
+    fun parkedWithMoneySetAside() = capture(camera.parked(), reasons, savings = setAside(40_000))
+
+    /** Parked without money set aside: no buttons, a line instead (ADR-0049). */
+    @Test
+    fun parkedWithFunMoney() = capture(camera.parked().copy(waitedDays = 30), reasons, savings = setAside(0))
+
     @Test
     fun gone() = capture(ItemDetailUiState(gone = true))
 

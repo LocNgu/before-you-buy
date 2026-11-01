@@ -1,6 +1,7 @@
 package io.github.locngu.beforeyoubuy.feature.decision
 
 import app.cash.turbine.test
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
 import io.github.locngu.beforeyoubuy.core.domain.decision.BuyPath
 import io.github.locngu.beforeyoubuy.core.domain.decision.OpportunityCostLine
 import io.github.locngu.beforeyoubuy.core.domain.decision.decisionFormOf
@@ -17,10 +18,13 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
+import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import io.github.locngu.beforeyoubuy.testing.FakePoolRepository
 import io.github.locngu.beforeyoubuy.testing.MutableClock
 import io.github.locngu.beforeyoubuy.testing.asPriority
+import io.github.locngu.beforeyoubuy.testing.parked
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -51,6 +55,7 @@ class DecisionViewModelTest {
     private val clock = MutableClock(start)
     private val items = FakeItemRepository()
     private val pool = FakePoolRepository(items)
+    private val policies = FakePolicyRepository().also { it.items = items }
 
     private val reflection =
         Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))
@@ -82,10 +87,11 @@ class DecisionViewModelTest {
         return items.stored.single { it.id == id }
     }
 
-    private fun TestScope.viewModelFor(item: Item) = DecisionViewModel(item.id.value, items, pool, clock).also {
-        it.uiState.launchIn(backgroundScope)
-        it.setLocale(Locale.GERMANY)
-    }
+    private fun TestScope.viewModelFor(item: Item) =
+        DecisionViewModel(item.id.value, items, pool, policies, clock).also {
+            it.uiState.launchIn(backgroundScope)
+            it.setLocale(Locale.GERMANY)
+        }
 
     private fun stored(item: Item) = items.stored.single { it.id == item.id }
 
@@ -224,11 +230,46 @@ class DecisionViewModelTest {
         assertEquals(ItemStatus.ACTIVE, waited.status)
         assertEquals(Instant.parse("2026-11-16T00:00:00Z"), waited.recheckAt)
         val reflections = items.observeReflections().first()
-        val groups = wishlistOf(listOf(waited), reflections, Savings.NONE, clock.instant(), ZoneOffset.UTC)
-        assertTrue(groups.single().waiting)
+        val listed = wishlistOf(listOf(waited), reflections, Savings.NONE, clock.instant(), ZoneOffset.UTC)
+        assertEquals(today.plusDays(14), listed.priorities.single().entry.recheckOn)
         val due = wishlistOf(listOf(waited), reflections, Savings.NONE, waited.recheckAt!!, ZoneOffset.UTC)
-        assertFalse(due.single().waiting)
+        assertNull(due.priorities.single().entry.recheckOn)
     }
+
+    @Test
+    fun `make it a priority on a parked want takes a free slot, and the overview follows`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val parked = add()
+            items.replace(parked.parked().copy(waitedDays = 30))
+            val viewModel = viewModelFor(parked)
+            assertEquals(Stage.PARKED, viewModel.uiState.value.overview!!.stage)
+            assertEquals(WaitProgress.Done, viewModel.uiState.value.overview!!.waitProgress)
+
+            viewModel.priorityEvents.test {
+                viewModel.makePriority()
+                assertEquals(PriorityEvent.Promoted("Camera", 1), awaitItem())
+            }
+
+            // It had waited its full period: Ready at once with its answers in (ADR-0049).
+            assertEquals(Stage.READY, viewModel.uiState.value.overview!!.stage)
+            assertEquals(BuyPath.BUY, viewModel.uiState.value.overview!!.buyPath)
+        }
+
+    @Test
+    fun `make it a priority with full slots opens the head-to-head and writes nothing`() =
+        runTest(UnconfinedTestDispatcher()) {
+            policies.changePrioritySlots(1, emptyList(), clock.instant(), clock.zone)
+            add(name = "Bike")
+            val parked = add()
+            items.replace(parked.parked())
+            val viewModel = viewModelFor(parked)
+
+            viewModel.priorityEvents.test {
+                viewModel.makePriority()
+                assertEquals(PriorityEvent.Compare(parked.id), awaitItem())
+            }
+            assertNull(stored(parked).prioritySlot)
+        }
 
     @Test
     fun `a decision that raced with another change writes nothing and says so`() = runTest(UnconfinedTestDispatcher()) {

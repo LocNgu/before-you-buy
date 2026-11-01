@@ -61,6 +61,11 @@
     <string name="stage_saving">Saving</string>
     <string name="stage_not_priority">Not one of your priorities</string>
     <string name="stage_ready">Ready</string>
+    <!-- Wishlist sections (ADR-0049): the priorities, then the needs, then every want without a slot ("Wishlist"). -->
+    <string name="wishlist_needs">Needs</string>
+    <string name="priorities_empty_hint">Make a want a priority to start its waiting period.</string>
+    <!-- How much of its waiting period a want without a slot has done (ADR-0049). Also wait_progress_* plurals. -->
+    <string name="wait_progress_done">Waiting period done</string>
 
     <!-- Relative dates, in calendar days. -->
     <string name="relative_today">Today</string>
@@ -90,8 +95,10 @@
     <!-- %1$s: the chosen date -->
     <string name="quick_add_target_date">Target date: %1$s</string>
     <string name="quick_add_target_date_remove">Remove date</string>
-    <!-- Snackbar after adding a need. Wants say how long they wait: plural quick_add_saved_want. -->
+    <!-- Snackbar after adding a need. -->
     <string name="quick_add_saved_need">Added as a need.</string>
+    <!-- Snackbar (with the action priority_make) and share toast after adding a want: it's parked (ADR-0049). -->
+    <string name="quick_add_saved_want">Added to your wishlist.</string>
 
     <!-- Share capture (#15): the name of a shared link that came without one. %1$s: the shop's address, e.g. amazon.de -->
     <string name="share_fallback_name">%1$s item</string>
@@ -194,8 +201,7 @@
 
     <!-- Wishlist and item detail: a Ready item after "Wait", until its re-check date (issue #18). -->
     <string name="wishlist_waiting">Looking again later</string>
-    <string name="stage_waiting">Waiting</string>
-    <!-- %1$s: a date, e.g. "9 Nov 2026". -->
+        <!-- %1$s: a date, e.g. "9 Nov 2026". -->
     <string name="wishlist_look_again_on">Look again on %1$s</string>
 
     <!-- Item detail: opens the decision screen. "Decide now" while the item isn't Ready. -->
@@ -326,6 +332,8 @@
     <string name="savings_to_go">%1$s to go</string>
     <string name="savings_not_set_up">Set money aside for this from your fun money.</string>
     <string name="savings_set_up">Set up fun money</string>
+    <!-- Item detail of a want without a slot: only priorities can be set aside for (ADR-0049). -->
+    <string name="savings_once_priority">You can set money aside once it’s a priority.</string>
     <string name="savings_set_aside">Set aside</string>
     <string name="savings_take_back">Take back</string>
     <string name="savings_sheet_set_aside_title">Set aside for %1$s</string>
@@ -345,7 +353,7 @@
     <string name="priorities_title">Priorities</string>
     <string name="priority_rank" translatable="false">#%1$d</string>
     <string name="priority_item_rank">Priority #%1$d</string>
-    <string name="priority_make">Make priority</string>
+    <string name="priority_make">Make it a priority</string>
     <string name="priority_remove">Remove from priorities</string>
     <string name="priority_promoted">%1$s is now priority #%2$d.</string>
     <string name="priority_removed">%1$s is no longer a priority.</string>
@@ -364,7 +372,7 @@
     <string name="head_to_head_gone">This item can’t become a priority anymore.</string>
     <string name="priority_outcome_stays">%1$s stays #%2$d</string>
     <string name="priority_outcome_now">%1$s is now #%2$d</string>
-    <string name="priority_outcome_back">%1$s moved back to the wishlist</string>
+    <string name="priority_outcome_back">%1$s moved back to the wishlist; its wait is paused</string>
     <string name="priority_outcome_stays_on_wishlist">%1$s stays on the wishlist</string>
 
     <!-- What else this money could do (issue #25, brief §7, ADR-0048). Plain statements: no "afford", no "spend". -->

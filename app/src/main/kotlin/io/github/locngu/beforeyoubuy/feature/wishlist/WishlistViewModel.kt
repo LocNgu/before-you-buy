@@ -13,11 +13,9 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.priorities.DEFAULT_PRIORITY_SLOTS
 import io.github.locngu.beforeyoubuy.core.domain.priorities.prioritiesOf
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
-import io.github.locngu.beforeyoubuy.core.domain.wishlist.Priority
-import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistGroup
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.Wishlist
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
-import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistSectionsOf
 import io.github.locngu.beforeyoubuy.feature.money.observeSavings
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.feature.priorities.makePriority
@@ -37,22 +35,21 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * What the wishlist shows (brief §4.7, §6.3). [groups] is null until the first load; it holds the items that aren't
- * [priorities], which come first by rank. Nothing in either: the empty state. [photos] has the photo file of each item
- * that has one, for its thumbnail. [prioritySlots] and [active] are what the slots dialog needs.
+ * What the wishlist shows (brief §4.7, §6.3, ADR-0049): the priorities, the needs and the parked wants ([Wishlist]),
+ * null until the first load. Nothing at all: the empty state. [photos] has the photo file of each item that has one,
+ * for its thumbnail. [prioritySlots] and [active] are what the slots dialog needs.
  */
 data class WishlistUiState(
-    val groups: List<WishlistGroup>? = null,
+    val wishlist: Wishlist? = null,
     val photos: Map<ItemId, File> = emptyMap(),
-    val priorities: List<Priority> = emptyList(),
     val prioritySlots: Int = DEFAULT_PRIORITY_SLOTS,
     val active: List<Item> = emptyList()
 )
 
 /**
- * The wishlist: the priorities, then the other active items grouped by derived stage (brief §4.7, §6.3). The grouping
- * is `wishlistOf` / `wishlistSectionsOf` in `:core:domain`; this only feeds them items, reflections and the time, and
- * recomputes when a cooling-off ends or the date changes (ADR-0018), not only when the database does.
+ * The wishlist: the priorities, the needs, then the wants without a slot (brief §4.7, §6.3, ADR-0049). The sections
+ * are `wishlistOf` in `:core:domain`; this only feeds it items, reflections and the time, and recomputes when a
+ * cooling-off ends or the date changes (ADR-0018), not only when the database does.
  */
 @HiltViewModel
 class WishlistViewModel @Inject constructor(
@@ -80,20 +77,20 @@ class WishlistViewModel @Inject constructor(
                 flow {
                     while (true) {
                         val now = clock.instant()
-                        val sections = wishlistSectionsOf(wishlistOf(active, reflections, savings, now, clock.zone))
-                        emit(WishlistUiState(sections.groups, photos, sections.priorities, slots, active))
+                        val wishlist = wishlistOf(active, reflections, savings, now, clock.zone)
+                        emit(WishlistUiState(wishlist, photos, slots, active))
                         delay(untilWishlistChanges(active, now, clock.zone).toMillis().coerceAtLeast(1))
                     }
                 }
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WishlistUiState())
 
-    /** What "Make priority" did: a message, or [PriorityEvent.Compare] to open the head-to-head. */
+    /** What "Make it a priority" did: a message, or [PriorityEvent.Compare] to open the head-to-head. */
     val priorityEvents: Flow<PriorityEvent> = events.receiveAsFlow()
 
     // One priority write at a time: a double tap would otherwise find its own change and report a conflict.
     private var writingPriorities = false
 
-    /** "Make priority" on a row (brief §4.7). */
+    /** "Make it a priority" on a row (brief §4.7). */
     fun makePriority(id: ItemId) = writePriorities { makePriority(id, items, policies, clock) }
 
     /**

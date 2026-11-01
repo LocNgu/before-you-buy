@@ -1,5 +1,6 @@
 package io.github.locngu.beforeyoubuy.core.domain.decision
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
@@ -72,6 +73,14 @@ class DecidingTest {
             BuyPath.EARLY,
             overviewOf(parked(waitedDays = 40), COMPLETE_REFLECTION, AFTER_COOLING).buyPath
         )
+    }
+
+    @Test
+    fun `a parked want's overview says how much of its wait is done, others don't`() {
+        assertEquals(WaitProgress.NotStarted(30), overviewOf(parked(), null, AFTER_COOLING).waitProgress)
+        assertEquals(WaitProgress.Partly(12, 30), overviewOf(parked(waitedDays = 12), null, AFTER_COOLING).waitProgress)
+        assertNull(overviewOf(item(), null, DURING_COOLING).waitProgress)
+        assertNull(overviewOf(item(ItemKind.NEED), null, DURING_COOLING).waitProgress)
     }
 
     @Test

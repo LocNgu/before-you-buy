@@ -123,8 +123,16 @@ class CaptureTest {
         for ((price, days) in cases) {
             val item = capture(CaptureForm(name = "Thing", price = price))
             assertEquals("price $price", days, item.coolingOffDays)
-            assertEquals("price $price", days, capturedWaitDays(item))
+            assertEquals("price $price", days, captureWaitDays(CaptureForm(price = price), policy, german))
         }
+    }
+
+    @Test
+    fun `quick add's hint needs a want and a price that reads`() {
+        assertEquals(60, captureWaitDays(CaptureForm(price = "600"), policy, german))
+        assertNull(captureWaitDays(CaptureForm(price = ""), policy, german))
+        assertNull(captureWaitDays(CaptureForm(price = "abc"), policy, german))
+        assertNull(captureWaitDays(CaptureForm(price = "600", kind = ItemKind.NEED), policy, german))
     }
 
     @Test
@@ -140,7 +148,6 @@ class CaptureTest {
     @Test
     fun `a need has no cooling-off days`() {
         val item = capture(CaptureForm(name = "Fridge", price = "600", kind = ItemKind.NEED))
-        assertEquals(0, capturedWaitDays(item))
         assertFalse(item.isParked)
     }
 }

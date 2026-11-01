@@ -82,7 +82,7 @@ class ShareCaptureTest {
 
             scenario.awaitFinishing()
             composeRule.waitUntil { ShadowToast.getTextOfLatestToast() != null }
-            assertEquals("Added. You can decide in 30 days.", ShadowToast.getTextOfLatestToast())
+            assertEquals("Added to your wishlist.", ShadowToast.getTextOfLatestToast())
         }
 
         // Stored like any other item: it's on the wishlist.

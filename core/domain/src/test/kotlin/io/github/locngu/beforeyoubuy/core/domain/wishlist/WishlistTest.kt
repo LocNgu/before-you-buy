@@ -1,9 +1,11 @@
 package io.github.locngu.beforeyoubuy.core.domain.wishlist
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
+import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.ADDED
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.AFTER_COOLING
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.COMPLETE_REFLECTION
@@ -38,93 +40,64 @@ class WishlistTest {
     /** A want without a slot (ADR-0049). */
     private fun parkedWish(id: Long, waitedDays: Int = 0): Item = parked(waitedDays).copy(id = ItemId(id))
 
-    @Test
-    fun `groups by derived stage in the order ready, needs reflection, cooling off`() {
-        val ready = wish(1, endsAt = Instant.parse("2026-10-10T10:00:00Z"))
-        val unreflected = wish(2, endsAt = Instant.parse("2026-10-11T10:00:00Z"))
-        val cooling = wish(3, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
-
-        val groups =
-            wishlistOf(
-                listOf(cooling, unreflected, ready),
-                mapOf(ready.id to COMPLETE_REFLECTION),
-                Savings.NONE,
-                AFTER_COOLING,
-                zone
-            )
-
-        assertEquals(listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), groups.map { it.stage })
-        assertEquals(
-            listOf(listOf(ready), listOf(unreflected), listOf(cooling)),
-            groups.map { g ->
-                g.entries.map { it.item }
-            }
-        )
-    }
+    private fun list(
+        items: List<Item>,
+        reflections: Map<ItemId, Reflection> = emptyMap(),
+        now: Instant = AFTER_COOLING
+    ) = wishlistOf(items, reflections, Savings.NONE, now, zone)
 
     @Test
-    fun `priorities come first by rank and leave their stage group, which goes once empty`() {
+    fun `priorities by rank, then needs, then parked wants, each with no other grouping`() {
         val second = wish(1).copy(prioritySlot = 2)
         val first = wish(2, endsAt = Instant.parse("2026-12-01T10:00:00Z")).copy(prioritySlot = 1)
         val parked = parkedWish(3)
         val need = wish(4, kind = ItemKind.NEED).copy(prioritySlot = 3)
-        val groups = wishlistOf(
+
+        val wishlist = list(
             listOf(second, first, parked, need),
-            mapOf(second.id to COMPLETE_REFLECTION, parked.id to COMPLETE_REFLECTION),
-            Savings.NONE,
-            AFTER_COOLING,
-            zone
+            mapOf(second.id to COMPLETE_REFLECTION, parked.id to COMPLETE_REFLECTION)
         )
 
-        val sections = wishlistSectionsOf(groups)
-
-        assertEquals(listOf(1 to first, 2 to second), sections.priorities.map { it.rank to it.entry.item })
-        assertEquals(Stage.COOLING_OFF, sections.priorities[0].entry.stage)
-        // A need with a stored slot isn't a priority (ADR-0047); the cooling-off and needs-reflection groups had only
-        // priorities and are gone.
-        assertEquals(listOf(Stage.READY, Stage.PARKED), sections.groups.map { it.stage })
-        assertEquals(listOf(listOf(need), listOf(parked)), sections.groups.map { g -> g.entries.map { it.item } })
-        assertEquals(sections.priorities, prioritiesIn(groups))
+        assertEquals(listOf(1 to first, 2 to second), wishlist.priorities.map { it.rank to it.entry.item })
+        assertEquals(listOf(Stage.COOLING_OFF, Stage.READY), wishlist.priorities.map { it.entry.stage })
+        // A need with a stored slot isn't a priority (ADR-0047).
+        assertEquals(listOf(need), wishlist.needs.map { it.item })
+        assertEquals(listOf(parked), wishlist.parked.map { it.item })
+        assertEquals(listOf(first, second, need, parked), wishlist.entries.map { it.item })
     }
 
     @Test
-    fun `without priorities the sections are the stage groups`() {
-        val items = listOf(parkedWish(1), wish(2, kind = ItemKind.NEED))
-        val groups = wishlistOf(items, emptyMap(), Savings.NONE, AFTER_COOLING, zone)
+    fun `every stage of a priority stays in the priorities, a waiting one too`() {
+        val ready = wish(1, endsAt = Instant.parse("2026-10-10T10:00:00Z")).copy(prioritySlot = 1)
+        val unreflected = wish(2, endsAt = Instant.parse("2026-10-11T10:00:00Z")).copy(prioritySlot = 2)
+        val cooling = wish(3, endsAt = Instant.parse("2026-12-01T10:00:00Z")).copy(prioritySlot = 3)
+        val waiting = wish(4, endsAt = Instant.parse("2026-10-10T10:00:00Z"))
+            .copy(prioritySlot = 4, recheckAt = Instant.parse("2026-11-10T00:00:00Z"))
+        val answered = listOf(ready, waiting).associate { it.id to COMPLETE_REFLECTION }
 
-        assertEquals(WishlistSections(emptyList(), groups), wishlistSectionsOf(groups))
+        val wishlist = list(listOf(cooling, waiting, unreflected, ready), answered)
+
+        assertEquals(
+            listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.COOLING_OFF, Stage.READY),
+            wishlist.priorities.map { it.entry.stage }
+        )
+        assertEquals(LocalDate.of(2026, 11, 10), wishlist.priorities[3].entry.recheckOn)
+        assertTrue(wishlist.needs.isEmpty() && wishlist.parked.isEmpty())
     }
 
     @Test
-    fun `a need sorts among the priorities by the day it was added`() {
-        val august = Instant.parse("2026-08-01T10:00:00Z")
-        val longReady = wish(
-            1
-        ).copy(addedAt = august, waitingSince = august, coolingEndsAt = august.plus(Duration.ofDays(30)))
-        val need = wish(2, kind = ItemKind.NEED) // added 1 Oct
-        val recentlyReady = wish(3, endsAt = Instant.parse("2026-10-20T10:00:00Z"))
-        val answered = listOf(longReady, recentlyReady).associate { it.id to COMPLETE_REFLECTION }
-
-        val ready = wishlistOf(listOf(recentlyReady, need, longReady), answered, Savings.NONE, AFTER_COOLING, zone)
-            .single().entries.map { it.item }
-
-        assertEquals(listOf(longReady, need, recentlyReady), ready)
-    }
-
-    @Test
-    fun `parked wants come last, after the waiting group, oldest first`() {
+    fun `needs and parked wants come oldest first, ties by id`() {
         val newer = parkedWish(1).copy(addedAt = ADDED.plusSeconds(60))
-        val older = parkedWish(2)
-        val waiting = wish(3, endsAt = Instant.parse("2026-10-20T10:00:00Z"))
-            .copy(recheckAt = Instant.parse("2026-11-10T00:00:00Z"))
-        val ready = wish(4, endsAt = Instant.parse("2026-10-20T10:00:00Z"))
-        val answered = listOf(waiting, ready, newer, older).associate { it.id to COMPLETE_REFLECTION }
+        val older = parkedWish(3)
+        val tie = parkedWish(2)
+        val laterNeed = wish(4, kind = ItemKind.NEED).copy(addedAt = ADDED.plusSeconds(60))
+        val need = wish(5, kind = ItemKind.NEED)
 
-        val groups = wishlistOf(listOf(newer, waiting, older, ready), answered, Savings.NONE, AFTER_COOLING, zone)
+        val wishlist = list(listOf(newer, laterNeed, older, need, tie))
 
-        assertEquals(listOf(Stage.READY, Stage.READY, Stage.PARKED), groups.map { it.stage })
-        assertEquals(listOf(false, true, false), groups.map { it.waiting })
-        assertEquals(listOf(older, newer), groups.last().entries.map { it.item })
+        assertEquals(listOf(tie, older, newer), wishlist.parked.map { it.item })
+        assertEquals(listOf(need, laterNeed), wishlist.needs.map { it.item })
+        assertEquals(listOf(Stage.READY, Stage.READY), wishlist.needs.map { it.stage })
     }
 
     @Test
@@ -133,12 +106,27 @@ class WishlistTest {
         val halfway = parkedWish(2, waitedDays = 12)
         val answered = mapOf(waitedOut.id to COMPLETE_REFLECTION, halfway.id to COMPLETE_REFLECTION)
 
-        val entries = wishlistOf(listOf(waitedOut, halfway), answered, Savings.NONE, AFTER_COOLING, zone)
-            .flatMap { it.entries }
+        val entries = list(listOf(waitedOut, halfway), answered).parked
 
         assertEquals(listOf(Stage.PARKED, Stage.PARKED), entries.map { it.stage })
         assertEquals(listOf(0, 18), entries.map { it.daysLeft })
         assertEquals(18, daysLeft(halfway, AFTER_COOLING.plus(Duration.ofDays(9)), zone))
+    }
+
+    @Test
+    fun `only a parked want shows how much of its wait is done`() {
+        val notStarted = parkedWish(1)
+        val halfway = parkedWish(2, waitedDays = 12)
+        val waitedOut = parkedWish(3, waitedDays = 30)
+
+        val wishlist = list(listOf(notStarted, halfway, waitedOut, wish(4), wish(5, kind = ItemKind.NEED)))
+
+        assertEquals(
+            listOf(WaitProgress.NotStarted(30), WaitProgress.Partly(12, 30), WaitProgress.Done),
+            wishlist.parked.map { it.waitProgress }
+        )
+        assertNull(wishlist.priorities.single().entry.waitProgress)
+        assertNull(wishlist.needs.single().waitProgress)
     }
 
     @Test
@@ -150,44 +138,22 @@ class WishlistTest {
 
     @Test
     fun `every entry carries the stage stageOf gives it`() {
-        val items = listOf(wish(1), wish(2, endsAt = Instant.parse("2026-12-01T10:00:00Z")))
+        val items =
+            listOf(
+                wish(1).copy(prioritySlot = 1),
+                wish(2, endsAt = Instant.parse("2026-12-01T10:00:00Z")).copy(prioritySlot = 2)
+            )
 
-        val entries = wishlistOf(items, emptyMap(), Savings.NONE, AFTER_COOLING, zone).flatMap { it.entries }
+        val entries = list(items).entries
 
         assertEquals(listOf(Stage.NEEDS_REFLECTION, Stage.COOLING_OFF), entries.map { it.stage })
     }
 
     @Test
-    fun `empty groups are left out`() {
-        assertEquals(
-            emptyList<WishlistGroup>(),
-            wishlistOf(emptyList(), emptyMap(), Savings.NONE, DURING_COOLING, zone)
-        )
-        assertEquals(
-            listOf(Stage.COOLING_OFF),
-            wishlistOf(listOf(wish(1)), emptyMap(), Savings.NONE, DURING_COOLING, zone).map {
-                it.stage
-            }
-        )
-    }
-
-    @Test
-    fun `soonest cooling end first, ties by age then id`() {
-        val later = wish(1, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
-        val sooner = wish(2, endsAt = Instant.parse("2026-11-01T10:00:00Z"))
-        val tieOlder = wish(
-            4,
-            endsAt = Instant.parse("2026-11-01T10:00:00Z")
-        ).copy(addedAt = sooner.addedAt.minusSeconds(60))
-        val tieHigherId = wish(3, endsAt = Instant.parse("2026-11-01T10:00:00Z"))
-
-        val order =
-            wishlistOf(listOf(later, tieHigherId, sooner, tieOlder), emptyMap(), Savings.NONE, DURING_COOLING, zone)
-                .single()
-                .entries
-                .map { it.item.id.value }
-
-        assertEquals(listOf(4L, 2L, 3L, 1L), order)
+    fun `without items the wishlist is empty`() {
+        assertEquals(Wishlist.EMPTY, list(emptyList(), now = DURING_COOLING))
+        assertTrue(Wishlist.EMPTY.isEmpty())
+        assertFalse(list(listOf(parkedWish(1))).isEmpty())
     }
 
     @Test
@@ -195,36 +161,25 @@ class WishlistTest {
         val items =
             listOf(wish(1), wish(2).copy(status = ItemStatus.PURCHASED), wish(3).copy(status = ItemStatus.REJECTED))
 
-        assertEquals(
-            listOf(ItemId(1)),
-            wishlistOf(items, emptyMap(), Savings.NONE, DURING_COOLING, zone).flatMap {
-                it.entries
-            }.map { it.item.id }
-        )
+        assertEquals(listOf(ItemId(1)), list(items, now = DURING_COOLING).entries.map { it.item.id })
     }
 
     @Test
     fun `a need is never cooling off and needs no reflection`() {
         val need = wish(1, kind = ItemKind.NEED)
 
-        assertEquals(
-            Stage.READY,
-            wishlistOf(listOf(need), emptyMap(), Savings.NONE, DURING_COOLING, zone).single().stage
-        )
+        assertEquals(Stage.READY, list(listOf(need), now = DURING_COOLING).needs.single().stage)
     }
 
     @Test
-    fun `an item changes group when its cooling off ends`() {
+    fun `a priority changes stage when its cooling off ends`() {
         val items = listOf(wish(1))
 
         assertEquals(
             Stage.COOLING_OFF,
-            wishlistOf(items, emptyMap(), Savings.NONE, COOLING_ENDS.minusMillis(1), zone).single().stage
+            list(items, now = COOLING_ENDS.minusMillis(1)).priorities.single().entry.stage
         )
-        assertEquals(
-            Stage.NEEDS_REFLECTION,
-            wishlistOf(items, emptyMap(), Savings.NONE, COOLING_ENDS, zone).single().stage
-        )
+        assertEquals(Stage.NEEDS_REFLECTION, list(items, now = COOLING_ENDS).priorities.single().entry.stage)
     }
 
     @Test
@@ -293,47 +248,26 @@ class WishlistTest {
     }
 
     @Test
-    fun `a ready item waiting for its re-check date is in a last, waiting group until then`() {
+    fun `a ready priority waiting for its re-check date carries the date until then`() {
         val recheck = Instant.parse("2026-11-09T00:00:00Z")
         val waited = wish(1, endsAt = Instant.parse("2026-10-10T10:00:00Z")).copy(recheckAt = recheck)
-        val ready = wish(2, endsAt = Instant.parse("2026-10-11T10:00:00Z"))
-        val cooling = wish(3, endsAt = Instant.parse("2026-12-01T10:00:00Z"))
-        val reflections = mapOf(waited.id to COMPLETE_REFLECTION, ready.id to COMPLETE_REFLECTION)
+        val reflections = mapOf(waited.id to COMPLETE_REFLECTION)
 
-        val groups = wishlistOf(listOf(waited, ready, cooling), reflections, Savings.NONE, AFTER_COOLING, zone)
-
-        assertEquals(listOf(false, false, true), groups.map { it.waiting })
-        assertEquals(listOf(Stage.READY, Stage.COOLING_OFF, Stage.READY), groups.map { it.stage })
-        assertEquals(listOf(ready.id), groups.first().entries.map { it.item.id })
-        val waiting = groups.last().entries.single()
-        assertEquals(waited.id, waiting.item.id)
+        val waiting = list(listOf(waited), reflections).priorities.single().entry
+        assertEquals(Stage.READY, waiting.stage)
         assertEquals(LocalDate.of(2026, 11, 9), waiting.recheckOn)
 
-        val due = wishlistOf(listOf(waited), reflections, Savings.NONE, recheck, zone).single()
-        assertFalse(due.waiting)
-        assertNull(due.entries.single().recheckOn)
-    }
-
-    @Test
-    fun `waiting items come soonest re-check first`() {
-        val later = wish(1).copy(recheckAt = Instant.parse("2026-11-20T00:00:00Z"))
-        val sooner = wish(2).copy(recheckAt = Instant.parse("2026-11-10T00:00:00Z"))
-        val reflections = mapOf(later.id to COMPLETE_REFLECTION, sooner.id to COMPLETE_REFLECTION)
-
-        val group = wishlistOf(listOf(later, sooner), reflections, Savings.NONE, AFTER_COOLING, zone).single()
-
-        assertEquals(listOf(sooner.id, later.id), group.entries.map { it.item.id })
+        assertNull(list(listOf(waited), reflections, now = recheck).priorities.single().entry.recheckOn)
     }
 
     @Test
     fun `a re-check date only matters once the item is ready`() {
         val waited = wish(1).copy(recheckAt = Instant.parse("2026-11-20T00:00:00Z"))
 
-        val group = wishlistOf(listOf(waited), emptyMap(), Savings.NONE, AFTER_COOLING, zone).single()
+        val entry = list(listOf(waited)).priorities.single().entry
 
-        assertEquals(Stage.NEEDS_REFLECTION, group.stage)
-        assertFalse(group.waiting)
-        assertNull(group.entries.single().recheckOn)
+        assertEquals(Stage.NEEDS_REFLECTION, entry.stage)
+        assertNull(entry.recheckOn)
     }
 
     @Test

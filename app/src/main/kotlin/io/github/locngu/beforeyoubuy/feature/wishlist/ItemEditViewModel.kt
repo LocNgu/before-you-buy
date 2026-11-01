@@ -79,6 +79,9 @@ data class ItemEditUiState(
 /** How saving would change the wait, with the end date in the device's zone (from the injected clock). */
 sealed interface WaitNote {
     data class Extended(val endsOn: LocalDate) : WaitNote
+
+    /** A want without a slot waits [days] once it's a priority, more than before (ADR-0049). */
+    data class OncePriority(val days: Int) : WaitNote
 }
 
 /** What the user can do on the edit screen. */
@@ -290,6 +293,7 @@ class ItemEditViewModel @AssistedInject constructor(
     private fun waitNoteOf(change: WaitChange): WaitNote? = when (change) {
         WaitChange.None -> null
         is WaitChange.Extended -> WaitNote.Extended(change.endsAt.atZone(clock.zone).toLocalDate())
+        is WaitChange.OncePriority -> WaitNote.OncePriority(change.days)
     }
 
     /** The item as observed; [item] null once it no longer exists. */

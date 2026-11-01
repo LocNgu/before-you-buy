@@ -292,7 +292,7 @@ private fun Detail(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Header(detail)
+        Header(detail, priorityActions.make)
         // The user's own reasons come before anything about the product (ADR-0013).
         Reasons(detail, onReflect)
         if (photo != null) Photo(detail, photo)
@@ -305,19 +305,34 @@ private fun Detail(
     }
 }
 
-/** "Make priority" and "Remove from priorities" (brief §4.7, ADR-0047). */
+/** "Make it a priority" and "Remove from priorities" (brief §4.7, ADR-0047). */
 private class PriorityActions(val make: () -> Unit, val remove: () -> Unit)
 
 /**
  * What is set aside for a want (brief §4.6), with equal "Set aside" and "Take back" buttons, each enabled while there
  * is something to move ([canSetAside], money set aside); without fun money, a way to set it up. Nothing for a need,
- * which is never saved for (ADR-0044). Saving can start while it cools off.
+ * which is never saved for (ADR-0044). Saving can start while it cools off. A want without a slot can't be saved for
+ * (ADR-0049): a line says so instead of the buttons, and money it still holds can be taken back.
  */
 @Composable
 private fun Savings(detail: ItemDetail, onOpenFunMoney: () -> Unit, actions: SavingsActions, canSetAside: Boolean) {
     val progress = detail.savings ?: return
+    val parked = detail.stage == Stage.PARKED
+    val held = progress.allocated.minorUnits > 0
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(stringResource(R.string.savings_title))
+        if (parked) {
+            if (held && detail.funMoneySetUp) {
+                SavingsProgressBar(progress, Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+            }
+            SecondaryText(stringResource(R.string.savings_once_priority), Modifier.padding(horizontal = 16.dp))
+            if (held && detail.funMoneySetUp) {
+                OutlinedButton(onClick = actions::openTakeBack, modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Text(stringResource(R.string.savings_take_back))
+                }
+            }
+            return@Column
+        }
         if (!detail.funMoneySetUp) {
             SecondaryText(stringResource(R.string.savings_not_set_up), Modifier.padding(horizontal = 16.dp))
             // Lines the label up with the text above; the button's own padding stays part of the touch target.
@@ -435,15 +450,23 @@ private fun savingsErrorMessage(error: SavingsError, sheet: SavingsSheet): Strin
     )
 }
 
+/**
+ * Name, price, stage and countdown. A want without a slot instead says that it isn't one of the priorities, how much
+ * of its wait is done, and offers "Make it a priority" ([onMakePriority], ADR-0049).
+ */
 @Composable
-private fun Header(detail: ItemDetail) {
+private fun Header(detail: ItemDetail, onMakePriority: () -> Unit) {
     val item = detail.item
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(item.name, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
         MoneyText(item.price, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StageChip(detail.stage, waiting = detail.recheckOn != null)
-            StageStatus(detail.stage, detail.daysLeft, detail.recheckOn, detail.savings?.shownToGo)
+        if (detail.stage == Stage.PARKED) {
+            NotAPriority(detail.waitProgress, onMakePriority.takeIf { item.canBePriority })
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StageChip(detail.stage, waiting = detail.recheckOn != null)
+                StageStatus(detail.stage, detail.daysLeft, detail.recheckOn, detail.savings?.shownToGo)
+            }
         }
         val wanted = if (detail.wantedForDays == 0) {
             stringResource(R.string.item_added_today)
@@ -646,8 +669,8 @@ private fun Decide(detail: ItemDetail, onDecide: () -> Unit) {
 
 /**
  * Once cooled off, the link may show as a plain text button; while cooling off it's only in the menu (ADR-0013).
- * "Make priority" for a want that isn't one, "Remove from priorities" for one that is (ADR-0047). "Mark as need" asks
- * first: it ends the wait.
+ * "Remove from priorities" for a priority (ADR-0047); a want without a slot offers "Make it a priority" in the header
+ * instead (ADR-0049). "Mark as need" asks first: it ends the wait.
  */
 @Composable
 private fun Actions(
@@ -658,9 +681,8 @@ private fun Actions(
 ) {
     val address = detail.item.link?.let { webLink(it) }?.takeIf { detail.linkProminent }
     val canMarkAsNeed = detail.item.canMarkAsNeed
-    val canMakePriority = detail.item.canBePriority
     val isPriority = detail.item.prioritySlot != null && detail.item.kind == ItemKind.WANT
-    if (address == null && !canMarkAsNeed && !canMakePriority && !isPriority) return
+    if (address == null && !canMarkAsNeed && !isPriority) return
     var confirming by rememberSaveable { mutableStateOf(false) }
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (address != null) {
@@ -668,9 +690,6 @@ private fun Actions(
             TextButton(onClick = { onOpenLink(address) }, modifier = Modifier.offset(x = (-12).dp)) {
                 Text(stringResource(R.string.item_open_link))
             }
-        }
-        if (canMakePriority) {
-            OutlinedButton(onClick = priorityActions.make) { Text(stringResource(R.string.priority_make)) }
         }
         if (isPriority) {
             OutlinedButton(onClick = priorityActions.remove) { Text(stringResource(R.string.priority_remove)) }

@@ -33,7 +33,10 @@ class ShareReceiverActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             BeforeYouBuyTheme {
-                QuickAddHost(viewModel = quickAdd, onSaved = { showSaved(it) }, onClosed = ::finish)
+                // "Added to your wishlist.", without an action: a toast over another app can't have one (ADR-0036).
+                QuickAddHost(viewModel = quickAdd, onSaved = {
+                    showSaved(savedMessage(resources, it))
+                }, onClosed = ::finish)
             }
         }
     }

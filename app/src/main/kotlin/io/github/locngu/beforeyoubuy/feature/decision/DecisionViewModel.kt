@@ -35,8 +35,11 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.funMoneyOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.leftAfterPurchase
 import io.github.locngu.beforeyoubuy.core.domain.pool.poolPurchaseOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.purchaseNeedsConfirmation
+import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.untilWishlistChanges
 import io.github.locngu.beforeyoubuy.feature.money.observeSavings
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
+import io.github.locngu.beforeyoubuy.feature.priorities.makePriority
 import java.time.Clock
 import java.time.LocalDate
 import java.util.Locale
@@ -160,6 +163,7 @@ class DecisionViewModel @AssistedInject constructor(
     @Assisted itemId: Long,
     private val items: ItemRepository,
     pool: PoolRepository,
+    private val policies: PolicyRepository,
     private val clock: Clock
 ) : ViewModel(),
     DecisionActions {
@@ -220,6 +224,30 @@ class DecisionViewModel @AssistedInject constructor(
 
     /** One-shot messages for the snackbar. */
     val message: Flow<DecisionMessage> = messages.receiveAsFlow()
+
+    private val priorityChannel = Channel<PriorityEvent>(Channel.BUFFERED)
+
+    /** What "Make it a priority" did: a message, or opening the head-to-head (ADR-0049). */
+    val priorityEvents: Flow<PriorityEvent> = priorityChannel.receiveAsFlow()
+
+    // One priority write at a time: a double tap would otherwise find its own change and report a conflict.
+    private var writingPriorities = false
+
+    /**
+     * "Make it a priority" for a want without a slot (ADR-0049): a free slot at once, full slots through the
+     * head-to-head. The overview follows the stored item, so it shows the new stage afterwards.
+     */
+    fun makePriority() {
+        if (writingPriorities) return
+        writingPriorities = true
+        viewModelScope.launch {
+            try {
+                priorityChannel.send(makePriority(id, items, policies, clock))
+            } finally {
+                writingPriorities = false
+            }
+        }
+    }
 
     /** The UI's locale, which decides how the price is shown and read (`1.234,56` vs `1,234.56`, ADR-0027). */
     fun setLocale(locale: Locale) = editor.update { it.copy(locale = locale) }

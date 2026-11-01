@@ -65,9 +65,14 @@ fun capturedItem(form: CaptureForm, policy: Policy, locale: Locale, addedAt: Ins
 }
 
 /**
- * How many calendar days a captured item waits once it's a priority: what the snackbar says right after adding it.
- * 0 for a `NEED`, which doesn't wait (ADR-0008).
+ * What quick add says under the price while typing (ADR-0049): the calendar days a want at the typed price waits
+ * once it's a priority, under the policy's tiers. Null for a need, which doesn't wait (the need switch says so,
+ * ADR-0008), and while the price doesn't read.
  */
-fun capturedWaitDays(item: Item): Int = if (item.kind == ItemKind.NEED) 0 else item.coolingOffDays
+fun captureWaitDays(form: CaptureForm, policy: Policy, locale: Locale): Int? {
+    if (form.kind == ItemKind.NEED) return null
+    val price = (parseMoney(form.price, policy.currency, locale) as? MoneyParseResult.Success)?.money ?: return null
+    return coolingOffDaysFor(price, policy.coolingOffRules)
+}
 
 private fun String.trimmedOrNull(): String? = trim().ifEmpty { null }

@@ -38,11 +38,12 @@ class WishlistFlowTest {
         composeRule.onNode(hasSetTextAction() and hasText("Price")).performTextInput("1,234.56")
         composeRule.onNodeWithText("Save").performClick()
 
-        composeRule.onNodeWithText("Added. You can decide in 90 days.").assertIsDisplayed()
+        composeRule.onNodeWithText("Added to your wishlist.").assertIsDisplayed()
         composeRule.waitUntilExactlyOneExists(hasText("Headphones"))
         composeRule.onNodeWithText("Headphones").assertIsDisplayed()
         // Parked: its wait starts only once it's made a priority (ADR-0049).
-        composeRule.onNodeWithText("Not one of your priorities").assertIsDisplayed()
+        composeRule.onNodeWithText("Waiting period not started (90 days)").assertIsDisplayed()
+        composeRule.onNodeWithText("Make a want a priority to start its waiting period.").assertIsDisplayed()
         composeRule.onNodeWithText("90 days left").assertDoesNotExist()
         composeRule.onNodeWithText("Your wishlist is empty").assertDoesNotExist()
     }

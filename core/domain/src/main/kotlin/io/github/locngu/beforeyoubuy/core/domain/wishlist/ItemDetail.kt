@@ -1,5 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.domain.wishlist
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitProgressOf
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
@@ -29,6 +31,7 @@ import java.time.temporal.ChronoUnit
  * @property recheckOn as in [WishlistEntry.recheckOn]: the date a "Wait" decision set, while the item waits for it.
  * @property savings what is set aside for a want (brief §4.6); null for a need, which is never saved for (ADR-0044).
  * @property funMoneySetUp money can be set aside; without fun money, detail offers to set it up instead.
+ * @property waitProgress as in [WishlistEntry.waitProgress]: how much of its wait a parked want has done.
  */
 data class ItemDetail(
     val item: Item,
@@ -41,7 +44,8 @@ data class ItemDetail(
     val imageProminent: Boolean,
     val recheckOn: LocalDate? = null,
     val savings: SavingsProgress? = null,
-    val funMoneySetUp: Boolean = false
+    val funMoneySetUp: Boolean = false,
+    val waitProgress: WaitProgress? = null
 )
 
 /**
@@ -63,7 +67,8 @@ fun itemDetailOf(item: Item, reflection: Reflection?, savings: Savings, now: Ins
         imageProminent = isCooledOff(item, now) && !item.isParked,
         recheckOn = recheckOnOf(item, stage, now, zone),
         savings = savings.progressOf(item),
-        funMoneySetUp = savings.setUp
+        funMoneySetUp = savings.setUp,
+        waitProgress = waitProgressOf(item, now, zone).takeIf { stage == Stage.PARKED }
     )
 }
 

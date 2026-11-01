@@ -128,7 +128,8 @@ class ItemEditViewModelTest {
         }
         needEditor.onNeedChange(false)
 
-        assertNull("its wait has no end until it's a priority (ADR-0049)", needEditor.uiState.value.waitNote)
+        // No end date until it's a priority (ADR-0049); the days it will wait then (ADR-0051).
+        assertEquals(WaitNote.OncePriority(30), needEditor.uiState.value.waitNote)
     }
 
     @Test

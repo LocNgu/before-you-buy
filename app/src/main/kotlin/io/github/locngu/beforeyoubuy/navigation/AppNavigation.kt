@@ -172,7 +172,8 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                             }
                             scope.launch { snackbarHostState.showSnackbar(resources.getString(message)) }
                         },
-                        onReflect = { backStack.open(ItemReflection(key.itemId)) }
+                        onReflect = { backStack.open(ItemReflection(key.itemId)) },
+                        onCompare = { backStack.open(HeadToHead(key.itemId)) }
                     )
                 }
                 entry<History> {
@@ -200,7 +201,11 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                 }
             }
     )
-    QuickAddHost(viewModel = quickAdd, snackbarHostState = snackbarHostState)
+    QuickAddHost(
+        viewModel = quickAdd,
+        snackbarHostState = snackbarHostState,
+        onCompare = { backStack.open(HeadToHead(it.value)) }
+    )
     // App-wide like quick add: asks once, after the first item is added (Android 13+).
     val notificationPermission: NotificationPermissionViewModel = hiltViewModel()
     NotificationPermissionPrompt(notificationPermission)
