@@ -1,6 +1,6 @@
 # ADR-0046: Savings per item: the funding switch, release by decision, one purchase entry, "set aside"
 
-**Status**: accepted; amended by ADR-0047 (Home's "Saving for" with priorities) and ADR-0049 (money can be set aside only while the want holds a priority slot; Home's fallback to wants by progress goes)
+**Status**: accepted; amended by ADR-0047 (Home's "Saving for" with priorities), ADR-0049 (money can be set aside only while the want holds a priority slot; Home's fallback to wants by progress goes) and ADR-0052 (Home shows "Priorities" instead of "Saving for", also without priorities)
 **Type**: product
 **Date**: 2026-10-24
 

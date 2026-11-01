@@ -30,7 +30,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Home on first start (nothing added, fun money not set up), in a typical state (items to decide, one cooling off,
- * fun money set up), with everything still cooling off, and while loading; en/de × light/dark. Record: `./gradlew :app:recordRoborazziDebug`.
+ * fun money set up), with everything still cooling off, without priorities, and while loading; en/de × light/dark.
+ * Record: `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -113,6 +114,18 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
     /** Without fun money, each priority shows its price instead of what is set aside (ADR-0047). */
     @Test
     fun priorities() = capture(state(listOf(coolingLater, unreflected, coolingSoon, need, ready)))
+
+    /**
+     * No priorities: the section keeps its heading with the wishlist's hint. The parked tent still holds money, but
+     * only priorities are listed (ADR-0049, ADR-0052); the fun money counts it as set aside.
+     */
+    @Test
+    fun noPriorities() = capture(
+        state(
+            listOf(coolingLater, need),
+            funMoney.copy(balance = PoolBalance(pool = Money(104_550, "EUR"), committed = Money(10_000, "EUR")))
+        )
+    )
 
     @Test
     fun loading() = capture(HomeUiState(null))
