@@ -4,6 +4,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-01
+
 ### Changed
 
 - Only your priorities wait. A want you add goes onto your wishlist without its waiting period running; the wait starts when you make it a priority, and only priorities can become ready to decide, have money set aside for them and get notifications. When a want stops being a priority (you remove it, it loses a comparison, or you choose fewer slots), its wait pauses: it keeps the days it has already waited and continues from there if it becomes a priority again. A want that has already waited its full period is ready as soon as it's a priority and your reasons (and money, if needed) are in. Your current priorities keep their waiting periods when you update; every other want moves to the wishlist, and the time since you added it counts as waited. You can still buy a want that isn't a priority with "Decide early…", and let it go any time.
@@ -68,7 +70,8 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 - The app language can be chosen per app in Android settings (Android 13 and newer).
 - Signed APKs on GitHub Releases for each version, which install on the phone and update in place with data kept (`docs/releasing.md`).
 
-[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/LocNgu/before-you-buy/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/LocNgu/before-you-buy/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/LocNgu/before-you-buy/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/LocNgu/before-you-buy/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/LocNgu/before-you-buy/compare/v0.2.0...v0.3.0
