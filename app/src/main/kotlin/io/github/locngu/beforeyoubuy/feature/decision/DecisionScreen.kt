@@ -61,10 +61,15 @@ import io.github.locngu.beforeyoubuy.core.domain.decision.keepFor
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.format
+import io.github.locngu.beforeyoubuy.core.domain.priorities.canBePriority
 import io.github.locngu.beforeyoubuy.feature.capture.DayPicker
 import io.github.locngu.beforeyoubuy.feature.capture.priceErrorMessage
 import io.github.locngu.beforeyoubuy.feature.money.SavingsProgressBar
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
+import io.github.locngu.beforeyoubuy.feature.priorities.priorityMessage
 import io.github.locngu.beforeyoubuy.feature.reflection.usageLabel
+import io.github.locngu.beforeyoubuy.feature.wishlist.NotAPriority
+import io.github.locngu.beforeyoubuy.feature.wishlist.waitProgressText
 import io.github.locngu.beforeyoubuy.ui.components.ButtonPair
 import io.github.locngu.beforeyoubuy.ui.components.CountdownText
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
@@ -88,6 +93,7 @@ fun DecisionScreen(
     onDecided: (DecisionOutcome) -> Unit,
     onReflect: () -> Unit,
     modifier: Modifier = Modifier,
+    onCompare: () -> Unit = {},
     viewModel: DecisionViewModel =
         hiltViewModel<DecisionViewModel, DecisionViewModel.Factory> { it.create(itemId) }
 ) {
@@ -106,6 +112,16 @@ fun DecisionScreen(
             snackbarHostState.showSnackbar(text)
         }
     }
+    val compare by rememberUpdatedState(onCompare)
+    LaunchedEffect(viewModel, snackbarHostState) {
+        viewModel.priorityEvents.collect { event ->
+            if (event is PriorityEvent.Compare) {
+                compare()
+            } else {
+                priorityMessage(event, resources)?.let { snackbarHostState.showSnackbar(it) }
+            }
+        }
+    }
     // Back from a step returns to the overview; from the overview it leaves the screen.
     BackHandler(enabled = state.step != DecisionStep.OVERVIEW, onBack = viewModel::onBackToOverview)
     DecisionContent(
@@ -113,7 +129,8 @@ fun DecisionScreen(
         actions = viewModel,
         onReflect = onReflect,
         snackbarHostState = snackbarHostState,
-        modifier = modifier
+        modifier = modifier,
+        onMakePriority = viewModel::makePriority
     )
 }
 
@@ -125,7 +142,8 @@ fun DecisionContent(
     actions: DecisionActions,
     onReflect: () -> Unit,
     snackbarHostState: SnackbarHostState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMakePriority: () -> Unit = {}
 ) {
     val overview = state.overview
     val inStep = overview != null && state.step != DecisionStep.OVERVIEW
@@ -161,7 +179,7 @@ fun DecisionContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     when (state.step) {
-                        DecisionStep.OVERVIEW -> Overview(overview, actions, onReflect, state.saving)
+                        DecisionStep.OVERVIEW -> Overview(overview, actions, onReflect, onMakePriority, state.saving)
                         DecisionStep.BUY -> state.form?.let { BuyStep(state, overview, it, actions) }
                         DecisionStep.WAIT -> state.form?.let { WaitStep(state, it, actions) }
                         DecisionStep.REJECT -> state.form?.let { RejectStep(state, it, actions) }
@@ -198,8 +216,14 @@ private fun BelowZeroDialog(belowZero: BelowZero, actions: DecisionActions) {
 }
 
 @Composable
-private fun Overview(overview: DecisionOverview, actions: DecisionActions, onReflect: () -> Unit, saving: Boolean) {
-    Header(overview)
+private fun Overview(
+    overview: DecisionOverview,
+    actions: DecisionActions,
+    onReflect: () -> Unit,
+    onMakePriority: () -> Unit,
+    saving: Boolean
+) {
+    Header(overview, onMakePriority.takeIf { !saving && overview.item.canBePriority })
     // The user's own reasons come before anything else (ADR-0013).
     Reasons(overview, onReflect)
     OpportunityCostSection(overview.opportunityCost)
@@ -251,9 +275,12 @@ private fun keepLabel(overview: DecisionOverview): String {
     return stringResource(R.string.decision_reject_for, price, keepFor.priority.name, keepFor.rank)
 }
 
-/** Name, price, how long it's wanted and where its cooling-off stands. */
+/**
+ * Name, price, how long it's wanted and where its cooling-off stands. A want without a slot instead says that it isn't
+ * one of the priorities, how much of its wait is done, and offers "Make it a priority" ([onMakePriority], ADR-0049).
+ */
 @Composable
-private fun Header(overview: DecisionOverview) {
+private fun Header(overview: DecisionOverview, onMakePriority: (() -> Unit)?) {
     val item = overview.item
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(item.name, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
@@ -268,7 +295,7 @@ private fun Header(overview: DecisionOverview) {
         when {
             item.kind == ItemKind.NEED -> SecondaryText(stringResource(R.string.item_need))
 
-            overview.stage == Stage.PARKED -> SecondaryText(stringResource(R.string.stage_not_priority))
+            overview.stage == Stage.PARKED -> NotAPriority(overview.waitProgress, onMakePriority)
 
             overview.stage == Stage.COOLING_OFF ->
                 CountdownText(overview.daysLeft, style = MaterialTheme.typography.bodyMedium)
@@ -326,7 +353,7 @@ private fun BuyStep(state: DecisionUiState, overview: DecisionOverview, form: De
         if (early) {
             SecondaryText(
                 when {
-                    // Not a priority: its wait doesn't run, so there are no days left to show (ADR-0049).
+                    // Not a priority: its wait doesn't run, so no days left; how much of it is done follows.
                     overview.stage == Stage.PARKED -> stringResource(R.string.stage_not_priority)
 
                     overview.stage == Stage.COOLING_OFF ->
@@ -344,6 +371,12 @@ private fun BuyStep(state: DecisionUiState, overview: DecisionOverview, form: De
                 },
                 style = MaterialTheme.typography.bodyLarge
             )
+            // Instead of days left: not started / N of M days / done (ADR-0049).
+            if (overview.stage == Stage.PARKED) {
+                overview.waitProgress?.let {
+                    SecondaryText(waitProgressText(it), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
             Answer(
                 stringResource(R.string.decision_early_reasons_against),
                 reasonsAgainstText(overview) ?: stringResource(R.string.decision_early_no_reasons_against),

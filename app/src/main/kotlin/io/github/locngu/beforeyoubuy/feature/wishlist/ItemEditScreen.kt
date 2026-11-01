@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -184,8 +185,12 @@ private fun PhotoField(state: ItemEditUiState, actions: ItemEditActions, onPickP
     }
 }
 
-/** "Waiting period extended to 30 Nov 2026" when saving would make the item wait longer. */
+/**
+ * "Waiting period extended to 30 Nov 2026" when saving would make a priority wait longer; for a want without a slot,
+ * "Waiting period: 60 days, once it's a priority", as in quick add (ADR-0049).
+ */
 @Composable
 private fun waitNoteText(note: WaitNote): String = when (note) {
     is WaitNote.Extended -> stringResource(R.string.item_edit_wait_extended, formattedDate(note.endsOn))
+    is WaitNote.OncePriority -> pluralStringResource(R.plurals.wait_once_priority, note.days, note.days)
 }

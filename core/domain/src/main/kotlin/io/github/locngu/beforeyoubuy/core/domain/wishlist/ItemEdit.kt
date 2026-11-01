@@ -5,8 +5,10 @@ import io.github.locngu.beforeyoubuy.core.domain.capture.checkCapture
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.changeKind
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitAfterPriceEdit
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isParked
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
@@ -73,24 +75,31 @@ fun editedItem(
 
 /** How an edit changes the wait, so the form can say so before saving ("Waiting period extended to …"). */
 sealed interface WaitChange {
-    /**
-     * The running wait stays as it is, or there is no end date to show: a need, a want whose wait is complete, or a
-     * parked want, whose wait has no end until it's a priority (ADR-0049).
-     */
+    /** The wait stays as it is: a need, a want whose wait is complete, or days that didn't grow. */
     data object None : WaitChange
 
     /** A priority still waits, now until [endsAt], later than before. */
     data class Extended(val endsAt: Instant) : WaitChange
+
+    /**
+     * A parked want now waits [days] once it's a priority, more than before (a higher price, or a need made a want).
+     * It has no end date to show until it's a priority (ADR-0049).
+     */
+    data class OncePriority(val days: Int) : WaitChange
 }
 
-/** How [edited] (from [editedItem]) changes the running wait of [current] at [now]. */
+/** How [edited] (from [editedItem]) changes the wait of [current] at [now]. */
 fun waitChange(current: Item, edited: Item, now: Instant): WaitChange {
+    if (isCooledOff(edited, now)) return WaitChange.None
     val before = current.coolingEndsAt
     val after = edited.coolingEndsAt
-    return if (before != null && after != null && after > before && !isCooledOff(edited, now)) {
-        WaitChange.Extended(after)
-    } else {
-        WaitChange.None
+    return when {
+        before != null && after != null && after > before -> WaitChange.Extended(after)
+
+        edited.isParked && (current.kind == ItemKind.NEED || edited.coolingOffDays > current.coolingOffDays) ->
+            WaitChange.OncePriority(edited.coolingOffDays)
+
+        else -> WaitChange.None
     }
 }
 

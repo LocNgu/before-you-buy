@@ -1,5 +1,6 @@
 package io.github.locngu.beforeyoubuy.core.domain.wishlist
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
@@ -55,6 +56,16 @@ class ItemDetailTest {
         assertEquals(Stage.PARKED, detail.stage)
         assertFalse(detail.linkProminent)
         assertFalse(detail.imageProminent)
+        assertEquals(WaitProgress.Done, detail.waitProgress)
+    }
+
+    @Test
+    fun `only a parked want shows how much of its wait is done`() {
+        val parked = itemDetailOf(parked(waitedDays = 12), null, Savings.NONE, DURING_COOLING, zone)
+        val priority = itemDetailOf(item(), null, Savings.NONE, DURING_COOLING, zone)
+
+        assertEquals(WaitProgress.Partly(12, 30), parked.waitProgress)
+        assertNull(priority.waitProgress)
     }
 
     @Test

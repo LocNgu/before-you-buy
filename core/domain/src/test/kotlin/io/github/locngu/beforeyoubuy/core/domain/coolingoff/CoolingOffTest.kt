@@ -186,6 +186,23 @@ class CoolingOffTest {
     }
 
     @Test
+    fun `wait progress is not started, part of the days, or done`() {
+        assertEquals(WaitProgress.NotStarted(30), waitProgressOf(parked(eur(12_000)), daysAfterAdded(50), utc))
+        assertEquals(
+            WaitProgress.Partly(4, 30),
+            waitProgressOf(parked(eur(12_000), waited = 4), daysAfterAdded(50), utc)
+        )
+        assertEquals(WaitProgress.Done, waitProgressOf(parked(eur(12_000), waited = 30), daysAfterAdded(50), utc))
+        assertEquals(WaitProgress.Done, waitProgressOf(parked(eur(12_000), waited = 45), daysAfterAdded(50), utc))
+        // A running wait counts its whole days so far, a part of a day not yet.
+        val running = startWait(parked(eur(12_000)), daysAfterAdded(0), utc)
+        assertEquals(WaitProgress.NotStarted(30), waitProgressOf(running, daysAfterAdded(1).minusSeconds(1), utc))
+        assertEquals(WaitProgress.Partly(1, 30), waitProgressOf(running, daysAfterAdded(1), utc))
+        assertEquals(WaitProgress.Done, waitProgressOf(running, daysAfterAdded(30), utc))
+        assertEquals(WaitProgress.Done, waitProgressOf(item(eur(12_000), ItemKind.NEED), daysAfterAdded(0), utc))
+    }
+
+    @Test
     fun `a need's price is checked against the rules like a want's`() {
         assertThrows(IllegalArgumentException::class.java) { coolingOffDaysFor(Money(5_000, "USD"), rules) }
         assertThrows(IllegalArgumentException::class.java) {

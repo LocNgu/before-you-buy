@@ -1,10 +1,12 @@
 package io.github.locngu.beforeyoubuy.feature.capture
 
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -12,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.locngu.beforeyoubuy.MainActivity
 import org.junit.Rule
@@ -27,6 +30,7 @@ import org.robolectric.annotation.GraphicsMode
  * Native graphics and a phone-sized screen: in legacy mode text gets placeholder widths, and the snackbar's text
  * didn't count as displayed.
  */
+@OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class QuickAddFlowTest {
@@ -48,7 +52,8 @@ class QuickAddFlowTest {
         field("Price").performTextInput("1,234.56")
         composeRule.onNodeWithText("Save").performClick() // 3
 
-        composeRule.onNodeWithText("Added. You can decide in 90 days.").assertIsDisplayed()
+        composeRule.onNodeWithText("Added to your wishlist.").assertIsDisplayed()
+        composeRule.onNode(hasText("Make it a priority") and hasClickAction()).assertIsDisplayed()
         composeRule.onNodeWithText("Quick add").assertDoesNotExist()
     }
 
@@ -61,18 +66,23 @@ class QuickAddFlowTest {
         field("Preis").performTextInput("1.234,56")
         field("Preis").performImeAction()
 
-        composeRule.onNodeWithText("Hinzugefügt. Du kannst in 90 Tagen entscheiden.").assertIsDisplayed()
+        composeRule.onNodeWithText("Zu deiner Wunschliste hinzugefügt.").assertIsDisplayed()
     }
 
     @Test
     @Config(qualifiers = "en-w411dp-h891dp-xxhdpi")
-    fun `the snackbar names a cheaper tier's period`() {
+    fun `the price says the tier's waiting period as it's typed, and the snackbar makes it a priority`() {
         composeRule.onNodeWithText("Add").performClick()
         field("Name").performTextInput("Book")
         field("Price").performTextInput("12.50")
+        composeRule.onNodeWithText("Waiting period: 7 days, once it’s a priority").assertIsDisplayed()
+        field("Price").performTextReplacement("1500")
+        composeRule.onNodeWithText("Waiting period: 90 days, once it’s a priority").assertIsDisplayed()
         composeRule.onNodeWithText("Save").performClick()
 
-        composeRule.onNodeWithText("Added. You can decide in 7 days.").assertIsDisplayed()
+        composeRule.onNode(hasText("Make it a priority") and hasClickAction()).performClick()
+
+        composeRule.waitUntilExactlyOneExists(hasText("Book is now priority #1."), timeoutMillis = 5_000)
     }
 
     @Test

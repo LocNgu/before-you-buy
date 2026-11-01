@@ -79,7 +79,7 @@ class DecisionFlowTest {
     @Test
     fun `a want that isn't ready offers no buy and no wait, only not buying and deciding early`() {
         // A priority still cooling off (ADR-0049).
-        tap("Make priority")
+        tap("Make it a priority")
         waitFor("7 days left")
         openDecision("Decide now")
 

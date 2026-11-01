@@ -8,7 +8,6 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.SavingsProgress
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.Priority
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
-import io.github.locngu.beforeyoubuy.core.domain.wishlist.prioritiesIn
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
 import java.time.Instant
 import java.time.ZoneId
@@ -19,7 +18,8 @@ import java.time.ZoneId
  *
  * @property toDecide "What can I decide on?": Ready items that aren't waiting for a "Wait" date (needs included,
  *   exactly those [io.github.locngu.beforeyoubuy.core.domain.lifecycle.isDueForDecision] accepts), then wants whose
- *   cooling-off is over but whose required answers are missing. Each part in wishlist order. Empty: nothing to show.
+ *   cooling-off is over but whose required answers are missing. Each part soonest cooling-off end first (a need by
+ *   the day it was added). Never a parked want (ADR-0049). Empty: nothing to show.
  * @property activeCount "What am I considering?": every active item, waiting ones included.
  * @property nextCoolingEnd the item still cooling off whose cooling-off ends first, or null if none is.
  * @property priorities "What am I saving for?" once the user has priorities: every priority by rank, with its savings
@@ -55,17 +55,21 @@ fun homeOverviewOf(
     now: Instant,
     zone: ZoneId
 ): HomeOverview {
-    val groups = wishlistOf(items, reflections, savings, now, zone)
-    fun entries(stage: Stage) = groups.firstOrNull { it.stage == stage && !it.waiting }?.entries.orEmpty()
-    val priorities = prioritiesIn(groups)
+    val wishlist = wishlistOf(items, reflections, savings, now, zone)
+    // Only priorities and needs are ever to decide or count down (ADR-0049); soonest end first, as before.
+    val deciding = (wishlist.priorities.map { it.entry } + wishlist.needs)
+        .filter { it.recheckOn == null }
+        .sortedWith(compareBy({ it.item.coolingEndsAt ?: it.item.addedAt }, { it.item.addedAt }, { it.item.id.value }))
+    fun entries(stage: Stage) = deciding.filter { it.stage == stage }
+    val priorities = wishlist.priorities
     return HomeOverview(
         toDecide = entries(Stage.READY) + entries(Stage.NEEDS_REFLECTION),
-        activeCount = groups.sumOf { it.entries.size },
+        activeCount = wishlist.entries.size,
         nextCoolingEnd = entries(Stage.COOLING_OFF).firstOrNull(),
         savingFor = if (priorities.isNotEmpty()) {
             emptyList()
         } else {
-            groups.flatMap { it.entries }
+            wishlist.entries
                 .mapNotNull { entry -> entry.savings?.let { SavingFor(entry.item, it) } }
                 .sortedWith(
                     compareByDescending<SavingFor> { it.progress.fraction }

@@ -4,15 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.locngu.beforeyoubuy.core.domain.capture.CaptureForm
+import io.github.locngu.beforeyoubuy.core.domain.capture.captureWaitDays
 import io.github.locngu.beforeyoubuy.core.domain.capture.capturedItem
-import io.github.locngu.beforeyoubuy.core.domain.capture.capturedWaitDays
 import io.github.locngu.beforeyoubuy.core.domain.capture.checkCapture
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.settings.Policy
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.time.today
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
+import io.github.locngu.beforeyoubuy.feature.priorities.makePriority
 import java.time.Clock
 import java.time.LocalDate
 import java.util.Locale
@@ -34,8 +37,11 @@ data class QuickAddPrefill(val name: String = "", val price: String = "", val li
 /** The field that has the cursor when the sheet opens. */
 enum class QuickAddField { NAME, PRICE }
 
-/** An item was added: "Added. You can decide in 30 days." for a want, "Added as a need." for a need. */
-data class QuickAddSaved(val kind: ItemKind, val coolingOffDays: Int)
+/**
+ * An item was added as [itemId]: "Added to your wishlist." for a want, which is parked and can be made a priority
+ * from the snackbar (ADR-0049); "Added as a need." for a need.
+ */
+data class QuickAddSaved(val itemId: ItemId, val kind: ItemKind)
 
 /**
  * What the quick-add sheet shows (brief §6.2).
@@ -46,6 +52,8 @@ data class QuickAddSaved(val kind: ItemKind, val coolingOffDays: Int)
  * @property today the earliest target date the picker offers.
  * @property startField where the cursor goes on open: the price when a share filled in the name but not the price
  *   (it can't be read offline, #15), else the name.
+ * @property waitDays the waiting period of the typed price's tier, which a want waits once it's a priority (ADR-0049);
+ *   null for a need and while the price doesn't read.
  */
 data class QuickAddUiState(
     val visible: Boolean = false,
@@ -56,7 +64,8 @@ data class QuickAddUiState(
     val canSave: Boolean = false,
     val currency: String? = null,
     val today: LocalDate? = null,
-    val startField: QuickAddField = QuickAddField.NAME
+    val startField: QuickAddField = QuickAddField.NAME,
+    val waitDays: Int? = null
 )
 
 /** What the user can do in the quick-add sheet. */
@@ -75,13 +84,14 @@ interface QuickAddActions : ItemFormActions {
 @HiltViewModel
 class QuickAddViewModel @Inject constructor(
     private val items: ItemRepository,
-    policies: PolicyRepository,
+    private val policies: PolicyRepository,
     private val clock: Clock
 ) : ViewModel(),
     QuickAddActions {
     private val editor = MutableStateFlow(Editor())
     private val policy: StateFlow<Policy?> = policies.policy.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val savedEvents = Channel<QuickAddSaved>(Channel.BUFFERED)
+    private val priorityChannel = Channel<PriorityEvent>(Channel.BUFFERED)
     private var opened = false
 
     val uiState: StateFlow<QuickAddUiState> =
@@ -90,6 +100,25 @@ class QuickAddViewModel @Inject constructor(
 
     /** One event per stored item, for the snackbar. */
     val saved: Flow<QuickAddSaved> = savedEvents.receiveAsFlow()
+
+    /** What the snackbar's "Make it a priority" did: a message, or opening the head-to-head (ADR-0049). */
+    val priorityEvents: Flow<PriorityEvent> = priorityChannel.receiveAsFlow()
+
+    // One priority write at a time: a double tap would otherwise find its own change and report a conflict.
+    private var writingPriorities = false
+
+    /** "Make it a priority" from the snackbar after adding [id]: a free slot at once, otherwise the head-to-head. */
+    fun makePriority(id: ItemId) {
+        if (writingPriorities) return
+        writingPriorities = true
+        viewModelScope.launch {
+            try {
+                priorityChannel.send(makePriority(id, items, policies, clock))
+            } finally {
+                writingPriorities = false
+            }
+        }
+    }
 
     /** Opens the sheet with a fresh form, filled with [prefill]. */
     fun open(prefill: QuickAddPrefill = QuickAddPrefill()) {
@@ -152,15 +181,16 @@ class QuickAddViewModel @Inject constructor(
         editor.value = current.copy(saving = true)
         viewModelScope.launch {
             val item = capturedItem(current.form, policy, locale, clock.instant())
-            try {
-                items.add(item)
+            val id = try {
+                val stored = items.add(item)
                 // The form stays until the next open, so the sheet doesn't empty while it slides away.
                 editor.update { it.copy(visible = false) }
+                stored
             } finally {
                 // Also if storing fails, so the form never stays locked.
                 editor.update { it.copy(saving = false) }
             }
-            savedEvents.send(QuickAddSaved(item.kind, capturedWaitDays(item)))
+            savedEvents.send(QuickAddSaved(id, item.kind))
         }
     }
 
@@ -203,7 +233,8 @@ class QuickAddViewModel @Inject constructor(
                 canSave = check?.isValid == true && !saving,
                 currency = policy?.currency,
                 today = today,
-                startField = startField
+                startField = startField,
+                waitDays = if (policy != null && locale != null) captureWaitDays(form, policy, locale) else null
             )
         }
     }

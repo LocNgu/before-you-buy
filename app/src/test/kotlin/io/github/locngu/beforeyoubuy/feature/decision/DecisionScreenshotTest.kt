@@ -22,6 +22,7 @@ import io.github.locngu.beforeyoubuy.core.domain.pool.PoolBalance
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
+import io.github.locngu.beforeyoubuy.testing.parked
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
 import java.time.LocalDate
@@ -110,6 +111,19 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
     fun earlyBuy() = capture(
         cooling,
         Reflection(why = reasons.why, reasonsAgainst = reasons.reasonsAgainst),
+        step = DecisionStep.BUY,
+        earlyReason = t("It's on sale until Sunday", "Bis Sonntag im Angebot")
+    )
+
+    /** Not one of the priorities: how much of its wait is done, "Make it a priority", no Buy (ADR-0049). */
+    @Test
+    fun parked() = capture(camera.parked().copy(waitedDays = 12), reasons, others)
+
+    /** "Decide early…" for a parked want: not a priority, and its wait not started yet (ADR-0049). */
+    @Test
+    fun parkedEarlyBuy() = capture(
+        camera.parked(),
+        reasons,
         step = DecisionStep.BUY,
         earlyReason = t("It's on sale until Sunday", "Bis Sonntag im Angebot")
     )

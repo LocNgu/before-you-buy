@@ -1,11 +1,15 @@
 package io.github.locngu.beforeyoubuy.core.domain.wishlist
 
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitProgressOf
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
 import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isCooledOff
+import io.github.locngu.beforeyoubuy.core.domain.lifecycle.isParked
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.stageOf
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
 import io.github.locngu.beforeyoubuy.core.domain.pool.SavingsProgress
@@ -26,34 +30,42 @@ import java.time.temporal.ChronoUnit
  * @property recheckOn the date a "Wait" decision set, while the item waits for it; null otherwise (see [isWaiting]).
  * @property savings what is set aside for a want while fun money is set up (brief §4.6); null for needs and without
  *   fun money.
+ * @property waitProgress how much of its waiting period a parked want has done, which it shows instead of a stage;
+ *   null for priorities and needs.
  */
 data class WishlistEntry(
     val item: Item,
     val stage: Stage,
     val daysLeft: Int,
     val recheckOn: LocalDate? = null,
-    val savings: SavingsProgress? = null
+    val savings: SavingsProgress? = null,
+    val waitProgress: WaitProgress? = null
 )
 
-/**
- * The entries in one [stage], soonest cooling-off end first. [waiting] marks the group of Ready items the user chose
- * to wait on: they aren't Ready to decide again until their re-check date, soonest first. The [Stage.PARKED] group
- * holds the wants that aren't priorities, oldest first.
- */
-data class WishlistGroup(val stage: Stage, val entries: List<WishlistEntry>, val waiting: Boolean = false)
+/** A priority with its [rank] (1 first) and its wishlist [entry] (stage, countdown, savings). */
+data class Priority(val rank: Int, val entry: WishlistEntry)
 
 /**
- * The order the wishlist shows its groups in (brief §6.3): what can be decided first, what waits last. The waiting
- * group comes after all of them, then the parked wants (ADR-0049).
+ * The wishlist as the screen shows it (brief §6.3, ADR-0049): the [priorities] by rank, each with its stage; then the
+ * [needs], Ready at once (ADR-0008), oldest first; then every [parked] want, the ones without a slot, oldest first.
+ * Parked wants have no stage groups: none can be Ready and none counts down.
  */
-val WISHLIST_STAGE_ORDER: List<Stage> = listOf(Stage.READY, Stage.NEEDS_REFLECTION, Stage.SAVING, Stage.COOLING_OFF)
+data class Wishlist(val priorities: List<Priority>, val needs: List<WishlistEntry>, val parked: List<WishlistEntry>) {
+    /** Every active item, in the order the screen shows them. */
+    val entries: List<WishlistEntry> get() = priorities.map { it.entry } + needs + parked
+
+    /** Nothing active: the empty state. */
+    fun isEmpty(): Boolean = priorities.isEmpty() && needs.isEmpty() && parked.isEmpty()
+
+    companion object {
+        val EMPTY = Wishlist(emptyList(), emptyList(), emptyList())
+    }
+}
 
 /**
- * The wishlist (brief §6.3): the active [items] grouped by derived stage in [WISHLIST_STAGE_ORDER], empty groups
- * left out. Within a group the soonest [Item.coolingEndsAt] comes first (a need, which has none, by the day it was
- * added), then the oldest, so the order is stable.
- * Ready items with a "Wait" re-check date still ahead ([isWaiting]) form a [WishlistGroup.waiting] group instead of
- * being Ready, soonest re-check first. The [Stage.PARKED] wants come last, oldest first (ADR-0049).
+ * The wishlist (brief §6.3, ADR-0049) of the active [items]: the priorities by rank ([prioritiesOf]), then the needs,
+ * then the parked wants. Each entry carries the stage [stageOf] gives it; a parked want also how much of its wait is
+ * done ([waitProgressOf]). A need with a stored slot isn't a priority (ADR-0047) and is listed with the needs.
  *
  * [reflections] holds the answers given so far; an item without an entry has none. [savings] holds what is set aside
  * per item and whether wants need it to be Ready (ADR-0046).
@@ -64,66 +76,28 @@ fun wishlistOf(
     savings: Savings,
     now: Instant,
     zone: ZoneId
-): List<WishlistGroup> {
-    val entries =
-        items
-            .filter { it.status == ItemStatus.ACTIVE }
-            .map { item ->
-                val stage = stageOf(item, reflections[item.id], savings.fundingOf(item), now)
-                WishlistEntry(
-                    item,
-                    stage,
-                    daysLeft(item, now, zone),
-                    recheckOnOf(item, stage, now, zone),
-                    savings.progressOf(item).takeIf { savings.setUp }
-                )
-            }
-    val (parked, others) = entries.partition { it.stage == Stage.PARKED }
-    val (waiting, deciding) = others.partition { it.recheckOn != null }
-    val byStage = deciding.groupBy { it.stage }
-    val groups = WISHLIST_STAGE_ORDER.mapNotNull { stage ->
-        val group = byStage[stage] ?: return@mapNotNull null
-        WishlistGroup(
+): Wishlist {
+    val active = items.filter { it.status == ItemStatus.ACTIVE }
+    fun entryOf(item: Item): WishlistEntry {
+        val stage = stageOf(item, reflections[item.id], savings.fundingOf(item), now)
+        return WishlistEntry(
+            item,
             stage,
-            group.sortedWith(
-                compareBy({ it.item.coolingEndsAt ?: it.item.addedAt }, { it.item.addedAt }, { it.item.id.value })
-            )
+            daysLeft(item, now, zone),
+            recheckOnOf(item, stage, now, zone),
+            savings.progressOf(item).takeIf { savings.setUp },
+            waitProgressOf(item, now, zone).takeIf { stage == Stage.PARKED }
         )
     }
-    val waitingGroup = WishlistGroup(
-        Stage.READY,
-        waiting.sortedWith(compareBy({ it.item.recheckAt }, { it.item.addedAt }, { it.item.id.value })),
-        waiting = true
+    val priorities = prioritiesOf(active)
+    val ids = priorities.map { it.id }.toSet()
+    val oldestFirst = compareBy<Item>({ it.addedAt }, { it.id.value })
+    val rest = active.filter { it.id !in ids }.sortedWith(oldestFirst)
+    return Wishlist(
+        priorities = priorities.mapIndexed { index, item -> Priority(index + 1, entryOf(item)) },
+        needs = rest.filter { it.kind == ItemKind.NEED }.map(::entryOf),
+        parked = rest.filter { it.isParked }.map(::entryOf)
     )
-    val parkedGroup =
-        WishlistGroup(Stage.PARKED, parked.sortedWith(compareBy({ it.item.addedAt }, { it.item.id.value })))
-    return groups + listOf(waitingGroup, parkedGroup).filter { it.entries.isNotEmpty() }
-}
-
-/** A priority with its [rank] (1 first) and its wishlist [entry] (stage, countdown, savings). */
-data class Priority(val rank: Int, val entry: WishlistEntry)
-
-/**
- * The wishlist as the screen shows it (brief §4.7, §6.3): the [priorities] by rank at the top, then the other active
- * items in their stage [groups] ([wishlistOf]). A priority is only in [priorities], not again in its stage group.
- */
-data class WishlistSections(val priorities: List<Priority>, val groups: List<WishlistGroup>)
-
-/** The priorities among the entries of [groups] ([wishlistOf]), rank 1 first ([prioritiesOf]). */
-fun prioritiesIn(groups: List<WishlistGroup>): List<Priority> {
-    val entries = groups.flatMap { it.entries }.associateBy { it.item.id }
-    return prioritiesOf(entries.values.map { it.item })
-        .mapIndexed { index, item -> Priority(index + 1, entries.getValue(item.id)) }
-}
-
-/** [groups] ([wishlistOf]) split into the priorities and everything else; groups left empty are dropped. */
-fun wishlistSectionsOf(groups: List<WishlistGroup>): WishlistSections {
-    val priorities = prioritiesIn(groups)
-    val ids = priorities.map { it.entry.item.id }.toSet()
-    val rest = groups
-        .map { group -> group.copy(entries = group.entries.filter { it.item.id !in ids }) }
-        .filter { it.entries.isNotEmpty() }
-    return WishlistSections(priorities, rest)
 }
 
 /**

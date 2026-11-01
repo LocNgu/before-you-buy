@@ -61,6 +61,11 @@
     <string name="stage_saving">Sparen</string>
     <string name="stage_not_priority">Keine deiner Prioritäten</string>
     <string name="stage_ready">Bereit</string>
+    <!-- Abschnitte der Wunschliste (ADR-0049): Prioritäten, dann Notwendiges, dann alle Wünsche ohne Platz („Wunschliste“). -->
+    <string name="wishlist_needs">Notwendiges</string>
+    <string name="priorities_empty_hint">Mach einen Wunsch zur Priorität, damit seine Wartezeit beginnt.</string>
+    <!-- Wie viel seiner Wartezeit ein Wunsch ohne Platz hinter sich hat (ADR-0049). Dazu die Plurale wait_progress_*. -->
+    <string name="wait_progress_done">Wartezeit vorbei</string>
 
     <!-- Relative Datumsangaben, in Kalendertagen. -->
     <string name="relative_today">Heute</string>
@@ -90,8 +95,10 @@
     <!-- %1$s: das gewählte Datum -->
     <string name="quick_add_target_date">Zieldatum: %1$s</string>
     <string name="quick_add_target_date_remove">Datum entfernen</string>
-    <!-- Snackbar nach dem Hinzufügen von etwas Notwendigem. Wünsche nennen ihre Wartezeit: Plural quick_add_saved_want. -->
+    <!-- Snackbar nach dem Hinzufügen von etwas Notwendigem. -->
     <string name="quick_add_saved_need">Als notwendig hinzugefügt.</string>
+    <!-- Snackbar (mit der Aktion priority_make) und Toast beim Teilen nach dem Hinzufügen eines Wunschs (ADR-0049). -->
+    <string name="quick_add_saved_want">Zu deiner Wunschliste hinzugefügt.</string>
 
     <!-- Teilen (#15): Name eines geteilten Links, der ohne Namen kam. %1$s: Adresse des Shops, z. B. amazon.de -->
     <string name="share_fallback_name">Artikel von %1$s</string>
@@ -194,7 +201,6 @@
 
     <!-- Wunschliste und Artikeldetail: ein bereiter Artikel nach „Warten“, bis zum gewählten Datum (Issue #18). -->
     <string name="wishlist_waiting">Später noch mal ansehen</string>
-    <string name="stage_waiting">Wartet</string>
     <string name="wishlist_look_again_on">Wieder ansehen am %1$s</string>
 
     <string name="item_decide">Entscheiden</string>
@@ -304,6 +310,8 @@
     <string name="savings_to_go">Noch %1$s</string>
     <string name="savings_not_set_up">Leg dafür Geld aus deinem Spaßgeld zurück.</string>
     <string name="savings_set_up">Spaßgeld einrichten</string>
+    <!-- Detailansicht eines Wunschs ohne Platz: Nur für Prioritäten lässt sich Geld zurücklegen (ADR-0049). -->
+    <string name="savings_once_priority">Geld zurücklegen kannst du, sobald der Wunsch eine Priorität ist.</string>
     <string name="savings_set_aside">Zurücklegen</string>
     <string name="savings_take_back">Zurücknehmen</string>
     <string name="savings_sheet_set_aside_title">Für %1$s zurücklegen</string>
@@ -341,7 +349,7 @@
     <string name="head_to_head_gone">Dieser Artikel kann keine Priorität mehr werden.</string>
     <string name="priority_outcome_stays">%1$s bleibt auf Platz %2$d</string>
     <string name="priority_outcome_now">%1$s ist jetzt auf Platz %2$d</string>
-    <string name="priority_outcome_back">%1$s ist zurück auf der Wunschliste</string>
+    <string name="priority_outcome_back">%1$s ist zurück auf der Wunschliste, die Wartezeit pausiert</string>
     <string name="priority_outcome_stays_on_wishlist">%1$s bleibt auf der Wunschliste</string>
 
     <string name="opportunity_cost_title">Was du sonst mit dem Geld machen könntest</string>

@@ -18,10 +18,22 @@
         <item quantity="other">vor %d Tagen</item>
     </plurals>
 
-    <!-- Snackbar nach dem Schnell-Hinzufügen: wie lange der neue Wunsch wartet (seine Wartezeit). -->
-    <plurals name="quick_add_saved_want">
-        <item quantity="one">Hinzugefügt. Du kannst in %d Tag entscheiden.</item>
-        <item quantity="other">Hinzugefügt. Du kannst in %d Tagen entscheiden.</item>
+    <!-- Unter dem Preis beim Hinzufügen (Wunsch) und Bearbeiten (Wunsch ohne Platz): die Wartezeit seiner Stufe (ADR-0049). -->
+    <plurals name="wait_once_priority">
+        <item quantity="one">Wartezeit als Priorität: %d Tag</item>
+        <item quantity="other">Wartezeit als Priorität: %d Tage</item>
+    </plurals>
+
+    <!-- Ein Wunsch ohne Platz, der noch keinen Tag gewartet hat: Seine ganze Wartezeit liegt noch vor ihm (ADR-0049). -->
+    <plurals name="wait_progress_not_started">
+        <item quantity="one">Wartezeit noch nicht begonnen (%d Tag)</item>
+        <item quantity="other">Wartezeit noch nicht begonnen (%d Tage)</item>
+    </plurals>
+
+    <!-- Ein Wunsch ohne Platz mit einem Teil seiner Wartezeit: „12 von 30 Tagen gewartet“. Die Menge richtet sich nach der Gesamtzahl. -->
+    <plurals name="wait_progress_partly">
+        <item quantity="one">%1$d von %2$d Tag gewartet</item>
+        <item quantity="other">%1$d von %2$d Tagen gewartet</item>
     </plurals>
 
     <!-- Ein getippter Preis hat mehr Nachkommastellen als die Währung. -->

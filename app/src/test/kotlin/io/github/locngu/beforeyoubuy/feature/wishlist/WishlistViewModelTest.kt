@@ -7,6 +7,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.Wishlist
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
@@ -65,12 +66,10 @@ class WishlistViewModelTest {
         return items.stored.first { it.id == id }
     }
 
-    private val groups get() = viewModel.uiState.value.groups
+    private val wishlist get() = viewModel.uiState.value.wishlist
 
-    /** Every listed entry: the priorities by rank, then the stage groups. */
-    private val entries get() = viewModel.uiState.value.let { state ->
-        state.priorities.map { it.entry } + state.groups.orEmpty().flatMap { it.entries }
-    }
+    /** Every listed entry: the priorities by rank, then the needs, then the parked wants. */
+    private val entries get() = wishlist!!.entries
 
     /** Moves the clock and the coroutine time together, as real time does. */
     private fun kotlinx.coroutines.test.TestScope.pass(duration: Duration) {
@@ -79,12 +78,12 @@ class WishlistViewModelTest {
     }
 
     @Test
-    fun `has no groups until the first load`() = runTest(UnconfinedTestDispatcher()) {
-        assertNull(groups)
+    fun `has no wishlist until the first load`() = runTest(UnconfinedTestDispatcher()) {
+        assertNull(wishlist)
 
         viewModel.uiState.launchIn(backgroundScope)
 
-        assertEquals(emptyList<Stage>(), groups!!.map { it.stage })
+        assertEquals(Wishlist.EMPTY, wishlist)
     }
 
     @Test
@@ -154,11 +153,11 @@ class WishlistViewModelTest {
 
         items.replace(item.copy(status = ItemStatus.REJECTED))
 
-        assertEquals(emptyList<Stage>(), groups!!.map { it.stage })
+        assertEquals(Wishlist.EMPTY, wishlist)
     }
 
     @Test
-    fun `priorities come first by rank, out of their stage group, with the slot count`() =
+    fun `priorities come first by rank, then the wants without a slot, with the slot count`() =
         runTest(UnconfinedTestDispatcher()) {
             val camera = add("Camera", endsInHours = 10, parked = true)
             val bike = add("Bike", endsInHours = 20, parked = true)
@@ -167,8 +166,10 @@ class WishlistViewModelTest {
             viewModel.uiState.launchIn(backgroundScope)
 
             val state = viewModel.uiState.value
-            assertEquals(listOf(1 to "Bike", 2 to "Camera"), state.priorities.map { it.rank to it.entry.item.name })
-            assertEquals(listOf(listOf("Lamp")), state.groups!!.map { group -> group.entries.map { it.item.name } })
+            val listed = state.wishlist!!
+            assertEquals(listOf(1 to "Bike", 2 to "Camera"), listed.priorities.map { it.rank to it.entry.item.name })
+            assertEquals(listOf("Lamp"), listed.parked.map { it.item.name })
+            assertEquals(Stage.PARKED, listed.parked.single().stage)
             assertEquals(3, state.prioritySlots)
         }
 
@@ -206,7 +207,7 @@ class WishlistViewModelTest {
         viewModel.changePrioritySlots(1)
 
         assertEquals(listOf(1), policies.slotChanges)
-        assertEquals(listOf("Camera"), viewModel.uiState.value.priorities.map { it.entry.item.name })
+        assertEquals(listOf("Camera"), viewModel.uiState.value.wishlist!!.priorities.map { it.entry.item.name })
         assertEquals(1, viewModel.uiState.value.prioritySlots)
     }
 

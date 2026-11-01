@@ -18,10 +18,22 @@
         <item quantity="other">%d days ago</item>
     </plurals>
 
-    <!-- Snackbar after quick add: how long the new want waits (its cooling-off period). -->
-    <plurals name="quick_add_saved_want">
-        <item quantity="one">Added. You can decide in %d day.</item>
-        <item quantity="other">Added. You can decide in %d days.</item>
+    <!-- Under the price in quick add (a want) and edit (a want without a slot): its tier's waiting period (ADR-0049). -->
+    <plurals name="wait_once_priority">
+        <item quantity="one">Waiting period: %d day, once it’s a priority</item>
+        <item quantity="other">Waiting period: %d days, once it’s a priority</item>
+    </plurals>
+
+    <!-- A want without a slot that hasn't waited a day yet: its whole waiting period is still ahead (ADR-0049). -->
+    <plurals name="wait_progress_not_started">
+        <item quantity="one">Waiting period not started (%d day)</item>
+        <item quantity="other">Waiting period not started (%d days)</item>
+    </plurals>
+
+    <!-- A want without a slot that has waited part of its period: "12 of 30 days waited". Quantity follows the total. -->
+    <plurals name="wait_progress_partly">
+        <item quantity="one">%1$d of %2$d day waited</item>
+        <item quantity="other">%1$d of %2$d days waited</item>
     </plurals>
 
     <!-- A typed price has more decimals than the currency. -->

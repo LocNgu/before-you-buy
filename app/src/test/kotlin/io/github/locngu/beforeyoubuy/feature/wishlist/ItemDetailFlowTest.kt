@@ -51,9 +51,9 @@ class ItemDetailFlowTest {
         composeRule.waitUntilExactlyOneExists(hasText("Why do you want this?"))
     }
 
-    /** "Make priority" on the open item, which starts its 7-day wait (ADR-0049). */
+    /** "Make it a priority" on the open item, which starts its 7-day wait (ADR-0049). */
     private fun makePriority() {
-        composeRule.onNodeWithText("Make priority").performScrollTo().performClick()
+        composeRule.onNodeWithText("Make it a priority").performScrollTo().performClick()
         composeRule.waitUntilExactlyOneExists(hasText("7 days left"))
     }
 

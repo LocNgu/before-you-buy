@@ -12,11 +12,10 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.pool.Savings
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.Wishlist
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistOf
-import io.github.locngu.beforeyoubuy.core.domain.wishlist.wishlistSectionsOf
 import io.github.locngu.beforeyoubuy.testing.asPriority
 import io.github.locngu.beforeyoubuy.testing.captureContent
-import io.github.locngu.beforeyoubuy.testing.parked
 import io.github.locngu.beforeyoubuy.testing.testPhoto
 import io.github.locngu.beforeyoubuy.ui.theme.BeforeYouBuyTheme
 import java.time.Instant
@@ -29,8 +28,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The wishlist with an item in each stage, with photo thumbnails, with a Ready item waiting after "Wait", empty, and
- * while loading, in English and German.
+ * The wishlist (ADR-0049): priorities in each stage, a need and wants without a slot, with photo thumbnails, with a
+ * Ready priority waiting after "Wait", without priorities, empty, and while loading, in English and German.
  * Record: `./gradlew :app:recordRoborazziDebug`.
  */
 @RunWith(AndroidJUnit4::class)
@@ -50,52 +49,72 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
 
     private val now = Instant.parse("2026-10-16T10:00:00Z")
 
-    private fun item(id: Long, name: String, euros: Long, endsInDays: Long, kind: ItemKind = ItemKind.WANT) = Item(
+    /** A priority in [slot] whose wait ends [endsInDays] from now. */
+    private fun item(id: Long, name: String, euros: Long, endsInDays: Long, slot: Int = 1) = Item(
         id = ItemId(id),
         name = name,
         price = Money(euros * 100, "EUR"),
         addedAt = now.minusSeconds(40L * 24 * 3600),
+        coolingOffDays = 30
+    ).asPriority(now.plusSeconds(endsInDays * 24 * 3600), slot)
+
+    /** A want without a slot that has waited [waitedDays] of its 30 (ADR-0049). */
+    private fun parkedItem(id: Long, name: String, euros: Long, waitedDays: Int = 0) = Item(
+        id = ItemId(id),
+        name = name,
+        price = Money(euros * 100, "EUR"),
+        addedAt = now.minusSeconds(id * 24 * 3600),
         coolingOffDays = 30,
-        kind = kind
-    ).asPriority(now.plusSeconds(endsInDays * 24 * 3600))
+        waitedDays = waitedDays
+    )
 
     private val reflection =
         Reflection(why = "Hikes", usageFrequency = UsageFrequency.WEEKLY, reasonsAgainst = listOf("Heavy"))
 
-    private val ready = item(1, t("Mirrorless camera", "Systemkamera"), 1_199, endsInDays = -10)
-    private val unreflected = item(2, t("Standing desk", "Stehschreibtisch"), 449, endsInDays = -2)
+    // Three slots, all used (the default); everything else is a need or parked.
+    private val ready = item(1, t("Mirrorless camera", "Systemkamera"), 1_199, endsInDays = -10, slot = 1)
+    private val unreflected = item(2, t("Standing desk", "Stehschreibtisch"), 449, endsInDays = -2, slot = 2)
     private val coolingSoon =
-        item(3, t("Noise-cancelling headphones", "Kopfhörer mit Geräuschunterdrückung"), 249, endsInDays = 1)
-    private val coolingLater = item(4, t("Road bike", "Rennrad"), 1_890, endsInDays = 23)
+        item(3, t("Noise-cancelling headphones", "Kopfhörer mit Geräuschunterdrückung"), 249, endsInDays = 1, slot = 3)
+    private val need = Item(
+        id = ItemId(4),
+        name = t("Winter boots", "Winterstiefel"),
+        price = Money(140_00, "EUR"),
+        addedAt = now.minusSeconds(3L * 24 * 3600),
+        coolingOffDays = 30,
+        kind = ItemKind.NEED
+    )
+    private val bike = parkedItem(5, t("Road bike", "Rennrad"), 1_890, waitedDays = 12)
+    private val lamp = parkedItem(6, t("Floor lamp", "Stehlampe"), 89)
+    private val watch = parkedItem(7, t("Smartwatch", "Smartwatch"), 329, waitedDays = 30)
 
+    private val all = listOf(bike, unreflected, lamp, coolingSoon, need, ready, watch)
+
+    /** Priorities in every stage by rank, then a need, then the wishlist: not started, partly and fully waited. */
     @Test
     fun allStages() = capture(
         WishlistUiState(
-            wishlistOf(
-                listOf(coolingLater, unreflected, coolingSoon, ready),
-                mapOf(ready.id to reflection),
-                Savings.NONE,
-                now,
-                ZoneOffset.UTC
-            )
+            wishlistOf(all, mapOf(ready.id to reflection), Savings.NONE, now, ZoneOffset.UTC),
+            active = all
         )
     )
 
-    /** Fun money set up and wants need their price: the camera saves, the bike has some set aside. */
+    /** Fun money set up and wants need their price: the camera saves; the bike still holds some from a slot. */
     @Test
     fun withSavings() = capture(
         WishlistUiState(
             wishlistOf(
-                listOf(coolingLater, unreflected, coolingSoon, ready),
+                all,
                 mapOf(ready.id to reflection),
                 Savings(
                     setUp = true,
                     required = true,
-                    byItem = mapOf(ready.id to Money(65_000, "EUR"), coolingLater.id to Money(40_000, "EUR"))
+                    byItem = mapOf(ready.id to Money(65_000, "EUR"), bike.id to Money(40_000, "EUR"))
                 ),
                 now,
                 ZoneOffset.UTC
-            )
+            ),
+            active = all
         )
     )
 
@@ -103,7 +122,7 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
     fun withPhotos() = capture(
         WishlistUiState(
             wishlistOf(
-                listOf(coolingLater, unreflected, ready),
+                listOf(ready, unreflected, bike),
                 mapOf(ready.id to reflection),
                 Savings.NONE,
                 now,
@@ -111,48 +130,40 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
             ),
             photos = mapOf(
                 ready.id to testPhoto(folder.root, "camera.jpg"),
-                coolingLater.id to testPhoto(folder.root, "bike.jpg", width = 600, height = 900)
+                bike.id to testPhoto(folder.root, "bike.jpg", width = 600, height = 900)
             )
         )
     )
 
+    /** A Ready priority after "Wait": "Looking again later" and the date. */
     @Test
     fun waiting() {
-        val waited = item(5, t("Espresso machine", "Siebträgermaschine"), 680, endsInDays = -12)
+        val waited = item(8, t("Espresso machine", "Siebträgermaschine"), 680, endsInDays = -12, slot = 1)
             .copy(recheckAt = Instant.parse("2026-10-30T00:00:00Z"))
+        val active = listOf(waited, coolingSoon.copy(prioritySlot = 2), ready.copy(prioritySlot = 3))
         capture(
             WishlistUiState(
                 wishlistOf(
-                    listOf(waited, coolingSoon, ready),
+                    active,
                     mapOf(ready.id to reflection, waited.id to reflection),
                     Savings.NONE,
                     now,
                     ZoneOffset.UTC
-                )
+                ),
+                active = active
             )
         )
     }
 
-    /**
-     * Two of three slots used: the priorities by rank at the top, out of their stage groups (ADR-0047), the other wants
-     * parked in the last group (ADR-0049).
-     */
+    /** No priorities yet, as after the first captures: the empty slots with a hint, then the wishlist (ADR-0049). */
     @Test
-    fun priorities() {
-        val active = listOf(
-            coolingLater.copy(prioritySlot = 1),
-            unreflected.parked(),
-            coolingSoon.parked(),
-            ready.copy(prioritySlot = 2)
-        )
-        val sections = wishlistSectionsOf(
-            wishlistOf(active, mapOf(ready.id to reflection), Savings.NONE, now, ZoneOffset.UTC)
-        )
-        capture(WishlistUiState(sections.groups, priorities = sections.priorities, active = active))
+    fun noPriorities() {
+        val active = listOf(bike, lamp, watch)
+        capture(WishlistUiState(wishlistOf(active, emptyMap(), Savings.NONE, now, ZoneOffset.UTC), active = active))
     }
 
     @Test
-    fun empty() = capture(WishlistUiState(emptyList()))
+    fun empty() = capture(WishlistUiState(Wishlist.EMPTY))
 
     @Test
     fun loading() = capture(WishlistUiState(null))

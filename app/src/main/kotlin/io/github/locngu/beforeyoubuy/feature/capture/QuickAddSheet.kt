@@ -13,7 +13,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -28,12 +30,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
+import io.github.locngu.beforeyoubuy.feature.priorities.priorityMessage
 import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
@@ -47,30 +53,58 @@ fun QuickAddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 /**
- * Quick add on a screen (brief §6.2): the bottom sheet while [viewModel] has it open, and after saving a
- * snackbar in [snackbarHostState] that says how long the item waits. Open it with [QuickAddViewModel.open].
+ * Quick add on a screen (brief §6.2): the bottom sheet while [viewModel] has it open, and after saving a snackbar in
+ * [snackbarHostState]. A want's says "Added to your wishlist." and offers "Make it a priority" (ADR-0049): a free slot
+ * at once (the snackbar says so), otherwise [onCompare] opens the head-to-head. Open it with [QuickAddViewModel.open].
  */
 @Composable
-fun QuickAddHost(viewModel: QuickAddViewModel, snackbarHostState: SnackbarHostState) =
-    QuickAddHost(viewModel = viewModel, onSaved = { snackbarHostState.showSnackbar(it) })
+fun QuickAddHost(viewModel: QuickAddViewModel, snackbarHostState: SnackbarHostState, onCompare: (ItemId) -> Unit) {
+    val resources by rememberUpdatedState(LocalResources.current)
+    val compare by rememberUpdatedState(onCompare)
+    LaunchedEffect(viewModel, snackbarHostState) {
+        viewModel.priorityEvents.collect { event ->
+            if (event is PriorityEvent.Compare) {
+                compare(event.itemId)
+            } else {
+                priorityMessage(event, resources)?.let { snackbarHostState.showSnackbar(it) }
+            }
+        }
+    }
+    QuickAddHost(
+        viewModel = viewModel,
+        onSaved = { saved ->
+            val message = savedMessage(resources, saved)
+            if (saved.kind == ItemKind.WANT) {
+                val result = snackbarHostState.showSnackbar(
+                    message = message,
+                    actionLabel = resources.getString(R.string.priority_make),
+                    // Like every other message: a longer one would hold back the next (they queue). Accessibility
+                    // settings lengthen it for a snackbar with an action.
+                    duration = SnackbarDuration.Short
+                )
+                if (result == SnackbarResult.ActionPerformed) viewModel.makePriority(saved.itemId)
+            } else {
+                snackbarHostState.showSnackbar(message)
+            }
+        }
+    )
+}
 
 /**
- * Quick add without a screen behind it, e.g. over the app a share came from (#15): [onSaved] shows the message
- * that says how long the item waits, and [onClosed] runs once the sheet was open and has slid away again, after
- * saving or closing.
+ * Quick add without a screen behind it, e.g. over the app a share came from (#15): [onSaved] shows what was added
+ * ([savedMessage]), and [onClosed] runs once the sheet was open and has slid away again, after saving or closing.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickAddHost(viewModel: QuickAddViewModel, onSaved: suspend (message: String) -> Unit, onClosed: () -> Unit = {}) {
+fun QuickAddHost(viewModel: QuickAddViewModel, onSaved: suspend (QuickAddSaved) -> Unit, onClosed: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val locale = currentLocale()
     LaunchedEffect(viewModel, locale) { viewModel.setLocale(locale) }
 
     // Not keys: a restart would cancel a showing snackbar, and its event is already taken from the channel.
-    val resources by rememberUpdatedState(LocalResources.current)
     val currentOnSaved by rememberUpdatedState(onSaved)
     LaunchedEffect(viewModel) {
-        viewModel.saved.collect { currentOnSaved(savedMessage(resources, it)) }
+        viewModel.saved.collect { currentOnSaved(it) }
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -143,6 +177,8 @@ fun QuickAddForm(
             priceError = state.priceError,
             currency = state.currency,
             actions = actions,
+            // Quietly, while typing: the tier's waiting period, which starts once it's a priority (ADR-0049).
+            note = state.waitDays?.let { pluralStringResource(R.plurals.wait_once_priority, it, it) },
             // "Done" on the keyboard saves a valid form, so a want takes FAB → name → Next → price → Done.
             onDone = { if (state.canSave) actions.save() else defaultKeyboardAction(ImeAction.Done) },
             modifier = Modifier.focusRequester(priceFocus)
@@ -158,9 +194,10 @@ fun QuickAddForm(
     }
 }
 
-private fun savedMessage(resources: Resources, saved: QuickAddSaved): String = when (saved.kind) {
-    ItemKind.NEED -> resources.getString(R.string.quick_add_saved_need)
-
-    ItemKind.WANT ->
-        resources.getQuantityString(R.plurals.quick_add_saved_want, saved.coolingOffDays, saved.coolingOffDays)
-}
+/** "Added to your wishlist." for a want (ADR-0049), "Added as a need." for a need. */
+internal fun savedMessage(resources: Resources, saved: QuickAddSaved): String = resources.getString(
+    when (saved.kind) {
+        ItemKind.NEED -> R.string.quick_add_saved_need
+        ItemKind.WANT -> R.string.quick_add_saved_want
+    }
+)

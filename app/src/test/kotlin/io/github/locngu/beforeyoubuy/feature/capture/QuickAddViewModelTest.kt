@@ -2,15 +2,18 @@ package io.github.locngu.beforeyoubuy.feature.capture
 
 import app.cash.turbine.test
 import io.github.locngu.beforeyoubuy.core.domain.capture.CaptureForm
+import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
+import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
 import io.github.locngu.beforeyoubuy.testing.FakePolicyRepository
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Locale
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -35,12 +38,13 @@ class QuickAddViewModelTest {
     private val clock = Clock.fixed(now, berlin)
 
     private val items = FakeItemRepository()
+    private val policies = FakePolicyRepository().also { it.items = items }
     private lateinit var viewModel: QuickAddViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        viewModel = QuickAddViewModel(items, FakePolicyRepository(), clock)
+        viewModel = QuickAddViewModel(items, policies, clock)
         viewModel.setLocale(Locale.GERMANY)
     }
 
@@ -77,7 +81,7 @@ class QuickAddViewModelTest {
 
         viewModel.saved.test {
             viewModel.save()
-            assertEquals(QuickAddSaved(ItemKind.WANT, 30), awaitItem())
+            assertEquals(QuickAddSaved(ItemId(1), ItemKind.WANT), awaitItem())
         }
 
         val item = items.stored.single()
@@ -107,15 +111,53 @@ class QuickAddViewModelTest {
     }
 
     @Test
-    fun `the snackbar says each default tier's waiting period`() = runTest {
-        viewModel.saved.test {
-            for ((price, days) in listOf("50" to 7, "100" to 30, "500" to 60, "1000" to 90)) {
-                viewModel.open()
-                fill("Thing", price)
-                viewModel.save()
-                assertEquals("price $price", QuickAddSaved(ItemKind.WANT, days), awaitItem())
-            }
+    fun `the price shows each default tier's waiting period for a want, updating as it's typed`() {
+        viewModel.open()
+        viewModel.onNameChange("Thing")
+        assertNull(state.waitDays)
+        for ((price, days) in listOf("50" to 7, "100" to 30, "500" to 60, "1000" to 90)) {
+            viewModel.onPriceChange(price)
+            assertEquals("price $price", days, state.waitDays)
         }
+        viewModel.onPriceChange("abc")
+        assertNull(state.waitDays)
+        viewModel.onPriceChange("1000")
+        viewModel.onNeedChange(true)
+        assertNull(state.waitDays)
+    }
+
+    @Test
+    fun `make it a priority from the snackbar takes a free slot`() = runTest {
+        viewModel.open()
+        fill("Camera", "120")
+        viewModel.save()
+        val id = items.stored.single().id
+
+        viewModel.priorityEvents.test {
+            viewModel.makePriority(id)
+            assertEquals(PriorityEvent.Promoted("Camera", 1), awaitItem())
+        }
+        assertEquals(1, items.stored.single().prioritySlot)
+        assertEquals(now, items.stored.single().waitingSince)
+    }
+
+    @Test
+    fun `make it a priority from the snackbar with full slots opens the head-to-head`() = runTest {
+        policies.changePrioritySlots(1, emptyList(), now, ZoneOffset.UTC)
+        viewModel.open()
+        fill("Camera", "120")
+        viewModel.save()
+        viewModel.open()
+        fill("Bike", "300")
+        viewModel.save()
+        val (camera, bike) = items.stored
+        items.setPriorities(emptyList(), listOf(camera.id), now, ZoneOffset.UTC)
+
+        viewModel.priorityEvents.test {
+            viewModel.makePriority(bike.id)
+            assertEquals(PriorityEvent.Compare(bike.id), awaitItem())
+        }
+        assertNull(items.stored.single { it.id == bike.id }.prioritySlot)
     }
 
     @Test
@@ -126,7 +168,7 @@ class QuickAddViewModelTest {
 
         viewModel.saved.test {
             viewModel.save()
-            assertEquals(QuickAddSaved(ItemKind.NEED, 0), awaitItem())
+            assertEquals(QuickAddSaved(ItemId(1), ItemKind.NEED), awaitItem())
         }
         assertEquals(ItemKind.NEED, items.stored.single().kind)
         assertNull(items.stored.single().coolingEndsAt)
@@ -246,7 +288,7 @@ class QuickAddViewModelTest {
 
     @Test
     fun `nothing can be saved before the UI's locale is known`() {
-        val fresh = QuickAddViewModel(items, FakePolicyRepository(), clock)
+        val fresh = QuickAddViewModel(items, policies, clock)
         fresh.open()
         fresh.onNameChange("Camera")
         fresh.onPriceChange("120")

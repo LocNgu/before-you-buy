@@ -46,11 +46,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
+import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.core.domain.priorities.canBePriority
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.Wishlist
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
@@ -102,8 +104,9 @@ fun WishlistScreen(
 }
 
 /**
- * Stateless wishlist, for screenshots. The priorities come first by rank, with the slots and a way to change them;
- * then the other items grouped by stage, the soonest cooling-off end first. A want's row menu offers "Make priority".
+ * Stateless wishlist, for screenshots (ADR-0049). The priorities come first by rank, each with its stage, with the
+ * slots and a way to change them; then the needs; then every want without a slot under "Wishlist", whose row menu
+ * offers "Make it a priority".
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,11 +125,11 @@ fun WishlistContent(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = { QuickAddButton(onClick = onAdd) }
     ) { innerPadding ->
-        val groups = state.groups
+        val wishlist = state.wishlist
         when {
-            groups == null -> Unit
+            wishlist == null -> Unit
 
-            groups.isEmpty() && state.priorities.isEmpty() ->
+            wishlist.isEmpty() ->
                 Column(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     verticalArrangement = Arrangement.Center,
@@ -140,6 +143,7 @@ fun WishlistContent(
 
             else -> WishlistList(
                 state,
+                wishlist,
                 onOpenItem,
                 onMakePriority,
                 onChangePrioritySlots,
@@ -152,6 +156,7 @@ fun WishlistContent(
 @Composable
 private fun WishlistList(
     state: WishlistUiState,
+    wishlist: Wishlist,
     onOpenItem: (ItemId) -> Unit,
     onMakePriority: (ItemId) -> Unit,
     onChangePrioritySlots: (Int) -> Unit,
@@ -160,26 +165,27 @@ private fun WishlistList(
     var changingSlots by rememberSaveable { mutableStateOf(false) }
     // Leaves room for the floating button, so the last row isn't hidden behind it.
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
-        if (state.priorities.isNotEmpty()) {
-            item(key = "header-priorities") {
-                PrioritiesHeader(state.priorities.size, state.prioritySlots, onChange = { changingSlots = true })
-            }
-            items(state.priorities, key = { it.entry.item.id.value }) { priority ->
-                WishlistRow(
-                    priority.entry,
-                    state.photos[priority.entry.item.id],
-                    onClick = { onOpenItem(priority.entry.item.id) },
-                    rank = priority.rank
-                )
+        // Always shown: every new want starts on the wishlist, and this is where its wait can start (ADR-0049).
+        item(key = "header-priorities") {
+            PrioritiesHeader(wishlist.priorities.size, state.prioritySlots, onChange = { changingSlots = true })
+        }
+        items(wishlist.priorities, key = { it.entry.item.id.value }) { priority ->
+            WishlistRow(
+                priority.entry,
+                state.photos[priority.entry.item.id],
+                onClick = { onOpenItem(priority.entry.item.id) },
+                rank = priority.rank
+            )
+        }
+        if (wishlist.needs.isNotEmpty()) {
+            item(key = "header-needs") { SectionHeader(stringResource(R.string.wishlist_needs)) }
+            items(wishlist.needs, key = { it.item.id.value }) { entry ->
+                WishlistRow(entry, state.photos[entry.item.id], onClick = { onOpenItem(entry.item.id) })
             }
         }
-        state.groups.orEmpty().forEach { group ->
-            item(key = "header-${group.stage}-${group.waiting}") {
-                SectionHeader(
-                    if (group.waiting) stringResource(R.string.wishlist_waiting) else stageLabel(group.stage)
-                )
-            }
-            items(group.entries, key = { it.item.id.value }) { entry ->
+        if (wishlist.parked.isNotEmpty()) {
+            item(key = "header-parked") { SectionHeader(stringResource(R.string.wishlist_title)) }
+            items(wishlist.parked, key = { it.item.id.value }) { entry ->
                 val id = entry.item.id
                 WishlistRow(
                     entry,
@@ -203,7 +209,10 @@ private fun WishlistList(
     }
 }
 
-/** "Priorities", how many slots are used (brief §4.7) and "Change", which opens the slots dialog. */
+/**
+ * "Priorities", how many slots are used (brief §4.7) and "Change", which opens the slots dialog. Without priorities, a
+ * line says what one is for (ADR-0049).
+ */
 @Composable
 private fun PrioritiesHeader(used: Int, slots: Int, onChange: () -> Unit) {
     Column {
@@ -220,12 +229,21 @@ private fun PrioritiesHeader(used: Int, slots: Int, onChange: () -> Unit) {
             )
             TextButton(onClick = onChange) { Text(stringResource(R.string.priority_slots_change)) }
         }
+        if (used == 0) {
+            Text(
+                text = stringResource(R.string.priorities_empty_hint),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 /**
- * One item: thumbnail, name, stage and status, price. A priority shows its [rank] before the name; a want that can
- * become one has a menu with "Make priority" ([onMakePriority]).
+ * One item: thumbnail, name, stage and status, price. A priority shows its [rank] before the name. A want without a
+ * slot has no stage and no rank, only how much of its wait is done, and a menu with "Make it a priority"
+ * ([onMakePriority]).
  */
 @Composable
 private fun WishlistRow(
@@ -264,9 +282,9 @@ private fun WishlistRow(
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // A parked want's group heading already says "Wishlist" (ADR-0049).
+                // A parked want has no stage: it's under "Wishlist", and nothing runs for it (ADR-0049).
                 if (entry.stage != Stage.PARKED) StageChip(entry.stage, waiting = entry.recheckOn != null)
-                StageStatus(entry.stage, entry.daysLeft, entry.recheckOn, entry.savings?.shownToGo)
+                StageStatus(entry.stage, entry.daysLeft, entry.recheckOn, entry.savings?.shownToGo, entry.waitProgress)
             }
             // How far the savings are, once something is set aside; detail has the amounts (brief §4.6).
             entry.savings?.takeIf { it.allocated.minorUnits > 0 }?.let { savings ->
@@ -295,7 +313,7 @@ internal fun PriorityRank(rank: Int) {
     )
 }
 
-/** A row's ⋮ menu: "Make priority" (brief §4.7). */
+/** A row's ⋮ menu: "Make it a priority" (brief §4.7). */
 @Composable
 private fun RowMenu(name: String, onMakePriority: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
@@ -320,11 +338,17 @@ private fun RowMenu(name: String, onMakePriority: () -> Unit) {
 
 /**
  * A countdown while cooling off, otherwise what the item is waiting for: after "Wait", the date to look again
- * ([recheckOn]); while saving, what is still to set aside ([toGo]); for a parked want, that it isn't a priority
- * (ADR-0049). Informational, never urgent.
+ * ([recheckOn]); while saving, what is still to set aside ([toGo]); for a parked want, how much of its wait is done
+ * ([waitProgress]), else that it isn't a priority (ADR-0049). Informational, never urgent.
  */
 @Composable
-internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = null, toGo: Money? = null) {
+internal fun StageStatus(
+    stage: Stage,
+    daysLeft: Int,
+    recheckOn: LocalDate? = null,
+    toGo: Money? = null,
+    waitProgress: WaitProgress? = null
+) {
     val style = MaterialTheme.typography.bodyMedium
     if (recheckOn != null) {
         Text(
@@ -337,7 +361,7 @@ internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = nu
     when (stage) {
         Stage.PARKED ->
             Text(
-                text = stringResource(R.string.stage_not_priority),
+                text = waitProgress?.let { waitProgressText(it) } ?: stringResource(R.string.stage_not_priority),
                 style = style,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -364,12 +388,12 @@ internal fun StageStatus(stage: Stage, daysLeft: Int, recheckOn: LocalDate? = nu
     }
 }
 
-/** The stage, or "Waiting" for a Ready item after "Wait" until its date ([waiting]). */
+/** The stage, or "Looking again later" for a Ready item after "Wait" until its date ([waiting], ADR-0049). */
 @Composable
 internal fun StageChip(stage: Stage, waiting: Boolean = false) {
     Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(
-            text = if (waiting) stringResource(R.string.stage_waiting) else stageLabel(stage),
+            text = if (waiting) stringResource(R.string.wishlist_waiting) else stageLabel(stage),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -392,6 +416,18 @@ internal fun stageLabel(stage: Stage): String = stringResource(
         Stage.READY -> R.string.stage_ready
     }
 )
+
+/** "Waiting period not started (30 days)", "12 of 30 days waited" or "Waiting period done" (ADR-0049). */
+@Composable
+internal fun waitProgressText(progress: WaitProgress): String = when (progress) {
+    is WaitProgress.NotStarted ->
+        pluralStringResource(R.plurals.wait_progress_not_started, progress.days, progress.days)
+
+    is WaitProgress.Partly ->
+        pluralStringResource(R.plurals.wait_progress_partly, progress.days, progress.waited, progress.days)
+
+    WaitProgress.Done -> stringResource(R.string.wait_progress_done)
+}
 
 /** Decoded size of photo thumbnails: enough for 48 dp on the densest screens. */
 internal const val THUMBNAIL_SIZE_PX = 192

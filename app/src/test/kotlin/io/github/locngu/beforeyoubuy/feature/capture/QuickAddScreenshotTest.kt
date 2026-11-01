@@ -51,7 +51,18 @@ abstract class QuickAddScreenshotTest(private val german: Boolean) {
                 targetDate = LocalDate.of(2026, 12, 24)
             ),
             detailsExpanded = true,
-            canSave = true
+            canSave = true,
+            waitDays = 30
+        )
+    )
+
+    /** A 1,500 € want: the tier's 90 days under the price, once it's a priority (ADR-0049). */
+    @Test
+    fun waitHint() = capture(
+        opened.copy(
+            form = CaptureForm(name = t("Road bike", "Rennrad"), price = t("1500", "1500")),
+            canSave = true,
+            waitDays = 90
         )
     )
 
