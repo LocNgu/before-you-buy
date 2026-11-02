@@ -285,8 +285,11 @@ The explicit "Let it go" action is deliberate: in the *one sec* study the option
 | **M0 Foundation** | A buildable, tested, CI-checked empty app | Cloud env/SDK, project scaffold, CI, theme & i18n |
 | **M1 Core loop** | Usable for the creator's own purchases | Domain model, cooling-off engine, persistence, quick add, share capture, wishlist/detail, reflection, decision screen (basic opportunity cost), history, notifications, dashboard |
 | **M2 Money & priorities** | The differentiators | Allowance pool, per-item savings & Ready, priorities + head-to-head, full opportunity cost |
-| **M3 Release** | Google Play closed test → production | Settings, export/import, onboarding, German copy, accessibility, privacy policy, name/ID/account decisions, store listing & release pipeline |
+| **M3 Ready to share** | Complete for anyone who installs it, with or without Google Play (signed APKs on GitHub Releases) | Settings, export/import, onboarding, German copy, accessibility, third-party licence notices, wishlist sort & filter, warmth without a score |
+| **M4 Google Play** | Google Play closed test → production | Final name & logo, privacy policy & Play declarations, account type & testers, AAB, store listing & Play tracks |
 | **Later** | v1.x | Home-screen widget, "Was it worth it?" check-in & insights, opt-in link previews, cost in hours worked, monetization |
+
+M3 and M4 were one milestone until 2026-11-01. The line between them: what the app needs even if it never goes on Google Play is M3; what exists only because of Play is M4. M4's owner decisions (name, account) can start before M3 is done.
 
 Capture methods: share sheet + manual quick add (M1), home-screen widget (Later).
 
