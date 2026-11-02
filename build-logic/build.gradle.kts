@@ -18,6 +18,10 @@ gradlePlugin {
             id = "beforeyoubuy.string-parity"
             implementationClass = "io.github.locngu.beforeyoubuy.buildlogic.StringParityPlugin"
         }
+        register("dependencyLicences") {
+            id = "beforeyoubuy.dependency-licences"
+            implementationClass = "io.github.locngu.beforeyoubuy.buildlogic.DependencyLicencesPlugin"
+        }
         register("release") {
             id = "beforeyoubuy.release"
             implementationClass = "io.github.locngu.beforeyoubuy.buildlogic.ReleasePlugin"

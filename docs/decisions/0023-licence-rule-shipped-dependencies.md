@@ -1,6 +1,6 @@
 # ADR-0023: The dependency licence rule covers what ships; test and build tools are exempt
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0053 (licence notices in every APK, enforced by `verify`)
 **Type**: technical
 **Date**: 2026-10-10
 

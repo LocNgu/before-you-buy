@@ -9,6 +9,7 @@ paths:
   - "**/AndroidManifest.xml"
   - "**/src/test/**/*"
   - "build-logic/**/*"
+  - "app/third-party/**/*"
 ---
 
 # Build (ADR-0017)
@@ -24,7 +25,7 @@ paths:
 ## Version catalog (`gradle/libs.versions.toml`)
 
 - Every version lives in `[versions]`, including SDK levels and `jvmTarget`. Build files never hard-code a version.
-- Use latest **stable** releases only (no alpha/beta/rc). A new dependency that ships (release runtime or debug-only) must be Apache-2.0, MIT or BSD; test-only and build-only ones may be any OSI-approved licence (ADR-0004, ADR-0023). Write the licence as a comment if it's not Apache-2.0, and state licence and classpath in the PR. Check what permissions it merges into the release manifest (ADR-0003).
+- Use latest **stable** releases only (no alpha/beta/rc). A new dependency that ships (release runtime or debug-only) must be Apache-2.0, MIT or BSD; test-only and build-only ones may be any OSI-approved licence (ADR-0004, ADR-0023). Write the licence as a comment if it's not Apache-2.0, and state licence and classpath in the PR. `verify` checks shipped licences and notices (see "Dependency licences" below). Check what permissions it merges into the release manifest (ADR-0003).
 - Alias names are kebab-case (`androidx-room-runtime`), giving `libs.androidx.room.runtime`. Compose libraries come from the BOM and have no version.
 - Changing `compileSdk`: also bump `DEFAULT_COMPILE_SDK` in `scripts/install-android-sdk.sh`, then run that script (see `ci-build.md`).
 
@@ -36,7 +37,7 @@ paths:
 
 ## Verify task
 
-- `./gradlew verify` (root `build.gradle.kts`): `spotlessCheck`, every module's `lint`, the debug unit tests, `:app:verifyRoborazziDebug`, the hard-constraint checks `:app:checkNoInternetPermission` and `checkStringParity`, and `build-logic`'s own tests. CI runs exactly this (`.claude/rules/ci-build.md`).
+- `./gradlew verify` (root `build.gradle.kts`): `spotlessCheck`, every module's `lint`, the debug unit tests, `:app:verifyRoborazziDebug`, the hard-constraint checks `:app:checkNoInternetPermission`, `checkStringParity` and `:app:checkDependencyLicences`, and `build-logic`'s own tests. CI runs exactly this (`.claude/rules/ci-build.md`).
 - Lint treats warnings as errors. The version-update checks (`GradleDependency`, `NewerVersionAvailable`, `AndroidGradlePluginVersion`) are off for every module in the root `lint.xml`, so the result doesn't depend on the network or the date. Fix a lint finding rather than suppressing it; if you must suppress, use `@Suppress`/`tools:ignore` at the narrowest scope with a reason.
 - Formatting: Spotless + ktlint, `android_studio` style (`.editorconfig`). `./gradlew spotlessApply` fixes it.
 
@@ -46,8 +47,18 @@ paths:
 - `beforeyoubuy.no-internet-permission` (applied in `:app`) registers `checkNoInternetPermission`: it reads the **merged manifest of every release variant** (`SingleArtifact.MERGED_MANIFEST`) and fails on `uses-permission`/`uses-permission-sdk-23`/`uses-permission-sdk-m` for `android.permission.INTERNET`.
 - `beforeyoubuy.string-parity` (applied at the root) registers `checkStringParity`: for each `src/*/res/` of every module it compares the `string`, `plurals` and `string-array` names in `values/*.xml` with `values-de/*.xml`. `translatable="false"` strings need no German entry and must not have one.
 - `beforeyoubuy.release` (applied in `:app`) sets the version and release signing (above) and registers `releaseNotes`, which writes the version's `CHANGELOG.md` section to `app/build/release/notes.md` (`docs/releasing.md`).
-- Logic sits in plain functions (`ManifestPermissions`, `StringResources`, `AppVersion`, `ReleaseSigning`, `Changelog`) with JUnit tests; the tasks only collect files and format messages. Task classes use lazy properties only (configuration cache). `build-logic` uses only AGP's `gradle-api`, `compileOnly`.
+- `beforeyoubuy.dependency-licences` (applied in `:app`) registers `check<Variant>DependencyLicences` for every variant and `checkDependencyLicences` for all of them (below).
+- Logic sits in plain functions (`ManifestPermissions`, `StringResources`, `AppVersion`, `ReleaseSigning`, `Changelog`, `DependencyLicences`) with JUnit tests; the tasks only collect files and format messages. Task classes use lazy properties only (configuration cache). `build-logic` uses only AGP's `gradle-api`, `compileOnly`.
 - A new hard constraint: add it here as a plugin + tested logic, then add its task to `verify`.
+
+## Dependency licences (ADR-0023, ADR-0053)
+
+- **Notices:** the AboutLibraries Gradle plugin (`aboutLibraries {}` in `app/build.gradle.kts`) writes `res/raw/aboutlibraries.json` into each variant: every external library on its classpath with its licences, from the POMs (resolved by Gradle like any dependency). It never downloads licence texts (`offlineMode`); they come from `app/third-party/`. `res/raw/keep.xml` keeps the file through resource shrinking. Never edit the generated file.
+- **Check:** `check<Variant>DependencyLicences` reads that same file and the variant's resolved runtime classpath (graph and AARs/JARs). It fails for a module missing from the file, a licence other than Apache-2.0, MIT, BSD-2-Clause or BSD-3-Clause, an unrecognised or missing licence unless allow-listed, a missing licence text, an MIT/BSD library without its own copy, and a NOTICE file in an artifact whose text isn't in its library's licences. Its report `app/build/reports/checkDependencyLicences/<variant>.txt` lists every library with its licences (use it for the PR's licence line).
+- **`app/third-party/`** (AboutLibraries' config format): `licenses/<key>.json` (`hash` = key, `spdxId`, `name`, `url`, `content` = the text; the generic texts use the SPDX id as key), `libraries/<group>.<artifact>.json` (`uniqueId` = `group:artifact`, `licenses` = keys to add), and `allowlist.json`.
+- **Adding a dependency:** Apache-2.0: nothing to do. MIT or BSD: the generic text has only a placeholder copyright line, so add the library's own LICENSE file verbatim as `licenses/<name>.json` (key `<name>`, `spdxId` its licence) and `libraries/<group>.<artifact>.json` pointing at it, like protobuf's. If the artifact contains a NOTICE file, add its text verbatim the same way (`spdxId` the library's licence), like `jakarta-inject-notice`.
+- **When it fails:** "missing from the notices": AboutLibraries couldn't download that POM (it logs "Failed to resolve POM batch", often an HTTP 429 on a cold cache); run the build again. "not allowed": the library can't ship; remove or replace it (test and build tools may use other licences). "isn't recognised" or "names no licence": read the LICENSE file in the library's source repository. If it is one of the four, add `{"artifact": "group:artifact", "licence": "<SPDX id>", "reason": "<where you checked, date>"}` to `allowlist.json`, and link the library to that licence's text in `libraries/<group>.<artifact>.json` (`Apache-2.0`, or its own copy for MIT/BSD). An entry only applies while the POM's licence is unrecognised or missing; the report lists entries without effect, so remove them. Never allow-list another licence. "no text", "own copy" or "NOTICE": add the missing text under `licenses/` and link it in `libraries/`.
+- AboutLibraries maps POM licence names loosely (a name containing "MIT" counts as MIT), so still read a new dependency's licence yourself.
 
 ## Tests
 

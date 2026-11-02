@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.hilt) apply false
     alias(libs.plugins.room) apply false
     alias(libs.plugins.roborazzi) apply false
+    alias(libs.plugins.aboutlibraries.android) apply false
     alias(libs.plugins.spotless)
     id("beforeyoubuy.string-parity")
 }
@@ -46,9 +47,11 @@ tasks.register("verify") {
         ":core:domain:test",
         ":app:verifyRoborazziDebug",
         // Hard constraints (build-logic, ADR-0025): no INTERNET in the release manifest (ADR-0003),
-        // the same strings in values/ and values-de/ (ADR-0016).
+        // the same strings in values/ and values-de/ (ADR-0016), only Apache-2.0/MIT/BSD libraries
+        // in what ships, each with its notice in the APK (ADR-0023, ADR-0053).
         ":app:checkNoInternetPermission",
         "checkStringParity",
+        ":app:checkDependencyLicences",
         gradle.includedBuild("build-logic").task(":test")
     )
 }

@@ -5,7 +5,11 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
+    // Third-party licence notices in the APK, generated from each variant's classpath (ADR-0053).
+    alias(libs.plugins.aboutlibraries.android)
     id("beforeyoubuy.no-internet-permission")
+    // Checks those notices: only Apache-2.0/MIT/BSD libraries ship, each with its licence text (ADR-0023).
+    id("beforeyoubuy.dependency-licences")
     // versionName/versionCode from the release tag, release signing from environment variables (ADR-0029).
     id("beforeyoubuy.release")
 }
@@ -77,6 +81,20 @@ kotlin {
 roborazzi {
     // Golden images are committed next to the tests. Tests call captureRoboImage() without a path.
     outputDir = file("src/test/screenshots")
+}
+
+// Writes res/raw/aboutlibraries.json for each variant: every library on its classpath with its licences
+// (ADR-0053). checkDependencyLicences reads the same file. How to add or allow-list: .claude/rules/build.md.
+aboutLibraries {
+    // Never download licence texts: they come from third-party/licenses/, so a failed download can't drop them
+    // from the APK. (POMs still come through Gradle's normal dependency resolution.)
+    offlineMode = true
+    collect {
+        // Licence texts, libraries' own notices (libraries/) and the check's allow-list.
+        configPath = file("third-party")
+        // BOMs are version constraints, not code in the APK.
+        includePlatform = false
+    }
 }
 
 dependencies {
