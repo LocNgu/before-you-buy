@@ -16,8 +16,8 @@ data class AppPreferences(
 )
 
 /**
- * Which notifications the user wants (brief §8); one switch per notification channel. The daily check reads them;
- * the Settings screen (M3) will change them. Until then both are on, and the system's per-channel switches apply.
+ * Which notifications the user wants (brief §8); one switch per notification channel, both on by default. The daily
+ * check reads them; Settings changes them. The system's per-channel switches apply on top ([notificationNoticeOf]).
  */
 data class NotificationPrefs(val waitingPeriods: Boolean = true, val reflectionReminders: Boolean = true)
 

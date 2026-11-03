@@ -352,4 +352,22 @@
     <string name="opportunity_cost_share">%1$d %% des Preises von %2$s (#%3$d)</string>
     <string name="opportunity_cost_share_less">Weniger als 1 %% des Preises von %1$s (#%2$d)</string>
     <string name="opportunity_cost_months_less">Weniger als ein Monat deines Spaßgelds</string>
+
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_fun_money_row">Monatsbetrag und Anpassungen</string>
+    <string name="settings_notifications_title">Benachrichtigungen</string>
+    <string name="settings_notifications_blocked">Benachrichtigungen sind für diese App in den Systemeinstellungen aus, daher erscheinen keine.</string>
+    <string name="settings_notifications_channel_off">In den Systemeinstellungen ausgeschaltet</string>
+    <string name="settings_open_system_settings">Systemeinstellungen öffnen</string>
+    <string name="settings_language_title">Sprache</string>
+    <string name="settings_language_app">App-Sprache</string>
+    <string name="settings_language_current">Deutsch</string>
+    <string name="settings_language_follows_system">Folgt der Systemsprache</string>
+    <string name="settings_about_title">Über die App</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_licence">Quellcode einsehbar, kostenlos für private und nicht kommerzielle Nutzung</string>
+    <string name="settings_source">Quellcode</string>
+    <string name="settings_privacy_title">Datenschutz</string>
+    <string name="settings_privacy_body">Alles bleibt auf deinem Gerät: kein Konto, kein Server, keine Analyse, keine Werbung. Die App hat keine Internetberechtigung und kann deine Daten daher nirgendwohin senden.</string>
+    <string name="settings_no_app">Keine App auf diesem Gerät kann das öffnen.</string>
 </resources>

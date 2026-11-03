@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -23,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -47,7 +50,8 @@ import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
 
 /**
  * Home (brief §6.1): what can I decide on, what am I considering, what am I saving for (the priorities) and how much
- * fun money there is for wants. [onOpenFunMoney] sets it up or changes it; [onOpenItem] opens a priority. Quick add is
+ * fun money there is for wants. [onOpenFunMoney] sets it up or changes it; [onOpenItem] opens a priority. The top bar
+ * opens History and Settings. Quick add is
  * hosted by the navigation, so this only asks to open it with [onAdd].
  */
 @Composable
@@ -56,6 +60,7 @@ fun HomeScreen(
     onOpenDecision: (ItemId) -> Unit,
     onOpenWishlist: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenFunMoney: () -> Unit,
     onOpenItem: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -69,6 +74,7 @@ fun HomeScreen(
         onOpenDecision = onOpenDecision,
         onOpenWishlist = onOpenWishlist,
         onOpenHistory = onOpenHistory,
+        onOpenSettings = onOpenSettings,
         onOpenFunMoney = onOpenFunMoney,
         onOpenItem = onOpenItem,
         snackbarHostState = snackbarHostState,
@@ -88,6 +94,7 @@ fun HomeContent(
     onOpenDecision: (ItemId) -> Unit,
     onOpenWishlist: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenFunMoney: () -> Unit,
     onOpenItem: (ItemId) -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -98,7 +105,12 @@ fun HomeContent(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
-                actions = { TextButton(onClick = onOpenHistory) { Text(stringResource(R.string.history_open)) } }
+                actions = {
+                    TextButton(onClick = onOpenHistory) { Text(stringResource(R.string.history_open)) }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings_title))
+                    }
+                }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

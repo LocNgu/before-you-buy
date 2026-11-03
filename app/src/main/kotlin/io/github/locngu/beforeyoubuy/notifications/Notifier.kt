@@ -14,6 +14,7 @@ import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationKind
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationPlan
+import io.github.locngu.beforeyoubuy.core.domain.settings.SystemNotifications
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +24,7 @@ import javax.inject.Singleton
  * [NotificationKind], so the user can switch each off in the system settings.
  */
 @Singleton
-class Notifier @Inject constructor(@param:ApplicationContext private val context: Context) {
+class Notifier @Inject constructor(@param:ApplicationContext private val context: Context) : SystemNotificationsReader {
     private val manager = NotificationManagerCompat.from(context)
 
     /**
@@ -51,8 +52,24 @@ class Notifier @Inject constructor(@param:ApplicationContext private val context
      * app's switch) and the kind's channel isn't switched off.
      */
     fun canShow(kind: NotificationKind): Boolean {
-        if (!hasPermission() || !manager.areNotificationsEnabled()) return false
+        if (!appAllowed()) return false
         createChannels()
+        return channelOn(kind)
+    }
+
+    /** What the phone lets through: the app as a whole, and each channel (Settings says when something is off). */
+    override fun read(): SystemNotifications {
+        createChannels()
+        return SystemNotifications(
+            appAllowed = appAllowed(),
+            waitingPeriodsChannelOn = channelOn(NotificationKind.WAITING_PERIOD_OVER),
+            reflectionRemindersChannelOn = channelOn(NotificationKind.REFLECTION_NUDGE)
+        )
+    }
+
+    private fun appAllowed() = hasPermission() && manager.areNotificationsEnabled()
+
+    private fun channelOn(kind: NotificationKind): Boolean {
         val channel = manager.getNotificationChannelCompat(channelOf(kind)) ?: return false
         return channel.importance != NotificationManagerCompat.IMPORTANCE_NONE
     }

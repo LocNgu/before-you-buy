@@ -6,6 +6,7 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ### Added
 
+- Settings, from the gear next to "History" on Home. Fun money opens its screen; "Priority slots" shows how many are used and changes how many there are, like the wishlist's "Change". Switch the waiting period notifications and the reflection reminders on or off; when your phone blocks the app's notifications, or one kind of them, Settings says so and opens the right page of the system settings. On Android 13 and later, "App language" opens the system's language page for the app; on older versions the app follows the system language. About shows the version, the licence (source available, free for personal and non-commercial use), a link to the source code and what happens with your data: everything stays on your phone.
 - The app now includes the licence texts and copyright notices of the third-party libraries it's built with, as their licences require. A screen to read them follows in a later version.
 
 ## [0.6.0] - 2026-11-01
