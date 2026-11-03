@@ -10,6 +10,7 @@ import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationNotice
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import io.github.locngu.beforeyoubuy.core.domain.settings.PolicyRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.PreferencesRepository
+import io.github.locngu.beforeyoubuy.core.domain.settings.SystemNotifications
 import io.github.locngu.beforeyoubuy.core.domain.settings.notificationNoticeOf
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.notifications.SystemNotificationsReader
@@ -21,10 +22,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * What Settings shows (brief §6.7, ADR-0054): the notification switches and what the phone does with them
@@ -42,8 +46,8 @@ data class SettingsUiState(
 /**
  * Settings: the notification switches (stored in [PreferencesRepository]) and the priority slots (through
  * [PolicyRepository.changePrioritySlots], like the wishlist's "Change", ADR-0047). The phone's own notification
- * switches are read with [SystemNotificationsReader]; the screen calls [refreshSystemNotifications] whenever it comes
- * back, since the user may have changed them in the system settings meanwhile.
+ * switches are read with [SystemNotificationsReader] only by [refreshSystemNotifications], which the screen calls each
+ * time it comes to the front (the first time too), since the user may have changed them in the system settings.
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -53,12 +57,19 @@ class SettingsViewModel @Inject constructor(
     private val system: SystemNotificationsReader,
     private val clock: Clock
 ) : ViewModel() {
-    private val systemNotifications = MutableStateFlow(system.read())
+    // Null until the first resume reads it, so each visit asks the system once, not also at construction.
+    private val systemNotifications = MutableStateFlow<SystemNotifications?>(null)
+    private val notificationWrites = Mutex()
     private val events = Channel<PriorityEvent>(Channel.BUFFERED)
 
-    /** Null until the preferences, the policy and the items are read. */
+    /** Null until the preferences, the policy, the items and the phone's notification state are read. */
     val uiState: StateFlow<SettingsUiState?> =
-        combine(preferences.preferences, systemNotifications, policies.policy, items.observeActive()) {
+        combine(
+            preferences.preferences,
+            systemNotifications.filterNotNull(),
+            policies.policy,
+            items.observeActive()
+        ) {
                 prefs,
                 system,
                 policy,
@@ -87,10 +98,13 @@ class SettingsViewModel @Inject constructor(
 
     fun setReflectionReminders(on: Boolean) = updateNotifications { it.copy(reflectionReminders = on) }
 
-    // Applied to the stored preferences, not the shown ones, so two quick taps on different switches both stick.
+    // Applied to the stored preferences, not the shown ones, one change at a time, so two quick taps on different
+    // switches both stick.
     private fun updateNotifications(change: (NotificationPrefs) -> NotificationPrefs) {
         viewModelScope.launch {
-            preferences.setNotificationPrefs(change(preferences.preferences.first().notifications))
+            notificationWrites.withLock {
+                preferences.setNotificationPrefs(change(preferences.preferences.first().notifications))
+            }
         }
     }
 

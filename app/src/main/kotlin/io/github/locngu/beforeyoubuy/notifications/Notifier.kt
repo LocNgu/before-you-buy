@@ -57,20 +57,20 @@ class Notifier @Inject constructor(@param:ApplicationContext private val context
         return channelOn(kind)
     }
 
-    /** What the phone lets through: the app as a whole, and each channel (Settings says when something is off). */
-    override fun read(): SystemNotifications {
-        createChannels()
-        return SystemNotifications(
-            appAllowed = appAllowed(),
-            waitingPeriodsChannelOn = channelOn(NotificationKind.WAITING_PERIOD_OVER),
-            reflectionRemindersChannelOn = channelOn(NotificationKind.REFLECTION_NUDGE)
-        )
-    }
+    /**
+     * What the phone lets through: the app as a whole, and each channel (Settings says when something is off). Only
+     * reads: a channel not created yet isn't switched off, and is created before anything is shown on it.
+     */
+    override fun read(): SystemNotifications = SystemNotifications(
+        appAllowed = appAllowed(),
+        waitingPeriodsChannelOn = channelOn(NotificationKind.WAITING_PERIOD_OVER, missing = true),
+        reflectionRemindersChannelOn = channelOn(NotificationKind.REFLECTION_NUDGE, missing = true)
+    )
 
     private fun appAllowed() = hasPermission() && manager.areNotificationsEnabled()
 
-    private fun channelOn(kind: NotificationKind): Boolean {
-        val channel = manager.getNotificationChannelCompat(channelOf(kind)) ?: return false
+    private fun channelOn(kind: NotificationKind, missing: Boolean = false): Boolean {
+        val channel = manager.getNotificationChannelCompat(channelOf(kind)) ?: return missing
         return channel.importance != NotificationManagerCompat.IMPORTANCE_NONE
     }
 

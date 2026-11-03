@@ -6,6 +6,7 @@ import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.settings.AppPreferences
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationNotice
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
+import io.github.locngu.beforeyoubuy.core.domain.settings.PreferencesRepository
 import io.github.locngu.beforeyoubuy.core.domain.settings.SystemNotifications
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
@@ -15,9 +16,12 @@ import io.github.locngu.beforeyoubuy.testing.MutableClock
 import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -41,6 +45,8 @@ class SettingsViewModelTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         viewModel = SettingsViewModel(preferences, policies, items, { system }, clock)
+        // As the screen does on its first resume.
+        viewModel.refreshSystemNotifications()
     }
 
     @After
@@ -99,6 +105,34 @@ class SettingsViewModelTest {
             preferences.preferences.value.notifications
         )
     }
+
+    @Test
+    fun `two quick taps on different switches both stick, even while a write is still under way`() =
+        runTest(UnconfinedTestDispatcher()) {
+            // Like DataStore: a write takes a while before the new value can be read.
+            val slow = object : PreferencesRepository {
+                override val preferences = MutableStateFlow(AppPreferences())
+
+                override suspend fun setNotificationPrefs(prefs: NotificationPrefs) {
+                    delay(100)
+                    preferences.value = preferences.value.copy(notifications = prefs)
+                }
+
+                override suspend fun setOnboardingComplete(complete: Boolean) = Unit
+
+                override suspend fun setNotificationPermissionAsked(asked: Boolean) = Unit
+            }
+            val viewModel = SettingsViewModel(slow, policies, items, { system }, clock)
+
+            viewModel.setWaitingPeriods(false)
+            viewModel.setReflectionReminders(false)
+            advanceUntilIdle()
+
+            assertEquals(
+                NotificationPrefs(waitingPeriods = false, reflectionReminders = false),
+                slow.preferences.value.notifications
+            )
+        }
 
     @Test
     fun `what the phone blocks is read again on refresh`() = runTest(UnconfinedTestDispatcher()) {

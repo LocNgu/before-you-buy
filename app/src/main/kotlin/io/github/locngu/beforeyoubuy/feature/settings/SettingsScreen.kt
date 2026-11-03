@@ -3,6 +3,7 @@ package io.github.locngu.beforeyoubuy.feature.settings
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -101,15 +102,12 @@ fun SettingsScreen(
     }
     fun openWeb(url: String) {
         if (runCatching { uriHandler.openUri(url) }.isFailure) {
-            scope.launch { snackbarHostState.showSnackbar(resources.getString(R.string.item_link_not_opened)) }
+            scope.launch { snackbarHostState.showSnackbar(resources.getString(R.string.settings_no_app)) }
         }
     }
-    val perAppLanguage = hasPerAppLanguageSettings()
-    SettingsContent(
-        state = state,
-        version = remember(context) { appVersion(context) },
-        perAppLanguage = perAppLanguage,
-        actions = SettingsActions(
+    // Remembered, so a new state (a switch, a resume) doesn't hand the sections new callbacks and recompose them all.
+    val actions = remember(viewModel, context, onOpenFunMoney) {
+        SettingsActions(
             onOpenFunMoney = onOpenFunMoney,
             onChangePrioritySlots = viewModel::changePrioritySlots,
             onWaitingPeriods = viewModel::setWaitingPeriods,
@@ -121,7 +119,13 @@ fun SettingsScreen(
             },
             onOpenLicence = { openWeb(LICENCE_URL) },
             onOpenSource = { openWeb(SOURCE_URL) }
-        ),
+        )
+    }
+    SettingsContent(
+        state = state,
+        version = remember(context) { appVersion(context) },
+        perAppLanguage = hasPerAppLanguageSettings(),
+        actions = actions,
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
@@ -328,5 +332,13 @@ private fun QuietLine(text: String) {
 }
 
 /** The installed version (`versionName`, from the release tag, ADR-0029). */
-private fun appVersion(context: Context): String =
-    context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+private fun appVersion(context: Context): String {
+    val packages = context.packageManager
+    val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        packages.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+    } else {
+        @Suppress("DEPRECATION") // The flags overload exists from Android 13.
+        packages.getPackageInfo(context.packageName, 0)
+    }
+    return info.versionName.orEmpty()
+}
