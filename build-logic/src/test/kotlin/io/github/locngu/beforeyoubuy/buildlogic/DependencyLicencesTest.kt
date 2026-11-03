@@ -157,6 +157,22 @@ class DependencyLicencesTest {
     }
 
     @Test
+    fun `the generic template under a library's own key doesn't count as its own copy`() {
+        val template =
+            Licence("odd-mit", "Odd (MIT)", null, "MIT", "MIT License\n\nCopyright (c) <year> <copyright holders>\n")
+        val mit = Licence("MIT", "MIT License", null, "MIT", template.text)
+        val metadata = metadata(library("org.example:odd", "MIT", "odd-mit"), licences = listOf(apache, mit, template))
+
+        val problems = check(metadata)
+
+        assertEquals(listOf("org.example:odd:1.0" to ProblemKind.NO_OWN_NOTICE), kinds(problems))
+        assertEquals(
+            "org.example:odd:1.0: MIT needs the library's own copy of the licence, with its real copyright line",
+            problems.single().toString()
+        )
+    }
+
+    @Test
     fun `an own notice for another licence doesn't count`() {
         val mitNotice = Licence("odd-mit", "Odd (MIT)", null, "MIT", "Copyright 2020 Someone")
         val metadata =
@@ -345,15 +361,20 @@ class DependencyLicencesTest {
             "lib.jar",
             "META-INF/NOTICE.md" to "jar notice",
             "META-INF/LICENSE.txt" to "licence",
+            "org/bouncycastle/asn1/x509/NoticeReference.class" to "not a notice",
             "a/B.class" to "x"
         )
         val classes = zipBytes("META-INF/NOTICE" to "classes notice")
         val inner = zipBytes("notice.txt" to "libs notice")
+        // Lint checks for the IDE; never in the APK.
+        val lint = zipBytes("META-INF/NOTICE" to "lint notice")
         val aar = zip(
             "lib.aar",
             "META-INF/androidx/x/NOTICE.txt" to "root notice",
+            "res/drawable/notice_icon.png" to "not a notice",
             "classes.jar" to classes,
-            "libs/inner.jar" to inner
+            "libs/inner.jar" to inner,
+            "lint.jar" to lint
         )
 
         assertEquals(listOf(NoticeFile("META-INF/NOTICE.md", "jar notice")), DependencyLicences.noticeFiles(jar))

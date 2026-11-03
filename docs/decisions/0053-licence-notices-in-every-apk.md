@@ -26,7 +26,8 @@ Alternatives considered:
   - a module on the variant's runtime classpath is missing from the file. AboutLibraries leaves a library out, with only a log warning, when it can't download its POM, which happened while this was built (Maven Central rate limits);
   - a licence AboutLibraries recognises isn't Apache-2.0, MIT, BSD-2-Clause or BSD-3-Clause;
   - a licence it doesn't recognise, or no licence at all, appears, unless `app/third-party/allowlist.json` lists the artifact with the licence a person found by hand (one of those four) and why, and the notices link the library to that licence's text. The allow-list can't permit any other licence, and an entry stops applying once the licence is recognised (the check's report lists such entries);
-  - a licence a library uses has no text, an MIT or BSD library has no own copy, or the text of a NOTICE file in a shipped AAR or JAR isn't among its library's licences.
+  - a licence a library uses has no text, an MIT or BSD library has no own copy (one still showing the SPDX template's `<year>`/`<owner>` placeholders doesn't count), or the text of a NOTICE file in a shipped AAR or JAR (not an AAR's `lint.jar`, which never reaches the APK) isn't among its library's licences.
+- A POM that names several licences is held to all of them: one recognised licence that isn't allowed fails the library, even if the POM means "either". Accepting a dual-licensed library needs its own decision.
 - A failure names the ADR, the artifact and the fix (allow-list entry, missing text, or run again), and is also a GitHub Actions error annotation.
 
 ## Consequences

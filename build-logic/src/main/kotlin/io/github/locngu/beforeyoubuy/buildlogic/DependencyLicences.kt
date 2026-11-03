@@ -31,8 +31,17 @@ internal data class Licence(
 ) {
     val hasText get() = !text.isNullOrBlank()
 
-    /** A library's own copy of a licence (its LICENSE or NOTICE file), not the generic SPDX text. */
-    val isOwnNotice get() = spdxId != null && key != spdxId && hasText
+    /**
+     * A library's own copy of a licence (its LICENSE or NOTICE file), not the generic SPDX text: its own key, and no
+     * placeholder such as `<year>` or `<copyright holders>` left in it.
+     */
+    val isOwnNotice get() = spdxId != null && key != spdxId && hasText &&
+        !TEMPLATE_PLACEHOLDER.containsMatchIn(text.orEmpty())
+
+    private companion object {
+        /** The placeholders the SPDX MIT and BSD templates have where the copyright line goes. */
+        val TEMPLATE_PLACEHOLDER = Regex("<(year|owner|copyright holders?)>", RegexOption.IGNORE_CASE)
+    }
 
     fun describe() = if (spdxId == null) "\"$name\"${url?.let { " ($it)" }.orEmpty()}" else "\"$name\" ($spdxId)"
 }
@@ -96,10 +105,12 @@ internal object DependencyLicences {
     private val NOTICE = Regex("(^|/)NOTICE(\\.(txt|md|markdown|html?))?$", RegexOption.IGNORE_CASE)
     private val LICENCE_KINDS = setOf(ProblemKind.NOT_ALLOWED, ProblemKind.UNKNOWN, ProblemKind.MISSING)
     private val WHITESPACE = Regex("\\s+")
+    private const val LINT_JAR = "lint.jar"
 
     /**
      * The NOTICE files in a JAR or AAR: anywhere in the archive, and for an AAR also in its `classes.jar` and
-     * `libs/` JARs. Paths inside nested JARs read `classes.jar!/META-INF/NOTICE`.
+     * `libs/` JARs. Paths inside nested JARs read `classes.jar!/META-INF/NOTICE`. An AAR's `lint.jar` is skipped:
+     * it holds lint checks for the IDE and never reaches the APK.
      */
     fun noticeFiles(artifact: File): List<NoticeFile> = ZipFile(artifact).use { zip ->
         noticeFiles(zip.entries().toList()) { zip.getInputStream(it) }
@@ -111,7 +122,7 @@ internal object DependencyLicences {
                 NOTICE.containsMatchIn(entry.name) ->
                     listOf(NoticeFile(entry.name, open(entry).use { it.readBytes().toString(Charsets.UTF_8) }))
 
-                entry.name.endsWith(".jar") ->
+                entry.name.endsWith(".jar") && entry.name != LINT_JAR ->
                     open(entry).use { stream ->
                         val nested = ZipInputStream(stream)
                         generateSequence { nested.nextEntry }
@@ -304,7 +315,7 @@ internal object DependencyLicences {
                             add(
                                 problem(
                                     ProblemKind.NO_OWN_NOTICE,
-                                    "$id needs the library's own copy of the licence (its copyright line)"
+                                    "$id needs the library's own copy of the licence, with its real copyright line"
                                 )
                             )
                         }
