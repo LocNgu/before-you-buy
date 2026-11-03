@@ -4,6 +4,10 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### Added
+
+- The app now includes the licence texts and copyright notices of the third-party libraries it's built with, as their licences require. A screen to read them follows in a later version.
+
 ## [0.6.0] - 2026-11-01
 
 ### Changed

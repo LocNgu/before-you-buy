@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Resource shrinking must not drop the licence notices AboutLibraries generates: nothing references them
+     until the licences screen exists, but every APK has to carry them (ADR-0053). -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/aboutlibraries" />
