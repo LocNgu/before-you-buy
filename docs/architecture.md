@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19), notifications (#20), the Home dashboard (#21), the monthly fun money (#22), savings per item (#23) and priorities (#24) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19), notifications (#20), the Home dashboard (#21), the monthly fun money (#22), savings per item (#23), priorities (#24) and Settings (#26) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -103,4 +103,4 @@ A release `vX.Y.Z` of `main` publishes a signed APK on GitHub Releases (`.github
 ## Not set up yet
 
 - **Backup:** `allowBackup="false"` and backup rules that exclude everything, until export/import decides what Android backup includes (ADR-0002, product brief §backup).
-- **In-app language picker:** the per-app language works through Android 13+ system settings (`res/xml/locales_config.xml`). A picker in Settings (and per-app language on Android 8–12 via AppCompat) comes with the Settings screen.
+- **In-app language picker:** none, by decision (ADR-0054). The per-app language works through Android 13+ system settings (`res/xml/locales_config.xml`), which Settings opens; on Android 8–12 the app follows the system language.

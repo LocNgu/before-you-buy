@@ -14,6 +14,7 @@ import io.github.locngu.beforeyoubuy.R
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationKind
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationPlan
+import io.github.locngu.beforeyoubuy.core.domain.settings.SystemNotifications
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -23,7 +24,7 @@ import javax.inject.Singleton
  * [NotificationKind], so the user can switch each off in the system settings.
  */
 @Singleton
-class Notifier @Inject constructor(@param:ApplicationContext private val context: Context) {
+class Notifier @Inject constructor(@param:ApplicationContext private val context: Context) : SystemNotificationsReader {
     private val manager = NotificationManagerCompat.from(context)
 
     /**
@@ -51,9 +52,25 @@ class Notifier @Inject constructor(@param:ApplicationContext private val context
      * app's switch) and the kind's channel isn't switched off.
      */
     fun canShow(kind: NotificationKind): Boolean {
-        if (!hasPermission() || !manager.areNotificationsEnabled()) return false
+        if (!appAllowed()) return false
         createChannels()
-        val channel = manager.getNotificationChannelCompat(channelOf(kind)) ?: return false
+        return channelOn(kind)
+    }
+
+    /**
+     * What the phone lets through: the app as a whole, and each channel (Settings says when something is off). Only
+     * reads: a channel not created yet isn't switched off, and is created before anything is shown on it.
+     */
+    override fun read(): SystemNotifications = SystemNotifications(
+        appAllowed = appAllowed(),
+        waitingPeriodsChannelOn = channelOn(NotificationKind.WAITING_PERIOD_OVER, missing = true),
+        reflectionRemindersChannelOn = channelOn(NotificationKind.REFLECTION_NUDGE, missing = true)
+    )
+
+    private fun appAllowed() = hasPermission() && manager.areNotificationsEnabled()
+
+    private fun channelOn(kind: NotificationKind, missing: Boolean = false): Boolean {
+        val channel = manager.getNotificationChannelCompat(channelOf(kind)) ?: return missing
         return channel.importance != NotificationManagerCompat.IMPORTANCE_NONE
     }
 

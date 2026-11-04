@@ -376,4 +376,25 @@
     <string name="opportunity_cost_share">%1$d%% of the price of your %2$s (#%3$d)</string>
     <string name="opportunity_cost_share_less">Less than 1%% of the price of your %1$s (#%2$d)</string>
     <string name="opportunity_cost_months_less">Less than a month of your fun money</string>
+
+    <!-- Settings (issue #26, brief §6.7, §9, ADR-0054). Never "open source": the app is source available. -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_fun_money_row">Monthly amount and adjustments</string>
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_blocked">Notifications are off for this app in the system settings, so none will show.</string>
+    <string name="settings_notifications_channel_off">Switched off in the system settings</string>
+    <string name="settings_open_system_settings">Open system settings</string>
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_app">App language</string>
+    <string name="settings_language_current">English</string>
+    <string name="settings_language_follows_system">Follows the system language</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_licence">Source available, free for personal and non-commercial use</string>
+    <string name="settings_licence_name" translatable="false">PolyForm Noncommercial License 1.0.0</string>
+    <string name="settings_source">Source code</string>
+    <string name="settings_source_location" translatable="false">github.com/LocNgu/before-you-buy</string>
+    <string name="settings_privacy_title">Privacy</string>
+    <string name="settings_privacy_body">Everything stays on your phone: no account, no server, no analytics, no ads. The app has no internet permission, so it can’t send your data anywhere.</string>
+    <string name="settings_no_app">No app on this phone can open this.</string>
 </resources>

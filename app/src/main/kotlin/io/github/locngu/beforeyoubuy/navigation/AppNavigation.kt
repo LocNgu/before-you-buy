@@ -26,6 +26,7 @@ import io.github.locngu.beforeyoubuy.feature.home.HomeScreen
 import io.github.locngu.beforeyoubuy.feature.money.FunMoneyScreen
 import io.github.locngu.beforeyoubuy.feature.priorities.HeadToHeadScreen
 import io.github.locngu.beforeyoubuy.feature.reflection.ReflectionScreen
+import io.github.locngu.beforeyoubuy.feature.settings.SettingsScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemDetailScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.ItemEditScreen
 import io.github.locngu.beforeyoubuy.feature.wishlist.WishlistScreen
@@ -68,6 +69,10 @@ data class HistoryItem(val itemId: Long) : NavKey
 /** Setting up and changing the monthly fun money (brief §4.5). */
 @Serializable
 data object FunMoney : NavKey
+
+/** Settings (brief §6.7), opened from Home's top bar. */
+@Serializable
+data object Settings : NavKey
 
 /** "Earn its place": one item against the priorities, one comparison at a time (brief §4.7). */
 @Serializable
@@ -113,10 +118,14 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                         onOpenDecision = { backStack.open(ItemDecision(it.value)) },
                         onOpenWishlist = { backStack.open(Wishlist) },
                         onOpenHistory = { backStack.open(History) },
+                        onOpenSettings = { backStack.open(Settings) },
                         onOpenFunMoney = { backStack.open(FunMoney) },
                         onOpenItem = { backStack.open(ItemDetail(it.value)) },
                         snackbarHostState = snackbarHostState
                     )
+                }
+                entry<Settings> {
+                    SettingsScreen(onOpenFunMoney = { backStack.open(FunMoney) })
                 }
                 entry<FunMoney> {
                     // As for edit: only the screen itself closes, even if the save lands after another tap.

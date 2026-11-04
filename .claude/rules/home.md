@@ -6,7 +6,7 @@ paths:
   - "app/src/test/kotlin/**/feature/home/**/*"
 ---
 
-# Home (brief §6.1, ADR-0012, ADR-0014, ADR-0040, ADR-0043, ADR-0045, ADR-0046, ADR-0047, ADR-0049, ADR-0052)
+# Home (brief §6.1, ADR-0012, ADR-0014, ADR-0040, ADR-0043, ADR-0045, ADR-0046, ADR-0047, ADR-0049, ADR-0052, ADR-0054)
 
 ## Rules (`:core:domain` `home/`)
 
@@ -16,8 +16,8 @@ paths:
 ## Screen and view model (`:app` `feature/home/`)
 
 - `HomeViewModel` recomputes on the clock like `WishlistViewModel` (`untilWishlistChanges`), not only on database changes. `overview == null` is "not loaded": show nothing. `money` is `funMoneyOf(allowance, entries, savings)` (`.claude/rules/pool.md`), null until loaded; both use `observeSavings`.
-- `HomeContent` (stateless, screenshots): top bar with the app name and a "History" text button; then "To decide" (only when non-empty; rows with name, stage chip, `StageStatus` unless Ready, price; tap → `onOpenDecision`), "Considering" (count plural or the first-start line, "Next waiting period to end" with name and `CountdownText`, an "Open wishlist" text button), then "Priorities", always shown (ADR-0052): `PriorityRow` with `PriorityRank` "#1", name, `SavingsProgressBar` or the price without fun money; tap → `onOpenItem` (ADR-0047); without priorities one quiet line, the wishlist's `priorities_empty_hint`, whether fun money is set up or not. No "Saving for" heading. Then "Fun money" (ADR-0045): not set up → one line and "Set up"; set up → `FunMoneyAmounts` ("Fun money for wants" / "Set aside for wants" / "Not yet set aside"), and "Change or adjust". Both buttons call `onOpenFunMoney`. Never "available" or "spend" (ADR-0014). The quick add FAB and the shared `SnackbarHostState` as on the wishlist.
-- Navigation: Home is the back stack's root. The fun money section opens `FunMoney`. Priority rows open `ItemDetail`. "To decide" opens `ItemDecision` directly (for an item without its answers the decision screen offers the questions); after Buy/Reject the snackbar shows on Home. No Settings entry until the Settings screen exists (#26 adds it to the top bar). No bottom bar (ADR-0043).
+- `HomeContent` (stateless, screenshots): top bar with the app name, a "History" text button and a gear `IconButton` (`ic_settings`, content description "Settings", `onOpenSettings`); then "To decide" (only when non-empty; rows with name, stage chip, `StageStatus` unless Ready, price; tap → `onOpenDecision`), "Considering" (count plural or the first-start line, "Next waiting period to end" with name and `CountdownText`, an "Open wishlist" text button), then "Priorities", always shown (ADR-0052): `PriorityRow` with `PriorityRank` "#1", name, `SavingsProgressBar` or the price without fun money; tap → `onOpenItem` (ADR-0047); without priorities one quiet line, the wishlist's `priorities_empty_hint`, whether fun money is set up or not. No "Saving for" heading. Then "Fun money" (ADR-0045): not set up → one line and "Set up"; set up → `FunMoneyAmounts` ("Fun money for wants" / "Set aside for wants" / "Not yet set aside"), and "Change or adjust". Both buttons call `onOpenFunMoney`. Never "available" or "spend" (ADR-0014). The quick add FAB and the shared `SnackbarHostState` as on the wishlist.
+- Navigation: Home is the back stack's root. The fun money section opens `FunMoney`. Priority rows open `ItemDetail`. "To decide" opens `ItemDecision` directly (for an item without its answers the decision screen offers the questions); after Buy/Reject the snackbar shows on Home. The gear opens `Settings` (`.claude/rules/settings.md`, ADR-0054); system back from History and Settings returns to Home. No bottom bar (ADR-0043).
 
 ## Tests
 

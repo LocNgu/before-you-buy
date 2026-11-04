@@ -139,6 +139,7 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
                     onOpenDecision = {},
                     onOpenWishlist = {},
                     onOpenHistory = {},
+                    onOpenSettings = {},
                     onOpenFunMoney = {},
                     onOpenItem = {},
                     snackbarHostState = SnackbarHostState()
