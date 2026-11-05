@@ -56,7 +56,7 @@
     <string name="wishlist_ready_to_decide">Bereit zur Entscheidung</string>
     <string name="stage_cooling_off">Wartezeit</string>
     <string name="stage_needs_reflection">Zum Überdenken</string>
-    <string name="stage_saving">Sparen</string>
+    <string name="stage_saving">Zurücklegen</string>
     <string name="stage_not_priority">Keine deiner Prioritäten</string>
     <string name="stage_ready">Bereit</string>
     <!-- Abschnitte der Wunschliste (ADR-0049): Prioritäten, dann Notwendiges, dann alle Wünsche ohne Platz („Wunschliste“). -->

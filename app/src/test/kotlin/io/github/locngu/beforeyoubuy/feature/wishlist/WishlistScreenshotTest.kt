@@ -24,6 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -34,7 +35,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-abstract class WishlistScreenshotTest(private val german: Boolean) {
+abstract class WishlistScreenshotTest(private val german: Boolean, private val fontScale: Float = 1f) {
     @get:Rule(order = 0)
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -169,6 +170,7 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
     fun loading() = capture(WishlistUiState(null))
 
     private fun capture(state: WishlistUiState) {
+        RuntimeEnvironment.setFontScale(fontScale)
         composeRule.setContent {
             BeforeYouBuyTheme {
                 WishlistContent(state, onAdd = {}, onOpenItem = {}, snackbarHostState = SnackbarHostState())
@@ -183,3 +185,7 @@ class WishlistScreenshotEnTest : WishlistScreenshotTest(german = false)
 
 @Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi")
 class WishlistScreenshotDeTest : WishlistScreenshotTest(german = true)
+
+/** German at font scale 1.3 (issue #29): long words must wrap, not clip. */
+@Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi")
+class WishlistScreenshotDeLargeFontTest : WishlistScreenshotTest(german = true, fontScale = 1.3f)
