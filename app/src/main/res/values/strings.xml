@@ -397,4 +397,39 @@
     <string name="settings_privacy_title">Privacy</string>
     <string name="settings_privacy_body">Everything stays on your phone: no account, no server, no analytics, no ads. The app has no internet permission, so it can’t send your data anywhere.</string>
     <string name="settings_no_app">No app on this phone can open this.</string>
+
+    <!-- Backup (issue #27, brief §9, ADR-0055). Neutral: what is saved, what an import replaces. -->
+    <string name="backup_title">Backup</string>
+    <string name="backup_export">Export backup</string>
+    <string name="backup_export_description">Saves everything in the app, photos included, as one file. You choose where it goes.</string>
+    <string name="backup_import">Import backup</string>
+    <string name="backup_import_description">Replaces what is in the app with a file you exported earlier.</string>
+    <string name="backup_working">Working…</string>
+    <string name="backup_exported">Backup saved</string>
+    <string name="backup_export_failed">The backup couldn’t be saved. Nothing in the app was changed.</string>
+    <string name="backup_import_title">Replace everything with this backup?</string>
+    <string name="backup_import_body">The file from %1$s holds %2$s. Importing replaces everything in the app now, and this can’t be undone.</string>
+    <string name="backup_import_counts">%1$s, %2$s, %3$s</string>
+    <string name="backup_import_replace">Replace all</string>
+    <string name="backup_import_confirm_title">Replace all data?</string>
+    <string name="backup_import_confirm_body">What is in the app now will be gone. Only the backup remains.</string>
+    <string name="backup_import_confirm">Replace all data</string>
+    <string name="backup_imported">Backup imported</string>
+    <string name="backup_import_failed">The backup couldn’t be imported. Nothing in the app was changed.</string>
+    <string name="backup_import_unreadable">That file couldn’t be opened.</string>
+    <string name="backup_rejected_not_a_backup">That file isn’t a backup from this app.</string>
+    <string name="backup_rejected_newer_version">That backup is from a newer version of the app. Update the app first, then import it.</string>
+    <string name="backup_rejected_damaged">That backup is damaged or incomplete, so nothing was imported.</string>
+    <plurals name="backup_count_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <plurals name="backup_count_decisions">
+        <item quantity="one">%d decision</item>
+        <item quantity="other">%d decisions</item>
+    </plurals>
+    <plurals name="backup_count_photos">
+        <item quantity="one">%d photo</item>
+        <item quantity="other">%d photos</item>
+    </plurals>
 </resources>

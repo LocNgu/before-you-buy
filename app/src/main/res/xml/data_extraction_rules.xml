@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Android 12+ backup rules. Everything is excluded for now, matching android:allowBackup="false"
-  on older versions. What to back up is decided with export/import (ADR-0002, product brief §backup).
+  Android 12+ backup rules (ADR-0055): the Room database (with its write-ahead log), the photos and the DataStore
+  preferences are backed up to the user's Google account and moved by device transfer; nothing else is. Naming an
+  include excludes everything not named, so caches, the staging area of an import and WorkManager's own database stay
+  out. System backup works without the app having INTERNET (ADR-0003). Keep in sync with backup_rules.xml.
 -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
+        <include domain="database" path="before-you-buy.db" />
+        <include domain="database" path="before-you-buy.db-wal" />
+        <include domain="file" path="images/" />
+        <include domain="file" path="datastore/" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="root" path="." />
-        <exclude domain="file" path="." />
-        <exclude domain="database" path="." />
-        <exclude domain="sharedpref" path="." />
-        <exclude domain="external" path="." />
+        <include domain="database" path="before-you-buy.db" />
+        <include domain="database" path="before-you-buy.db-wal" />
+        <include domain="file" path="images/" />
+        <include domain="file" path="datastore/" />
     </device-transfer>
 </data-extraction-rules>

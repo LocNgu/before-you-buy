@@ -15,7 +15,7 @@ paths:
 
 ## Screen and view model (`:app` `feature/settings/`)
 
-- Opened from Home's gear (`Settings` NavKey); back returns to Home. Sections in order: Fun money, Priorities, Notifications, Language, About. #27 adds Backup, #97 Waiting periods and Currency, #98 "Third-party licences" under About; put them in this order, not at the end.
+- Opened from Home's gear (`Settings` NavKey); back returns to Home. Sections in order: Fun money, Priorities, Notifications, Language, Backup, About. #97 adds Waiting periods and Currency, #98 "Third-party licences" under About; put them in this order, not at the end.
 - `SettingsViewModel(preferences, policies, items, SystemNotificationsReader, clock)`: `uiState` is null until loaded (show only the title), including the system state, which only `refreshSystemNotifications()` reads (once per resume, the first one too). Switches write `preferences.setNotificationPrefs` from the **stored** prefs, not the shown ones, one at a time under a `Mutex` (DataStore writes suspend; two quick taps would otherwise both read the old prefs). `changePrioritySlots` passes the priorities the dialog listed, like the wishlist; on `false` `priorityEvents` emits `ChangedMeanwhile` (snackbar via `priorityMessage`). `refreshSystemNotifications()` runs on every resume (`LifecycleResumeEffect`), since the user may change the system settings and come back.
 - `SettingsContent(state, version, perAppLanguage, actions)` is stateless (screenshots); `SettingsActions` holds every callback, no-ops by default; `SettingsScreen` `remember`s it so a new state doesn't recompose every section.
 - Fun money: one row to `FunMoney` (ADR-0045). Priorities: "Priority slots" with `priority_slots_used`, opening `PrioritySlotsDialog` (ADR-0047).
@@ -27,3 +27,9 @@ paths:
 ## Tests
 
 - Rule: `NotificationNoticeTest` (JVM). View model: `SettingsViewModelTest` (`FakePreferencesRepository`, `FakePolicyRepository` with `items`, a lambda `SystemNotificationsReader`). Stateless screen: `SettingsContentTest` (language per version, channel page). Real app: `SettingsFlowTest` (Home ↔ Settings, fun money row, a switch stored across visits, the blocked line and its page with the permission denied and gone after a resume, language page, licence and source links; started intents via `shadowOf(application).nextStartedActivity`). Robolectric only has Android 37 here, so the Android 8–12 line is covered by `hasPerAppLanguageSettings` and the stateless screen. Screenshots: `SettingsScreenshotTest` typical, notifications blocked, channel off + Android 8–12 line, loading × en/de × light/dark, on a taller screen (`h1300dp`) so the whole page is in one image.
+
+## Backup (#27, ADR-0055)
+
+- Two rows (export, import) between Language and About. `BackupViewModel(BackupRepository, BackupStreams, Clock)` is separate from `SettingsViewModel`; `BackupUiState` is `Idle`/`Working`/`Preview`, results go out as `BackupEvent`s (snackbar via `backupMessage`). `BackupStreams` hides the content resolver so the view model is a JVM test. Export uses `CreateDocument("application/zip")` (name `before-you-buy-<date>.zip`), import `OpenDocument`: no storage permission.
+- Import never changes data before **Replace all** and a second confirmation (`ImportDialogs`); both ways out are equal. A rejected file says why (`BackupProblem`) and changes nothing. The format and the repository: `.claude/rules/data.md`.
+- Tests: `BackupViewModelTest` (JVM).

@@ -42,6 +42,8 @@ internal abstract class BeforeYouBuyDatabase : RoomDatabase() {
 
     abstract fun poolDao(): PoolDao
 
+    abstract fun backupDao(): BackupDao
+
     companion object {
         const val NAME = "before-you-buy.db"
 

@@ -370,4 +370,39 @@
     <string name="settings_privacy_title">Datenschutz</string>
     <string name="settings_privacy_body">Alles bleibt auf deinem Gerät: kein Konto, kein Server, keine Analyse, keine Werbung. Die App hat keine Internetberechtigung und kann deine Daten daher nirgendwohin senden.</string>
     <string name="settings_no_app">Keine App auf diesem Gerät kann das öffnen.</string>
+
+    <!-- Backup (issue #27, brief §9, ADR-0055). Neutral: what is saved, what an import replaces. -->
+    <string name="backup_title">Sicherung</string>
+    <string name="backup_export">Sicherung exportieren</string>
+    <string name="backup_export_description">Speichert alles in der App, auch die Fotos, als eine Datei. Du wählst, wohin sie kommt.</string>
+    <string name="backup_import">Sicherung importieren</string>
+    <string name="backup_import_description">Ersetzt, was in der App ist, durch eine Datei, die du früher exportiert hast.</string>
+    <string name="backup_working">Einen Moment …</string>
+    <string name="backup_exported">Sicherung gespeichert</string>
+    <string name="backup_export_failed">Die Sicherung konnte nicht gespeichert werden. In der App wurde nichts verändert.</string>
+    <string name="backup_import_title">Alles durch diese Sicherung ersetzen?</string>
+    <string name="backup_import_body">Die Datei vom %1$s enthält %2$s. Beim Import wird alles in der App ersetzt, das lässt sich nicht rückgängig machen.</string>
+    <string name="backup_import_counts">%1$s, %2$s, %3$s</string>
+    <string name="backup_import_replace">Alles ersetzen</string>
+    <string name="backup_import_confirm_title">Alle Daten ersetzen?</string>
+    <string name="backup_import_confirm_body">Was jetzt in der App ist, ist danach weg. Nur die Sicherung bleibt.</string>
+    <string name="backup_import_confirm">Alle Daten ersetzen</string>
+    <string name="backup_imported">Sicherung importiert</string>
+    <string name="backup_import_failed">Die Sicherung konnte nicht importiert werden. In der App wurde nichts verändert.</string>
+    <string name="backup_import_unreadable">Diese Datei konnte nicht geöffnet werden.</string>
+    <string name="backup_rejected_not_a_backup">Diese Datei ist keine Sicherung dieser App.</string>
+    <string name="backup_rejected_newer_version">Diese Sicherung stammt aus einer neueren Version der App. Aktualisiere zuerst die App und importiere sie dann.</string>
+    <string name="backup_rejected_damaged">Diese Sicherung ist beschädigt oder unvollständig, deshalb wurde nichts importiert.</string>
+    <plurals name="backup_count_items">
+        <item quantity="one">%d Eintrag</item>
+        <item quantity="other">%d Einträge</item>
+    </plurals>
+    <plurals name="backup_count_decisions">
+        <item quantity="one">%d Entscheidung</item>
+        <item quantity="other">%d Entscheidungen</item>
+    </plurals>
+    <plurals name="backup_count_photos">
+        <item quantity="one">%d Foto</item>
+        <item quantity="other">%d Fotos</item>
+    </plurals>
 </resources>
