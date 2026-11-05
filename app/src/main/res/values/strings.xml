@@ -46,7 +46,7 @@
     <string name="fun_money_below_zero_body">Taking out %1$s leaves %2$s not yet set aside.</string>
 
     <!-- Countdown on items that are cooling off. -->
-    <string name="countdown_over">Cooling-off over</string>
+    <string name="countdown_over">Waiting period over</string>
 
     <!-- Wishlist (brief §6.3). Stage names are shown as group headings and as chips on each row. -->
     <string name="wishlist_title">Wishlist</string>
@@ -54,9 +54,9 @@
     <string name="wishlist_empty_title">Your wishlist is empty</string>
     <string name="wishlist_empty_body">Add something you want. It waits here while you think it over.</string>
     <string name="wishlist_ready_to_decide">Ready to decide</string>
-    <string name="stage_cooling_off">Cooling off</string>
+    <string name="stage_cooling_off">Waiting period</string>
     <string name="stage_needs_reflection">Needs reflection</string>
-    <string name="stage_saving">Saving</string>
+    <string name="stage_saving">Setting aside</string>
     <string name="stage_not_priority">Not one of your priorities</string>
     <string name="stage_ready">Ready</string>
     <!-- Wishlist sections (ADR-0049): the priorities, then the needs, then every want without a slot ("Wishlist"). -->
@@ -210,7 +210,7 @@
     <string name="decision_title">Decide</string>
     <string name="decision_back">Back</string>
     <string name="decision_added_today">You added this today</string>
-    <string name="decision_cooling_done">Cooling-off completed</string>
+    <string name="decision_cooling_done">Waiting period completed</string>
     <!-- %1$s: a date. -->
     <string name="decision_recheck_on">You wanted to look again on %1$s</string>
     <string name="decision_no_reasons">No reasons noted yet.</string>

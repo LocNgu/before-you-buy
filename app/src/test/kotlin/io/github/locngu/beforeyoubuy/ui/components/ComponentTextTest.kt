@@ -39,7 +39,7 @@ class ComponentTextTest {
         }
         composeRule.onNodeWithText("23 days left").assertIsDisplayed()
         composeRule.onNodeWithText("1 day left").assertIsDisplayed()
-        composeRule.onAllNodesWithText("Cooling-off over").assertCountEquals(2)
+        composeRule.onAllNodesWithText("Waiting period over").assertCountEquals(2)
     }
 
     @Test

@@ -56,12 +56,12 @@
     <string name="wishlist_ready_to_decide">Bereit zur Entscheidung</string>
     <string name="stage_cooling_off">Wartezeit</string>
     <string name="stage_needs_reflection">Zum Überdenken</string>
-    <string name="stage_saving">Sparen</string>
+    <string name="stage_saving">Zurücklegen</string>
     <string name="stage_not_priority">Keine deiner Prioritäten</string>
     <string name="stage_ready">Bereit</string>
     <!-- Abschnitte der Wunschliste (ADR-0049): Prioritäten, dann Notwendiges, dann alle Wünsche ohne Platz („Wunschliste“). -->
     <string name="wishlist_needs">Notwendiges</string>
-    <string name="priorities_empty_hint">Mach einen Wunsch zur Priorität, damit seine Wartezeit beginnt.</string>
+    <string name="priorities_empty_hint">Mach einen Wunsch zur Priorität, damit die Wartezeit beginnt.</string>
     <!-- Wie viel seiner Wartezeit ein Wunsch ohne Platz hinter sich hat (ADR-0049). Dazu die Plurale wait_progress_*. -->
     <string name="wait_progress_done">Wartezeit vorbei</string>
 
@@ -299,7 +299,7 @@
 
     <!-- Savings per item (#23, ADR-0046): "set aside", never "saved" or "available". -->
     <string name="fun_money_wants_need_funding">Wünsche brauchen ihren Preis zurückgelegt</string>
-    <string name="fun_money_wants_need_funding_explained">Ein Wunsch ist bereit zur Entscheidung, sobald sein Preis zurückgelegt ist. Aus: Die Wartezeit und deine Gründe reichen.</string>
+    <string name="fun_money_wants_need_funding_explained">Ein Wunsch ist bereit zur Entscheidung, sobald der Preis zurückgelegt ist. Wenn du das ausschaltest, reichen die Wartezeit und deine Gründe.</string>
     <string name="savings_title">Zurückgelegt</string>
     <string name="savings_progress">%1$s von %2$s zurückgelegt · noch %3$s</string>
     <string name="savings_progress_complete">%1$s von %2$s zurückgelegt</string>

@@ -31,6 +31,7 @@ import java.util.Locale
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -41,7 +42,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-abstract class DecisionScreenshotTest(private val german: Boolean) {
+abstract class DecisionScreenshotTest(private val german: Boolean, private val fontScale: Float = 1f) {
     @get:Rule(order = 0)
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -185,6 +186,7 @@ abstract class DecisionScreenshotTest(private val german: Boolean) {
     }
 
     private fun capture(state: DecisionUiState) {
+        RuntimeEnvironment.setFontScale(fontScale)
         composeRule.setContent {
             BeforeYouBuyTheme {
                 DecisionContent(state, NoActions, onReflect = {}, snackbarHostState = SnackbarHostState())
@@ -225,3 +227,7 @@ class DecisionScreenshotEnTest : DecisionScreenshotTest(german = false)
 
 @Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi")
 class DecisionScreenshotDeTest : DecisionScreenshotTest(german = true)
+
+/** German at font scale 1.3 (issue #29): long words must wrap, not clip. */
+@Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi")
+class DecisionScreenshotDeLargeFontTest : DecisionScreenshotTest(german = true, fontScale = 1.3f)

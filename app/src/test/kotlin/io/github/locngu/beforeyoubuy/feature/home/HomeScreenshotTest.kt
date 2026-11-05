@@ -25,6 +25,7 @@ import java.time.ZoneOffset
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -35,7 +36,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-abstract class HomeScreenshotTest(private val german: Boolean) {
+abstract class HomeScreenshotTest(private val german: Boolean, private val fontScale: Float = 1f) {
     @get:Rule(order = 0)
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -131,6 +132,7 @@ abstract class HomeScreenshotTest(private val german: Boolean) {
     fun loading() = capture(HomeUiState(null))
 
     private fun capture(state: HomeUiState) {
+        RuntimeEnvironment.setFontScale(fontScale)
         composeRule.setContent {
             BeforeYouBuyTheme {
                 HomeContent(
@@ -161,3 +163,7 @@ class HomeScreenshotDeLightTest : HomeScreenshotTest(german = true)
 
 @Config(qualifiers = "de-w411dp-h891dp-night-xxhdpi")
 class HomeScreenshotDeDarkTest : HomeScreenshotTest(german = true)
+
+/** German at font scale 1.3 (issue #29): long words must wrap, not clip. */
+@Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi")
+class HomeScreenshotDeLargeFontTest : HomeScreenshotTest(german = true, fontScale = 1.3f)
