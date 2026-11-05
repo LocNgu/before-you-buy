@@ -94,6 +94,9 @@ internal interface ReflectionDao {
     fun observe(itemId: Long): Flow<ReflectionEntity?>
 
     @Query("SELECT * FROM reflections")
+    suspend fun getAll(): List<ReflectionEntity>
+
+    @Query("SELECT * FROM reflections")
     fun observeAll(): Flow<List<ReflectionEntity>>
 }
 
@@ -109,6 +112,9 @@ internal interface DecisionDao {
 
     @Query("SELECT * FROM decisions WHERE item_id = :itemId ORDER BY id")
     fun observeForItem(itemId: Long): Flow<List<DecisionEntity>>
+
+    @Query("SELECT * FROM decisions ORDER BY id")
+    suspend fun getAll(): List<DecisionEntity>
 
     @Query("SELECT * FROM decisions WHERE actual_price_minor IS NOT NULL AND actual_price_currency IS NOT NULL")
     suspend fun getWithActualPrice(): List<DecisionEntity>
@@ -206,6 +212,47 @@ internal interface PoolDao {
     /** Changes only the amount, for a currency relabel (ADR-0033). */
     @Query("UPDATE allocations SET amount_minor = :minor, currency = :currency WHERE id = :id")
     suspend fun setAllocationAmount(id: Long, minor: Long, currency: String)
+}
+
+/**
+ * Whole-database replacement for restoring a backup (#27). Used only inside one transaction by `RoomBackupRepository`.
+ * Rows keep their ids, so the references between them hold.
+ */
+@Dao
+internal interface BackupDao {
+    /** Items go with their reflections, decisions, notification log and allocations (ON DELETE CASCADE). */
+    @Query("DELETE FROM items")
+    suspend fun deleteItems()
+
+    @Query("DELETE FROM pool_entries")
+    suspend fun deletePoolEntries()
+
+    @Query("DELETE FROM allowance")
+    suspend fun deleteAllowance()
+
+    @Insert
+    suspend fun insertItems(items: List<ItemEntity>)
+
+    @Insert
+    suspend fun insertReflections(reflections: List<ReflectionEntity>)
+
+    @Insert
+    suspend fun insertDecisions(decisions: List<DecisionEntity>)
+
+    @Insert
+    suspend fun insertNotifications(notifications: List<ItemNotificationsEntity>)
+
+    @Insert
+    suspend fun insertPoolEntries(entries: List<PoolEntryEntity>)
+
+    @Insert
+    suspend fun insertAllocations(allocations: List<AllocationEntity>)
+
+    @Insert
+    suspend fun insertAllowance(allowance: AllowanceEntity)
+
+    @Update
+    suspend fun updatePolicy(policy: PolicyEntity): Int
 }
 
 internal data class HistoryRow(

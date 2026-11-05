@@ -63,7 +63,7 @@ internal class FileItemImageStore(
         }
     }
 
-    override fun fileFor(ref: String): File? = if (REF.matches(ref)) File(directory, ref) else null
+    override fun fileFor(ref: String): File? = if (IMAGE_REF.matches(ref)) File(directory, ref) else null
 
     override suspend fun deleteUnreferenced(referenced: Set<String>, writtenBefore: Instant): Set<String> =
         withContext(io) {
@@ -114,9 +114,11 @@ internal class FileItemImageStore(
     private companion object {
         const val JPEG_QUALITY = 85
         const val NO_ROTATION = ExifInterface.ORIENTATION_NORMAL
-        val REF = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.jpg")
     }
 }
+
+/** The only file names the store gives out (ADR-0038); backups use it to accept only those. */
+internal val IMAGE_REF = Regex("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.jpg")
 
 /** The rotation and mirroring that turns an image with EXIF [orientation] upright. */
 private fun orientationMatrix(orientation: Int): Matrix = Matrix().apply {

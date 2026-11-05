@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -43,12 +46,17 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.locngu.beforeyoubuy.R
+import io.github.locngu.beforeyoubuy.core.domain.backup.BackupPreview
+import io.github.locngu.beforeyoubuy.core.domain.backup.BackupProblem
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationNotice
 import io.github.locngu.beforeyoubuy.core.domain.settings.NotificationPrefs
 import io.github.locngu.beforeyoubuy.feature.priorities.PrioritySlotsDialog
 import io.github.locngu.beforeyoubuy.feature.priorities.priorityMessage
 import io.github.locngu.beforeyoubuy.notifications.Notifier
 import io.github.locngu.beforeyoubuy.ui.components.SectionHeader
+import io.github.locngu.beforeyoubuy.ui.format.currentLocale
+import io.github.locngu.beforeyoubuy.ui.format.formatDate
+import java.time.ZoneId
 import kotlinx.coroutines.launch
 
 /**
@@ -63,6 +71,10 @@ class SettingsActions(
     val onOpenAppNotifications: () -> Unit = {},
     val onOpenChannel: (channelId: String) -> Unit = {},
     val onOpenLanguage: () -> Unit = {},
+    val onExportBackup: () -> Unit = {},
+    val onImportBackup: () -> Unit = {},
+    val onCancelImport: () -> Unit = {},
+    val onConfirmImport: () -> Unit = {},
     val onOpenLicence: () -> Unit = {},
     val onOpenSource: () -> Unit = {}
 )
@@ -75,8 +87,10 @@ class SettingsActions(
 fun SettingsScreen(
     onOpenFunMoney: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    backupViewModel: BackupViewModel = hiltViewModel()
 ) {
+    val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -92,6 +106,18 @@ fun SettingsScreen(
             priorityMessage(event, resources)?.let { snackbarHostState.showSnackbar(it) }
         }
     }
+    LaunchedEffect(backupViewModel) {
+        backupViewModel.backupEvents.collect { snackbarHostState.showSnackbar(backupMessage(it, resources)) }
+    }
+    // The system's file pickers: no storage permission (ADR-0055).
+    val version = remember(context) { appVersion(context) }
+    val exportPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(BACKUP_MIME_TYPE)) {
+        backupViewModel.export(it, version)
+    }
+    val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
+        backupViewModel.startImport(it)
+    }
+
     // A system page or browser that isn't there (a stripped-down phone): say so instead of crashing.
     fun open(intent: Intent) {
         try {
@@ -106,7 +132,7 @@ fun SettingsScreen(
         }
     }
     // Remembered, so a new state (a switch, a resume) doesn't hand the sections new callbacks and recompose them all.
-    val actions = remember(viewModel, context, onOpenFunMoney) {
+    val actions = remember(viewModel, backupViewModel, context, onOpenFunMoney) {
         SettingsActions(
             onOpenFunMoney = onOpenFunMoney,
             onChangePrioritySlots = viewModel::changePrioritySlots,
@@ -117,13 +143,18 @@ fun SettingsScreen(
             onOpenLanguage = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) open(SettingsIntents.appLanguage(context))
             },
+            onExportBackup = { exportPicker.launch(backupViewModel.suggestedFileName()) },
+            onImportBackup = { importPicker.launch(BACKUP_OPEN_MIME_TYPES) },
+            onCancelImport = backupViewModel::cancelImport,
+            onConfirmImport = backupViewModel::confirmReplace,
             onOpenLicence = { openWeb(LICENCE_URL) },
             onOpenSource = { openWeb(SOURCE_URL) }
         )
     }
     SettingsContent(
         state = state,
-        version = remember(context) { appVersion(context) },
+        version = version,
+        backup = backupState,
         perAppLanguage = hasPerAppLanguageSettings(),
         actions = actions,
         snackbarHostState = snackbarHostState,
@@ -133,7 +164,7 @@ fun SettingsScreen(
 
 /**
  * Stateless Settings, for screenshots. The sections in order: fun money, priorities, notifications, language, about
- * (#27 adds backup, #97 waiting periods and currency, #98 the third-party licences). [state] null is "not loaded":
+ * (backup sits between language and about; #97 waiting periods and currency, #98 the third-party licences). [state] null is "not loaded":
  * the sections that depend on it wait, so the switches never flip after the first frame. [perAppLanguage]: Android
  * 13+ (a row to the system's language page), else one line.
  */
@@ -145,6 +176,7 @@ fun SettingsContent(
     perAppLanguage: Boolean,
     actions: SettingsActions,
     modifier: Modifier = Modifier,
+    backup: BackupUiState = BackupUiState.Idle,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     var changingSlots by rememberSaveable { mutableStateOf(false) }
@@ -181,7 +213,11 @@ fun SettingsContent(
             }
             item(key = "notifications") { NotificationsSection(state.notifications, state.notice, actions) }
             item(key = "language") { LanguageSection(perAppLanguage, actions.onOpenLanguage) }
+            item(key = "backup") { BackupSection(backup, actions) }
             item(key = "about") { AboutSection(version, actions) }
+        }
+        if (backup is BackupUiState.Preview) {
+            ImportDialogs(backup.preview, actions.onConfirmImport, actions.onCancelImport)
         }
         if (changingSlots) {
             PrioritySlotsDialog(
@@ -256,6 +292,87 @@ private fun LanguageSection(perAppLanguage: Boolean, onOpenLanguage: () -> Unit)
         }
     }
 }
+
+/** Export and import of the whole app (brief §9, ADR-0055). The rows are inert while a file is being handled. */
+@Composable
+private fun BackupSection(state: BackupUiState, actions: SettingsActions) {
+    val idle = state == BackupUiState.Idle
+    Column {
+        SectionHeader(stringResource(R.string.backup_title))
+        LinkRow(
+            headline = stringResource(R.string.backup_export),
+            supporting = stringResource(R.string.backup_export_description),
+            onClick = { if (idle) actions.onExportBackup() }
+        )
+        LinkRow(
+            headline = stringResource(R.string.backup_import),
+            supporting = stringResource(R.string.backup_import_description),
+            onClick = { if (idle) actions.onImportBackup() }
+        )
+        if (state == BackupUiState.Working) QuietLine(stringResource(R.string.backup_working))
+    }
+}
+
+/**
+ * What the picked file holds and "Replace all", then one more confirmation: an import replaces everything and can't
+ * be undone. Both ways out are equally easy (ADR-0012's spirit: no pressure).
+ */
+@Composable
+private fun ImportDialogs(preview: BackupPreview, onConfirm: () -> Unit, onCancel: () -> Unit) {
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    if (!confirming) {
+        val counts = stringResource(
+            R.string.backup_import_counts,
+            pluralStringResource(R.plurals.backup_count_items, preview.items, preview.items),
+            pluralStringResource(R.plurals.backup_count_decisions, preview.decisions, preview.decisions),
+            pluralStringResource(R.plurals.backup_count_photos, preview.photos, preview.photos)
+        )
+        val date = formatDate(preview.exportedAt.atZone(ZoneId.systemDefault()).toLocalDate(), currentLocale())
+        AlertDialog(
+            onDismissRequest = onCancel,
+            title = { Text(stringResource(R.string.backup_import_title)) },
+            text = { Text(stringResource(R.string.backup_import_body, date, counts)) },
+            confirmButton = {
+                TextButton(onClick = { confirming = true }) { Text(stringResource(R.string.backup_import_replace)) }
+            },
+            dismissButton = { TextButton(onClick = onCancel) { Text(stringResource(R.string.dialog_cancel)) } }
+        )
+    } else {
+        AlertDialog(
+            onDismissRequest = onCancel,
+            title = { Text(stringResource(R.string.backup_import_confirm_title)) },
+            text = { Text(stringResource(R.string.backup_import_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = onConfirm) { Text(stringResource(R.string.backup_import_confirm)) }
+            },
+            dismissButton = { TextButton(onClick = onCancel) { Text(stringResource(R.string.dialog_cancel)) } }
+        )
+    }
+}
+
+internal fun backupMessage(event: BackupEvent, resources: android.content.res.Resources): String = resources.getString(
+    when (event) {
+        BackupEvent.Exported -> R.string.backup_exported
+
+        BackupEvent.ExportFailed -> R.string.backup_export_failed
+
+        BackupEvent.Imported -> R.string.backup_imported
+
+        BackupEvent.ImportFailed -> R.string.backup_import_failed
+
+        BackupEvent.ImportUnreadable -> R.string.backup_import_unreadable
+
+        is BackupEvent.ImportRejected -> when (event.problem) {
+            BackupProblem.NOT_A_BACKUP -> R.string.backup_rejected_not_a_backup
+            BackupProblem.NEWER_VERSION -> R.string.backup_rejected_newer_version
+            BackupProblem.DAMAGED -> R.string.backup_rejected_damaged
+        }
+    }
+)
+
+private const val BACKUP_MIME_TYPE = "application/zip"
+private val BACKUP_OPEN_MIME_TYPES =
+    arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")
 
 /** Version, licence, source and what happens with the data (brief §9). Source available, never "open source". */
 @Composable

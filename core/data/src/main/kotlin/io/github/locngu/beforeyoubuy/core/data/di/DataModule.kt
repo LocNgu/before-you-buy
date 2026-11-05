@@ -8,6 +8,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import io.github.locngu.beforeyoubuy.core.data.backup.RoomBackupRepository
 import io.github.locngu.beforeyoubuy.core.data.db.BeforeYouBuyDatabase
 import io.github.locngu.beforeyoubuy.core.data.image.FileItemImageStore
 import io.github.locngu.beforeyoubuy.core.data.item.RoomItemRepository
@@ -15,6 +16,7 @@ import io.github.locngu.beforeyoubuy.core.data.notifications.RoomNotificationLog
 import io.github.locngu.beforeyoubuy.core.data.pool.RoomPoolRepository
 import io.github.locngu.beforeyoubuy.core.data.settings.DataStorePreferencesRepository
 import io.github.locngu.beforeyoubuy.core.data.settings.RoomPolicyRepository
+import io.github.locngu.beforeyoubuy.core.domain.backup.BackupRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemImageStore
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.notifications.NotificationLogRepository
@@ -70,6 +72,22 @@ internal object DataModule {
         DataStorePreferencesRepository(
             DataStorePreferencesRepository.createDataStore { context.preferencesDataStoreFile(PREFERENCES_FILE) }
         )
+
+    /** Backups are staged in the cache directory, which neither Auto Backup nor an export includes. */
+    @Provides
+    @Singleton
+    fun provideBackupRepository(
+        @ApplicationContext context: Context,
+        database: BeforeYouBuyDatabase,
+        preferences: PreferencesRepository,
+        clock: Clock
+    ): BackupRepository = RoomBackupRepository(
+        database = database,
+        preferences = preferences,
+        imagesDirectory = File(context.filesDir, IMAGES_DIRECTORY),
+        stagingRoot = File(context.cacheDir, "backup-staging"),
+        clock = clock
+    )
 
     private const val PREFERENCES_FILE = "preferences"
     private const val IMAGES_DIRECTORY = "images"

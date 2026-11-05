@@ -1,6 +1,6 @@
 # Architecture
 
-Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19), notifications (#20), the Home dashboard (#21), the monthly fun money (#22), savings per item (#23), priorities (#24) and Settings (#26) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
+Status: scaffolded (#8): modules, build, DI, navigation and tests exist. Domain rules (#11, #12), persistence (#13), quick add (#14), share capture (#15), the wishlist and item detail/edit (#16), the reflection flow (#17), the decision screen (#18), history (#19), notifications (#20), the Home dashboard (#21), the monthly fun money (#22), savings per item (#23), priorities (#24) and Settings (#26) and backup (#27) exist; the other screens don't yet. Update this file when reality differs. Decisions behind it: ADR-0001, ADR-0003, ADR-0017–ADR-0021. Build conventions: `.claude/rules/build.md`.
 
 ## Verify task — the one pre-push gate
 
@@ -59,6 +59,7 @@ navigation/  (Navigation 3 keys and the NavDisplay)   di/  (Hilt modules, e.g. t
 - `ItemRepository`, `PolicyRepository`, `PreferencesRepository`, `NotificationLogRepository` and `PoolRepository` (interfaces in `:core:domain`) are bound by `:core:data`'s own Hilt module `DataModule`; everything in `:core:data` stays `internal`. `:app` just injects the interfaces.
 - Item writes are compare-and-set: `update(current, edited)` and `recordDecision(current, decision, result)` write only if the stored row still equals what the caller read, and return false otherwise. `recordDecision` writes the decision and the item's new state in one transaction; `update` never changes the status. `delete(current)` removes an ended item with its reflection and decisions, compare-and-set too.
 - The currency is fixed on first start (device region, else EUR). A tier change rewrites the waits that aren't complete in the same transaction (ADR-0031). A want's wait runs only while it holds a priority slot: slot writes start and pause it in their transaction (ADR-0049, ADR-0050); a currency change relabels every amount, the fun money included, keeping the numbers (ADR-0033). The monthly fun money is credited at app start, whenever the app comes to the front and by the daily worker (`PoolAccrual`), idempotently. Every stored amount is in the app's currency.
+- Backup (ADR-0055): `BackupRepository` (interface in `:core:domain`) exports one zip (`backup.json` from `BackupDto`, plus `images/<ref>.jpg`) and `inspect`s a file completely before `StagedBackup.restore()` replaces every row in one transaction. Auto Backup rules include the database, `files/images/` and `files/datastore/`.
 - Preferences (notifications, onboarding, whether the notification permission was asked) are in DataStore; defaults are computed on read.
 - Conventions and tests: `.claude/rules/data.md`.
 
@@ -102,5 +103,4 @@ A release `vX.Y.Z` of `main` publishes a signed APK on GitHub Releases (`.github
 
 ## Not set up yet
 
-- **Backup:** `allowBackup="false"` and backup rules that exclude everything, until export/import decides what Android backup includes (ADR-0002, product brief §backup).
 - **In-app language picker:** none, by decision (ADR-0054). The per-app language works through Android 13+ system settings (`res/xml/locales_config.xml`), which Settings opens; on Android 8–12 the app follows the system language.

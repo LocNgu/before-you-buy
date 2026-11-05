@@ -31,6 +31,13 @@ paths:
 - Every stored amount is in the policy currency: `add`/`update` require it. `PolicyRepository.changeCoolingOffRules(rules, changedAt, zone)` writes the tiers and `waitAfterRulesChange` for active items in one transaction (targeted `setWait`, so unreadable columns survive). `changeCurrency` relabels item prices, actual prices (`DecisionDao.setActualPrice`, the one decision write), tiers, the monthly allowance, every pool entry (`PoolDao.setEntryAmount`, the one ledger update) and every allocation (`setAllocationAmount`) in one transaction; null tiers stay null. Currencies must pass `isUsableCurrency`.
 - Preferences (DataStore) store only values the user set; defaults are computed on read. Create the DataStore with `DataStorePreferencesRepository.createDataStore` (corruption handler: replace with empty). The flow uses `retryWhen`, not `catch`, so it survives a failed read, and emits nothing until a read succeeds (never defaults in place of the user's values).
 
+## Backup (`backup/`, #27, ADR-0055)
+
+- `RoomBackupRepository` (interface `BackupRepository` in `:core:domain`): `export` writes a zip from one transaction snapshot; `inspect` reads a whole file into `cacheDir/backup-staging/<uuid>` and validates it (`isConsistent`, version via `BackupHeader` first) before returning a `StagedBackup`; `restore()` copies missing photos, then `BackupDao` deletes and inserts every row in one `withTransaction` (a failure rolls back and removes the photos this call added), then writes the DataStore settings.
+- `BackupDto` and its mappers mirror every entity by column; **a new table or column needs its DTO field (with a default), the export, `isConsistent` and `replaceAllRows`**. A change older apps can't read raises `BACKUP_FORMAT_VERSION`. Only names matching `IMAGE_REF` are taken from a file's `images/`.
+- Auto Backup: `app/src/main/res/xml/data_extraction_rules.xml` and `backup_rules.xml` include the database (+ `-wal`), `files/images/` and `files/datastore/` and nothing else; keep them in step with where data lives.
+- Test: `RoomBackupRepositoryTest` (round trip over every table, photos, settings; refusals; rollback via a trigger).
+
 ## Tests
 
 - Room: Robolectric + `Room.inMemoryDatabaseBuilder` via `db/DatabaseTest`. Raw SQL for odd states goes through `execSql`, which refreshes the invalidation tracker (otherwise observed queries don't re-emit).
