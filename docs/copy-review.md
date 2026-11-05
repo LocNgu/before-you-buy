@@ -22,7 +22,7 @@ English UI text says "waiting period", never "cooling off" (code and docs may st
 ## Result
 
 - Scan for shaming, urgency (only, hurry, last chance), celebration (saved, streak, well done), "afford", "available", deals and prices: **no violations** in any key. "Watch" flags below are borderline wordings that were checked and kept.
-- Changed: `stage_cooling_off`, `countdown_over`, `decision_cooling_done` (EN, term table); `stage_saving` (DE, "Sparen" → "Zurücklegen").
+- Changed: `stage_cooling_off`, `countdown_over`, `decision_cooling_done` (EN, term table); `stage_saving` (EN "Saving" → "Setting aside", DE "Sparen" → "Zurücklegen").
 - Left to #88: `home_money_unallocated` and the three keys that reuse "not yet set aside".
 - Plurals: every plural has `one` and `other` in both languages. German `notification_nudge_digest_title` and `home_considering_count` are identical in both forms by design.
 - Long words: the German wishlist, home and decision screens are screenshot-tested at font scale 1.3 (`*ScreenshotDeLargeFontTest`); text wraps, nothing clips.
@@ -71,11 +71,11 @@ English UI text says "waiting period", never "cooling off" (code and docs may st
 | `wishlist_ready_to_decide` | Ready to decide | Bereit zur Entscheidung |  |
 | `stage_cooling_off` | Waiting period | Wartezeit | Fixed: EN now "Waiting period" (was "Cooling off") |
 | `stage_needs_reflection` | Needs reflection | Zum Überdenken |  |
-| `stage_saving` | Saving | Zurücklegen | Fixed: DE now "Zurücklegen" (was "Sparen") |
+| `stage_saving` | Setting aside | Zurücklegen | Fixed: EN now "Setting aside" (was "Saving"), DE "Zurücklegen" (was "Sparen") |
 | `stage_not_priority` | Not one of your priorities | Keine deiner Prioritäten |  |
 | `stage_ready` | Ready | Bereit |  |
 | `wishlist_needs` | Needs | Notwendiges |  |
-| `priorities_empty_hint` | Make a want a priority to start its waiting period. | Mach einen Wunsch zur Priorität, damit seine Wartezeit beginnt. |  |
+| `priorities_empty_hint` | Make a want a priority to start its waiting period. | Mach einen Wunsch zur Priorität, damit die Wartezeit beginnt. |  |
 | `wait_progress_done` | Waiting period done | Wartezeit vorbei |  |
 | `relative_today` | Today | Heute |  |
 | `relative_yesterday` | Yesterday | Gestern |  |
@@ -269,7 +269,7 @@ English UI text says "waiting period", never "cooling off" (code and docs may st
 | `notification_permission_allow` | Allow notifications | Benachrichtigungen erlauben |  |
 | `notification_permission_not_now` | Not now | Jetzt nicht |  |
 | `fun_money_wants_need_funding` | Wants need their price set aside | Wünsche brauchen ihren Preis zurückgelegt |  |
-| `fun_money_wants_need_funding_explained` | A want is ready to decide on once its price is set aside. Off: the waiting period and your reasons are enough. | Ein Wunsch ist bereit zur Entscheidung, sobald sein Preis zurückgelegt ist. Aus: Die Wartezeit und deine Gründe reichen. |  |
+| `fun_money_wants_need_funding_explained` | A want is ready to decide on once its price is set aside. Off: the waiting period and your reasons are enough. | Ein Wunsch ist bereit zur Entscheidung, sobald der Preis zurückgelegt ist. Wenn du das ausschaltest, reichen die Wartezeit und deine Gründe. |  |
 | `savings_title` | Set aside | Zurückgelegt |  |
 | `savings_progress` | %1$s of %2$s set aside · %3$s to go | %1$s von %2$s zurückgelegt · noch %3$s |  |
 | `savings_progress_complete` | %1$s of %2$s set aside | %1$s von %2$s zurückgelegt |  |

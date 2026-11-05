@@ -6,7 +6,7 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ### Changed
 
-- Copy review: English now says "Waiting period" instead of "Cooling off" everywhere, and the German stage for a priority being funded reads "Zurücklegen" instead of "Sparen". The full list of strings is in `docs/copy-review.md`.
+- Copy review: English now says "Waiting period" instead of "Cooling off" everywhere, and the stage for a priority being funded reads "Setting aside" / "Zurücklegen" instead of "Saving" / "Sparen". The full list of strings is in `docs/copy-review.md`.
 
 ### Added
 
