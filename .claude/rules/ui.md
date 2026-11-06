@@ -32,6 +32,14 @@ paths:
 - Dates: `formattedDate(date)` (medium style). Day counts: `durationInDays(n)`, `daysAgo(n)`, `CountdownText`. They're all `plurals`, never "day(s)" or string concatenation.
 - Every string and plural in `values/` **and** `values-de/` (ADR-0016). New languages also go into `res/xml/locales_config.xml` (per-app language setting).
 
+## Accessibility (#30)
+
+- Every actionable element is ≥ 48dp (Material components add the padding; a custom `clickable` needs `minimumInteractiveComponentSize()`) and has text or a content description. Icons that are clickable need a description; decorative ones `contentDescription = null`.
+- A progress bar is either decorative (`clearAndSetSemantics {}` next to text that says the same, as in `SavingsProgressBar`, reflection) or gets a `stateDescription` with the amounts. Never leave a bare percentage.
+- Screens scroll (`verticalScroll`/`LazyColumn`) so font scale 2.0 never clips; no fixed heights on text containers.
+- `captureContent()` runs `checkAccessibility()` (`testing/Screenshots.kt`): touch targets and labels of clickable elements, and descriptions of bars that expose a range, over the semantics tree, for every screenshot test. Non-clickable images, sliders and long-click-only targets are not covered: review those by hand. The Accessibility Test Framework can't see Compose under Robolectric ("Composable content is not evaluated"), so it is not used. `ContrastTest` checks the palette for WCAG AA (4.5:1 text, 3:1 outlines) in light and dark: a regenerated palette must pass it.
+- Font scale: `…DeLargeFontTest` screenshot subclasses (`fontScale = 2.0f`, German) for Home, decision, head-to-head and item detail. Add one when a new core-loop screen is added.
+
 ## Tests
 
 - Component screenshots: abstract `ComponentScreenshotTest` with one subclass per variant (en/de × light/dark), each with fixed `@Config(qualifiers = …)`; images are `…ComponentScreenshot<Lang><Theme>Test.<test>.png`. Add a test method per new component to the base class. Set qualifiers with `@Config`, not `RuntimeEnvironment.setQualifiers` between tests.

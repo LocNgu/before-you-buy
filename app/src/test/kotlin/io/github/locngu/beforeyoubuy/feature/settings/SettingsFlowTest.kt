@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isOff
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.performClick
@@ -92,6 +93,13 @@ class SettingsFlowTest {
         waitingPeriodsSwitch().assertIsOn()
 
         waitingPeriodsSwitch().performClick()
+        // The switch follows the stored value, which is written asynchronously: wait for it, don't assert at once.
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodes(
+                hasText("Waiting periods") and isToggleable() and isOff()
+            ).fetchSemanticsNodes().size ==
+                1
+        }
         waitingPeriodsSwitch().assertIsOff()
         Espresso.pressBack()
         openSettings()
