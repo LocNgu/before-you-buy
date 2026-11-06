@@ -161,3 +161,7 @@ class HomeScreenshotDeLightTest : HomeScreenshotTest(german = true)
 
 @Config(qualifiers = "de-w411dp-h891dp-night-xxhdpi")
 class HomeScreenshotDeDarkTest : HomeScreenshotTest(german = true)
+
+/** Largest system font scale, longest language: scrolls, nothing is cut off or too small to press (#30). */
+@Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi", fontScale = 2.0f)
+class HomeScreenshotDeLargeFontTest : HomeScreenshotTest(german = true)

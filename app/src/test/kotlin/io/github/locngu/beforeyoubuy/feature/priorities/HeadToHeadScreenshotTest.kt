@@ -139,3 +139,7 @@ class HeadToHeadScreenshotDeLightTest : HeadToHeadScreenshotTest(german = true)
 
 @Config(qualifiers = "de-w411dp-h891dp-night-xxhdpi")
 class HeadToHeadScreenshotDeDarkTest : HeadToHeadScreenshotTest(german = true)
+
+/** Largest system font scale, longest language (#30). */
+@Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi", fontScale = 2.0f)
+class HeadToHeadScreenshotDeLargeFontTest : HeadToHeadScreenshotTest(german = true)

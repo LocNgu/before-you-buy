@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -141,7 +142,11 @@ private fun Progress(page: ReflectionPage) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        LinearProgressIndicator(progress = { (step.ordinal + 1f) / count }, modifier = Modifier.fillMaxWidth())
+        // The "Step 2 of 4" text above says it; the bar is only visual.
+        LinearProgressIndicator(
+            progress = { (step.ordinal + 1f) / count },
+            modifier = Modifier.fillMaxWidth().clearAndSetSemantics {}
+        )
     }
 }
 

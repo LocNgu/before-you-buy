@@ -261,3 +261,7 @@ class ItemDetailScreenshotEnTest : ItemDetailScreenshotTest(german = false)
 
 @Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi")
 class ItemDetailScreenshotDeTest : ItemDetailScreenshotTest(german = true)
+
+/** Largest system font scale, longest language (#30). */
+@Config(qualifiers = "de-w411dp-h891dp-notnight-xxhdpi", fontScale = 2.0f)
+class ItemDetailScreenshotDeLargeFontTest : ItemDetailScreenshotTest(german = true)

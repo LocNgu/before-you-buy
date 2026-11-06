@@ -9,6 +9,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import io.github.locngu.beforeyoubuy.R
@@ -27,8 +29,16 @@ fun SavingsProgressBar(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyMedium
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        LinearProgressIndicator(progress = { progress.fraction }, modifier = Modifier.fillMaxWidth())
+    // One TalkBack stop that reads the amounts once; the bar only repeats them visually.
+    Column(
+        modifier = modifier.semantics(mergeDescendants = true) {
+        },
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        LinearProgressIndicator(
+            progress = { progress.fraction },
+            modifier = Modifier.fillMaxWidth().clearAndSetSemantics {}
+        )
         Text(
             text = savingsText(progress),
             style = style,

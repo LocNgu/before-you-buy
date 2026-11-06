@@ -42,6 +42,8 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,6 +57,7 @@ import io.github.locngu.beforeyoubuy.core.domain.priorities.canBePriority
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.Wishlist
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
+import io.github.locngu.beforeyoubuy.feature.money.savingsText
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.feature.priorities.PrioritySlotsDialog
 import io.github.locngu.beforeyoubuy.feature.priorities.priorityMessage
@@ -288,9 +291,10 @@ private fun WishlistRow(
             }
             // How far the savings are, once something is set aside; detail has the amounts (brief §4.6).
             entry.savings?.takeIf { it.allocated.minorUnits > 0 }?.let { savings ->
+                val description = savingsText(savings)
                 LinearProgressIndicator(
                     progress = { savings.fraction },
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp).semantics { stateDescription = description }
                 )
             }
         }
