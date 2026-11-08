@@ -96,8 +96,12 @@ class QuickAddViewModel @Inject constructor(
     private val priorityChannel = Channel<PriorityEvent>(Channel.BUFFERED)
     private var opened = false
 
+    // Starts empty, so the sheet never waits for the database to offer its suggestions.
+    private val categories: StateFlow<List<String>> =
+        observeCategories(items).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val uiState: StateFlow<QuickAddUiState> =
-        combine(editor, policy, observeCategories(items)) { editor, policy, categories ->
+        combine(editor, policy, categories) { editor, policy, categories ->
             editor.toUiState(policy).copy(categories = categories)
         }
             .stateIn(viewModelScope, SharingStarted.Eagerly, QuickAddUiState())

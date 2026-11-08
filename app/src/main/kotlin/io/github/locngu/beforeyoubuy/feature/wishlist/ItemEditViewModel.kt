@@ -132,6 +132,8 @@ class ItemEditViewModel @AssistedInject constructor(
     private val policy: StateFlow<Policy?> = policies.policy.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     private val savings: StateFlow<Savings?> =
         observeSavings(items, pool).stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val categories: StateFlow<List<String>> =
+        observeCategories(items).stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     private val savedEvents = Channel<Unit>(Channel.BUFFERED)
 
     val uiState: StateFlow<ItemEditUiState> =
@@ -141,7 +143,7 @@ class ItemEditViewModel @AssistedInject constructor(
             policy,
             locale,
             ::uiStateOf
-        ).combine(observeCategories(items)) { state, categories -> state.copy(categories = categories) }
+        ).combine(categories) { state, categories -> state.copy(categories = categories) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, ItemEditUiState())
 
     /** One event per stored edit; the screen closes. */
