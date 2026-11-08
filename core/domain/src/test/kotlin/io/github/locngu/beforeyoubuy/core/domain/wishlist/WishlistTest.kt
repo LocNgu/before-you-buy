@@ -299,7 +299,7 @@ class WishlistTest {
         val all = listOf(a, b, c)
 
         assertEquals(listOf(2L, 1L, 3L), sorted(all, WishlistSort()).parked.map { it.item.id.value })
-        assertEquals(listOf(3L, 1L, 2L), sorted(all, WishlistSort(descending = true)).parked.map { it.item.id.value })
+        assertEquals(listOf(1L, 3L, 2L), sorted(all, WishlistSort(descending = true)).parked.map { it.item.id.value })
     }
 
     @Test

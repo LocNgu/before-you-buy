@@ -140,11 +140,23 @@ fun wishlistOf(
     val priorities = prioritiesOf(active)
     val ids = priorities.map { it.id }.toSet()
     val byAdded = compareBy<Item>({ it.addedAt }, { it.id.value })
-    val primary: Comparator<Item> = when (sort.field) {
-        SortField.ADDED -> byAdded
-        SortField.PRICE -> compareBy<Item> { it.price.minorUnits }
-    }.let { if (sort.descending) it.reversed() else it }
-    val order = if (sort.field == SortField.ADDED) primary else primary.then(byAdded)
+    // Ties go to the older item, then the lower id, in either direction.
+    val order: Comparator<Item> = when (sort.field) {
+        SortField.ADDED ->
+            if (sort.descending) compareByDescending<Item> { it.addedAt }.thenBy { it.id.value } else byAdded
+
+        SortField.PRICE ->
+            (
+                if (sort.descending) {
+                    compareByDescending<Item> {
+                        it.price.minorUnits
+                    }
+                } else {
+                    compareBy { it.price.minorUnits }
+                }
+                )
+                .then(byAdded)
+    }
     val wanted = category?.categoryKey()?.takeIf { it.isNotEmpty() }
     fun Item.shown() = wanted == null || this.category?.categoryKey() == wanted
     val rest = active.filter { it.id !in ids && it.shown() }.sortedWith(order)
