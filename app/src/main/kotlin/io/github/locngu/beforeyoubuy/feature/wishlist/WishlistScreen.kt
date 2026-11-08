@@ -1,6 +1,8 @@
 package io.github.locngu.beforeyoubuy.feature.wishlist
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,10 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -28,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,6 +47,8 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,8 +59,10 @@ import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.core.domain.priorities.canBePriority
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.SortField
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.Wishlist
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistEntry
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistSort
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddButton
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.feature.priorities.PrioritySlotsDialog
@@ -92,10 +101,17 @@ fun WishlistScreen(
             }
         }
     }
+    // Sort and filter aren't remembered: leaving the wishlist (not a rotation) puts them back (#83).
+    val activity = LocalActivity.current
+    DisposableEffect(viewModel) {
+        onDispose { if (activity?.isChangingConfigurations != true) viewModel.resetView() }
+    }
     WishlistContent(
         state = state,
         onAdd = onAdd,
         onOpenItem = onOpenItem,
+        onSort = viewModel::sortBy,
+        onFilterCategory = viewModel::filterByCategory,
         onMakePriority = viewModel::makePriority,
         onChangePrioritySlots = viewModel::changePrioritySlots,
         snackbarHostState = snackbarHostState,
@@ -117,11 +133,18 @@ fun WishlistContent(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
     onMakePriority: (ItemId) -> Unit = {},
-    onChangePrioritySlots: (Int) -> Unit = {}
+    onChangePrioritySlots: (Int) -> Unit = {},
+    onSort: (WishlistSort) -> Unit = {},
+    onFilterCategory: (String?) -> Unit = {}
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.wishlist_title)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.wishlist_title)) },
+                actions = { if (state.wishlist?.isEmpty() == false) SortMenu(state.sort, onSort) }
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = { QuickAddButton(onClick = onAdd) }
     ) { innerPadding ->
@@ -147,6 +170,7 @@ fun WishlistContent(
                 onOpenItem,
                 onMakePriority,
                 onChangePrioritySlots,
+                onFilterCategory,
                 Modifier.padding(innerPadding)
             )
         }
@@ -160,11 +184,15 @@ private fun WishlistList(
     onOpenItem: (ItemId) -> Unit,
     onMakePriority: (ItemId) -> Unit,
     onChangePrioritySlots: (Int) -> Unit,
+    onFilterCategory: (String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var changingSlots by rememberSaveable { mutableStateOf(false) }
     // Leaves room for the floating button, so the last row isn't hidden behind it.
     LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 96.dp)) {
+        if (wishlist.categories.isNotEmpty()) {
+            item(key = "category-filter") { CategoryChips(wishlist.categories, state.category, onFilterCategory) }
+        }
         // Always shown: every new want starts on the wishlist, and this is where its wait can start (ADR-0049).
         item(key = "header-priorities") {
             PrioritiesHeader(wishlist.priorities.size, state.prioritySlots, onChange = { changingSlots = true })
@@ -206,6 +234,68 @@ private fun WishlistList(
             },
             onDismiss = { changingSlots = false }
         )
+    }
+}
+
+/** The sort options: [WishlistSort] and the label of each, in menu order. */
+private val SORT_OPTIONS = listOf(
+    WishlistSort(SortField.ADDED, descending = false) to R.string.wishlist_sort_added_oldest,
+    WishlistSort(SortField.ADDED, descending = true) to R.string.wishlist_sort_added_newest,
+    WishlistSort(SortField.PRICE, descending = false) to R.string.wishlist_sort_price_low,
+    WishlistSort(SortField.PRICE, descending = true) to R.string.wishlist_sort_price_high
+)
+
+/** The top bar's sort menu: how the needs and the wishlist are ordered. The priorities stay by rank (#83). */
+@Composable
+private fun SortMenu(current: WishlistSort, onSort: (WishlistSort) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { expanded = true }) { Text(stringResource(R.string.wishlist_sort)) }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text(
+                text = stringResource(R.string.wishlist_sort_hint),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            SORT_OPTIONS.forEach { (sort, label) ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(label)) },
+                    onClick = {
+                        expanded = false
+                        onSort(sort)
+                    },
+                    modifier = Modifier.semantics { selected = sort == current },
+                    trailingIcon = if (sort == current) {
+                        { Icon(painterResource(R.drawable.ic_check), contentDescription = null) }
+                    } else {
+                        null
+                    }
+                )
+            }
+        }
+    }
+}
+
+/** "All" and one chip per category in use; one at a time (#83). Shown only with two or more categories. */
+@Composable
+private fun CategoryChips(categories: List<String>, selected: String?, onSelect: (String?) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            selected = selected == null,
+            onClick = { onSelect(null) },
+            label = { Text(stringResource(R.string.wishlist_filter_all)) }
+        )
+        categories.forEach { category ->
+            FilterChip(
+                selected = selected != null && selected.trim().equals(category, ignoreCase = true),
+                onClick = { onSelect(category) },
+                label = { Text(category) }
+            )
+        }
     }
 }
 

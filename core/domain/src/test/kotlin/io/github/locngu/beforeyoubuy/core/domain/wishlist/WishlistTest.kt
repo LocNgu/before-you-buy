@@ -279,4 +279,116 @@ class WishlistTest {
         assertEquals(Duration.ofHours(2), untilWishlistChanges(listOf(waited, passed), now, zone))
         assertEquals(Duration.ofHours(14), untilWishlistChanges(listOf(passed), now, zone))
     }
+
+    // --- Sort and category filter (#83) ---
+
+    private fun parkedAt(id: Long, minor: Long, added: String, category: String? = null): Item = parkedWish(id).copy(
+        price = parkedWish(id).price.copy(minorUnits = minor),
+        addedAt = Instant.parse(added),
+        category = category
+    )
+
+    private fun sorted(items: List<Item>, sort: WishlistSort, category: String? = null) =
+        wishlistOf(items, emptyMap(), Savings.NONE, AFTER_COOLING, zone, sort, category)
+
+    @Test
+    fun `parked wants sort by date added in both directions, ties by id`() {
+        val a = parkedAt(1, 100, "2026-01-02T00:00:00Z")
+        val b = parkedAt(2, 100, "2026-01-01T00:00:00Z")
+        val c = parkedAt(3, 100, "2026-01-02T00:00:00Z")
+        val all = listOf(a, b, c)
+
+        assertEquals(listOf(2L, 1L, 3L), sorted(all, WishlistSort()).parked.map { it.item.id.value })
+        assertEquals(listOf(1L, 3L, 2L), sorted(all, WishlistSort(descending = true)).parked.map { it.item.id.value })
+    }
+
+    @Test
+    fun `parked wants sort by price in both directions, ties by date added then id`() {
+        val cheapNew = parkedAt(1, 100, "2026-01-03T00:00:00Z")
+        val cheapOld = parkedAt(2, 100, "2026-01-01T00:00:00Z")
+        val dear = parkedAt(3, 900, "2026-01-02T00:00:00Z")
+        val sameDay = parkedAt(4, 100, "2026-01-01T00:00:00Z")
+        val all = listOf(cheapNew, dear, sameDay, cheapOld)
+
+        assertEquals(
+            listOf(2L, 4L, 1L, 3L),
+            sorted(all, WishlistSort(SortField.PRICE)).parked.map { it.item.id.value }
+        )
+        assertEquals(
+            listOf(3L, 2L, 4L, 1L),
+            sorted(all, WishlistSort(SortField.PRICE, descending = true)).parked.map { it.item.id.value }
+        )
+    }
+
+    @Test
+    fun `needs follow the sort too`() {
+        val cheap = wish(1, kind = ItemKind.NEED).let { it.copy(price = it.price.copy(minorUnits = 100)) }
+        val dear = wish(2, kind = ItemKind.NEED).let { it.copy(price = it.price.copy(minorUnits = 900)) }
+
+        val needs = sorted(listOf(cheap, dear), WishlistSort(SortField.PRICE, descending = true)).needs
+
+        assertEquals(listOf(2L, 1L), needs.map { it.item.id.value })
+    }
+
+    @Test
+    fun `priorities keep rank order under every sort`() {
+        val first = wish(1).copy(prioritySlot = 1).let { it.copy(price = it.price.copy(minorUnits = 900)) }
+        val second = wish(2).copy(prioritySlot = 2).let { it.copy(price = it.price.copy(minorUnits = 100)) }
+
+        for (sort in listOf(WishlistSort(), WishlistSort(descending = true), WishlistSort(SortField.PRICE))) {
+            assertEquals(listOf(1L, 2L), sorted(listOf(second, first), sort).priorities.map { it.entry.item.id.value })
+        }
+    }
+
+    @Test
+    fun `a category filter ignores case and spaces, applies to every section and keeps real ranks`() {
+        val photo = wish(1).copy(prioritySlot = 1, category = "Garden")
+        val camera = wish(2).copy(prioritySlot = 2, category = " photo ")
+        val need = wish(3, kind = ItemKind.NEED).copy(category = "PHOTO")
+        val lens = parkedAt(4, 100, "2026-01-01T00:00:00Z", "Photo")
+        val spade = parkedAt(5, 100, "2026-01-01T00:00:00Z", "Garden")
+
+        val wishlist = sorted(listOf(photo, camera, need, lens, spade), WishlistSort(), category = "photo")
+
+        assertEquals(listOf(2), wishlist.priorities.map { it.rank })
+        assertEquals(listOf(3L), wishlist.needs.map { it.item.id.value })
+        assertEquals(listOf(4L), wishlist.parked.map { it.item.id.value })
+    }
+
+    @Test
+    fun `a filter can leave a section empty`() {
+        val lens = parkedAt(1, 100, "2026-01-01T00:00:00Z", "Photo")
+        val spade = parkedAt(2, 100, "2026-01-01T00:00:00Z", "Garden")
+        val need = wish(3, kind = ItemKind.NEED).copy(category = "Garden")
+
+        val wishlist = sorted(listOf(lens, spade, need), WishlistSort(), category = "Photo")
+
+        assertTrue(wishlist.needs.isEmpty())
+        assertTrue(wishlist.priorities.isEmpty())
+    }
+
+    @Test
+    fun `categories are offered only with two or more distinct ones, whatever the filter`() {
+        val one = parkedAt(1, 100, "2026-01-01T00:00:00Z", "Photo")
+        val same = parkedAt(2, 100, "2026-01-01T00:00:00Z", " photo")
+        val other = parkedAt(3, 100, "2026-01-01T00:00:00Z", "Garden")
+        val none = parkedAt(4, 100, "2026-01-01T00:00:00Z", null)
+
+        assertTrue(sorted(listOf(one, same, none), WishlistSort()).categories.isEmpty())
+        assertEquals(listOf("Garden", "Photo"), sorted(listOf(one, same, other), WishlistSort()).categories)
+        assertEquals(
+            listOf("Garden", "Photo"),
+            sorted(listOf(one, same, other), WishlistSort(), category = "Garden").categories
+        )
+    }
+
+    @Test
+    fun `suggestions come from existing categories, de-duplicated ignoring case`() {
+        val existing = listOf("Photo", "photo ", "Garden", null, "  ", "Photography")
+
+        assertEquals(listOf("Garden", "Photo", "Photography"), categorySuggestions(existing, ""))
+        assertEquals(listOf("Photography"), categorySuggestions(existing, "photo"))
+        assertEquals(listOf("Garden"), categorySuggestions(existing, " GAR"))
+        assertTrue(categorySuggestions(existing, "zzz").isEmpty())
+    }
 }

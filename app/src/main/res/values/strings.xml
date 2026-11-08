@@ -51,6 +51,13 @@
     <!-- Wishlist (brief §6.3). Stage names are shown as group headings and as chips on each row. -->
     <string name="wishlist_title">Wishlist</string>
     <string name="wishlist_open">Open wishlist</string>
+    <string name="wishlist_sort">Sort</string>
+    <string name="wishlist_sort_hint">Needs and wishlist. Priorities stay in rank order.</string>
+    <string name="wishlist_sort_added_oldest">Added: oldest first</string>
+    <string name="wishlist_sort_added_newest">Added: newest first</string>
+    <string name="wishlist_sort_price_low">Price: low to high</string>
+    <string name="wishlist_sort_price_high">Price: high to low</string>
+    <string name="wishlist_filter_all">All</string>
     <string name="wishlist_empty_title">Your wishlist is empty</string>
     <string name="wishlist_empty_body">Add something you want. It waits here while you think it over.</string>
     <string name="wishlist_ready_to_decide">Ready to decide</string>

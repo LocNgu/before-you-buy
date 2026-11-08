@@ -1,11 +1,13 @@
 package io.github.locngu.beforeyoubuy.feature.capture
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActionScope
 import androidx.compose.foundation.text.KeyboardActions
@@ -17,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,6 +45,7 @@ import io.github.locngu.beforeyoubuy.core.domain.item.ItemKind
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
 import io.github.locngu.beforeyoubuy.core.domain.money.MoneyParseResult
 import io.github.locngu.beforeyoubuy.core.domain.money.formatForInput
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.categorySuggestions
 import io.github.locngu.beforeyoubuy.ui.format.currencySymbol
 import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 import io.github.locngu.beforeyoubuy.ui.format.formattedDate
@@ -154,7 +158,12 @@ internal fun NeedToggle(form: CaptureForm, actions: ItemFormActions) {
 
 /** Category, notes and target date. [today] is the earliest date the picker offers. */
 @Composable
-internal fun DetailFields(form: CaptureForm, today: LocalDate?, actions: ItemFormActions) {
+internal fun DetailFields(
+    form: CaptureForm,
+    today: LocalDate?,
+    actions: ItemFormActions,
+    categories: List<String> = emptyList()
+) {
     OutlinedTextField(
         value = form.category,
         onValueChange = actions::onCategoryChange,
@@ -163,6 +172,17 @@ internal fun DetailFields(form: CaptureForm, today: LocalDate?, actions: ItemFor
         singleLine = true,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next)
     )
+    val suggestions = remember(categories, form.category) { categorySuggestions(categories, form.category) }
+    if (suggestions.isNotEmpty()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            suggestions.forEach { category ->
+                SuggestionChip(onClick = { actions.onCategoryChange(category) }, label = { Text(category) })
+            }
+        }
+    }
     OutlinedTextField(
         value = form.notes,
         onValueChange = actions::onNotesChange,

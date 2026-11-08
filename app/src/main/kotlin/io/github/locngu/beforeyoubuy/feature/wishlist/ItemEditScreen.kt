@@ -134,7 +134,7 @@ fun ItemEditContent(
                     )
                     LinkField(form, actions)
                     NeedToggle(form, actions)
-                    DetailFields(form, state.today, actions)
+                    DetailFields(form, state.today, actions, state.categories)
                     PhotoField(state, actions, onPickPhoto)
                 }
         }
