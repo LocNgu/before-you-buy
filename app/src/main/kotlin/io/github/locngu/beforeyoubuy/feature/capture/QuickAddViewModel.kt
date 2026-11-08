@@ -54,6 +54,7 @@ data class QuickAddSaved(val itemId: ItemId, val kind: ItemKind)
  *   (it can't be read offline, #15), else the name.
  * @property waitDays the waiting period of the typed price's tier, which a want waits once it's a priority (ADR-0049);
  *   null for a need and while the price doesn't read.
+ * @property categories the categories already used, which the category field suggests while typing (#83).
  */
 data class QuickAddUiState(
     val visible: Boolean = false,
@@ -65,7 +66,8 @@ data class QuickAddUiState(
     val currency: String? = null,
     val today: LocalDate? = null,
     val startField: QuickAddField = QuickAddField.NAME,
-    val waitDays: Int? = null
+    val waitDays: Int? = null,
+    val categories: List<String> = emptyList()
 )
 
 /** What the user can do in the quick-add sheet. */
@@ -95,7 +97,9 @@ class QuickAddViewModel @Inject constructor(
     private var opened = false
 
     val uiState: StateFlow<QuickAddUiState> =
-        combine(editor, policy) { editor, policy -> editor.toUiState(policy) }
+        combine(editor, policy, observeCategories(items)) { editor, policy, categories ->
+            editor.toUiState(policy).copy(categories = categories)
+        }
             .stateIn(viewModelScope, SharingStarted.Eagerly, QuickAddUiState())
 
     /** One event per stored item, for the snackbar. */

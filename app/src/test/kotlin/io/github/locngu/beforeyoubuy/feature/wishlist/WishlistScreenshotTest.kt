@@ -168,10 +168,41 @@ abstract class WishlistScreenshotTest(private val german: Boolean) {
     @Test
     fun loading() = capture(WishlistUiState(null))
 
+    /** Two categories in use: the chips show, and "Photo" keeps only its items in every section (#83). */
+    @Test
+    fun filteredByCategory() {
+        val categorized = all.map {
+            when (it.id) {
+                bike.id, lamp.id -> it.copy(category = t("Home", "Zuhause"))
+                else -> it.copy(category = t("Photo", "Foto"))
+            }
+        }
+        val chosen = t("Photo", "Foto")
+        capture(
+            WishlistUiState(
+                wishlistOf(
+                    categorized,
+                    mapOf(ready.id to reflection),
+                    Savings.NONE,
+                    now,
+                    ZoneOffset.UTC,
+                    category = chosen
+                ),
+                active = categorized,
+                category = chosen
+            )
+        )
+    }
+
     private fun capture(state: WishlistUiState) {
         composeRule.setContent {
             BeforeYouBuyTheme {
-                WishlistContent(state, onAdd = {}, onOpenItem = {}, snackbarHostState = SnackbarHostState())
+                WishlistContent(
+                    state,
+                    onAdd = {},
+                    onOpenItem = {},
+                    snackbarHostState = SnackbarHostState()
+                )
             }
         }
         composeRule.captureContent()

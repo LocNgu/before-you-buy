@@ -51,6 +51,13 @@
     <!-- Wunschliste (Brief §6.3). Die Phasen sind Gruppenüberschriften und Chips in jeder Zeile. -->
     <string name="wishlist_title">Wunschliste</string>
     <string name="wishlist_open">Wunschliste öffnen</string>
+    <string name="wishlist_sort">Sortieren</string>
+    <string name="wishlist_sort_hint">Bedarf und Wunschliste. Prioritäten bleiben in ihrer Reihenfolge.</string>
+    <string name="wishlist_sort_added_oldest">Hinzugefügt: älteste zuerst</string>
+    <string name="wishlist_sort_added_newest">Hinzugefügt: neueste zuerst</string>
+    <string name="wishlist_sort_price_low">Preis: aufsteigend</string>
+    <string name="wishlist_sort_price_high">Preis: absteigend</string>
+    <string name="wishlist_filter_all">Alle</string>
     <string name="wishlist_empty_title">Deine Wunschliste ist leer</string>
     <string name="wishlist_empty_body">Füge etwas hinzu, das du gern hättest. Es wartet hier, während du darüber nachdenkst.</string>
     <string name="wishlist_ready_to_decide">Bereit zur Entscheidung</string>

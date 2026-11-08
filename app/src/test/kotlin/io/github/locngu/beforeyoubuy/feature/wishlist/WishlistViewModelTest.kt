@@ -7,7 +7,9 @@ import io.github.locngu.beforeyoubuy.core.domain.item.Reflection
 import io.github.locngu.beforeyoubuy.core.domain.item.UsageFrequency
 import io.github.locngu.beforeyoubuy.core.domain.lifecycle.Stage
 import io.github.locngu.beforeyoubuy.core.domain.money.Money
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.SortField
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.Wishlist
+import io.github.locngu.beforeyoubuy.core.domain.wishlist.WishlistSort
 import io.github.locngu.beforeyoubuy.feature.priorities.PriorityEvent
 import io.github.locngu.beforeyoubuy.testing.FakeItemImageStore
 import io.github.locngu.beforeyoubuy.testing.FakeItemRepository
@@ -133,6 +135,45 @@ class WishlistViewModelTest {
         pass(Duration.ofHours(14)) // midnight
 
         assertEquals(2, entries.single().daysLeft)
+    }
+
+    @Test
+    fun `sort and category filter apply, and reset to the defaults`() = runTest(UnconfinedTestDispatcher()) {
+        viewModel.uiState.launchIn(backgroundScope)
+        val lens = add("Lens", endsInHours = 24, price = 50_000, parked = true)
+        val spade = add("Spade", endsInHours = 24, price = 2_000, parked = true)
+        items.replace(lens.copy(category = "Photo"))
+        items.replace(spade.copy(category = "Garden"))
+
+        assertEquals(listOf(lens.id, spade.id), wishlist!!.parked.map { it.item.id })
+        assertEquals(listOf("Garden", "Photo"), wishlist!!.categories)
+
+        viewModel.sortBy(WishlistSort(SortField.PRICE))
+        assertEquals(listOf(spade.id, lens.id), wishlist!!.parked.map { it.item.id })
+
+        viewModel.filterByCategory("photo")
+        assertEquals(listOf(lens.id), wishlist!!.parked.map { it.item.id })
+        assertEquals("photo", viewModel.uiState.value.category)
+
+        viewModel.resetView()
+        assertEquals(WishlistSort.DEFAULT, viewModel.uiState.value.sort)
+        assertNull(viewModel.uiState.value.category)
+        assertEquals(listOf(lens.id, spade.id), wishlist!!.parked.map { it.item.id })
+    }
+
+    @Test
+    fun `a chosen category that is no longer offered shows everything`() = runTest(UnconfinedTestDispatcher()) {
+        viewModel.uiState.launchIn(backgroundScope)
+        val lens = add("Lens", endsInHours = 24, parked = true)
+        val spade = add("Spade", endsInHours = 24, parked = true)
+        items.replace(lens.copy(category = "Photo"))
+        items.replace(spade.copy(category = "Garden"))
+        viewModel.filterByCategory("Photo")
+
+        items.replace(spade.copy(category = "Photo"))
+
+        assertNull(viewModel.uiState.value.category)
+        assertEquals(2, wishlist!!.parked.size)
     }
 
     @Test

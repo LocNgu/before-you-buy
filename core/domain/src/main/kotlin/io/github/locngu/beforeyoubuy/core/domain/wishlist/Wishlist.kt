@@ -50,7 +50,12 @@ data class Priority(val rank: Int, val entry: WishlistEntry)
  * [needs], Ready at once (ADR-0008), oldest first; then every [parked] want, the ones without a slot, oldest first.
  * Parked wants have no stage groups: none can be Ready and none counts down.
  */
-data class Wishlist(val priorities: List<Priority>, val needs: List<WishlistEntry>, val parked: List<WishlistEntry>) {
+data class Wishlist(
+    val priorities: List<Priority>,
+    val needs: List<WishlistEntry>,
+    val parked: List<WishlistEntry>,
+    val categories: List<String> = emptyList()
+) {
     /** Every active item, in the order the screen shows them. */
     val entries: List<WishlistEntry> get() = priorities.map { it.entry } + needs + parked
 
@@ -62,6 +67,42 @@ data class Wishlist(val priorities: List<Priority>, val needs: List<WishlistEntr
     }
 }
 
+/** What the needs and the wishlist section are ordered by (#83). The priorities always stay in rank order. */
+enum class SortField { ADDED, PRICE }
+
+/**
+ * How the needs and the parked wants are ordered: by [field], [descending] or not. Ties go to the older item, then the
+ * lower id, in either direction. The default is oldest first.
+ */
+data class WishlistSort(val field: SortField = SortField.ADDED, val descending: Boolean = false) {
+    companion object {
+        val DEFAULT = WishlistSort()
+    }
+}
+
+private fun String.categoryKey(): String = trim().lowercase()
+
+/**
+ * The distinct categories of [categories] (null and blank ignored), matched ignoring case and surrounding spaces; each
+ * is spelled as first seen, trimmed. Sorted alphabetically, ignoring case.
+ */
+fun distinctCategories(categories: Iterable<String?>): List<String> = categories
+    .mapNotNull { it?.trim()?.takeIf(String::isNotEmpty) }
+    .distinctBy { it.categoryKey() }
+    .sortedBy { it.categoryKey() }
+
+/**
+ * Categories to suggest while [typed] is entered: [existing] ones ([distinctCategories]) that contain it, ignoring
+ * case, without the one already typed in full. All of them when nothing is typed.
+ */
+fun categorySuggestions(existing: Iterable<String?>, typed: String): List<String> {
+    val key = typed.categoryKey()
+    return distinctCategories(existing).filter {
+        key.isEmpty() ||
+            (it.categoryKey().contains(key) && it.categoryKey() != key)
+    }
+}
+
 /**
  * The wishlist (brief §6.3, ADR-0049) of the active [items]: the priorities by rank ([prioritiesOf]), then the needs,
  * then the parked wants. Each entry carries the stage [stageOf] gives it; a parked want also how much of its wait is
@@ -69,13 +110,20 @@ data class Wishlist(val priorities: List<Priority>, val needs: List<WishlistEntr
  *
  * [reflections] holds the answers given so far; an item without an entry has none. [savings] holds what is set aside
  * per item and whether wants need it to be Ready (ADR-0046).
+ *
+ * [sort] orders the needs and the parked wants; the priorities stay in rank order (ADR-0011). [category] shows only
+ * items of that category, ignoring case and surrounding spaces, in every section; a section left empty is then empty.
+ * [Wishlist.categories] lists the categories in use among all active items, whatever the filter, but only when there
+ * are two or more (the screen's chips).
  */
 fun wishlistOf(
     items: List<Item>,
     reflections: Map<ItemId, Reflection>,
     savings: Savings,
     now: Instant,
-    zone: ZoneId
+    zone: ZoneId,
+    sort: WishlistSort = WishlistSort.DEFAULT,
+    category: String? = null
 ): Wishlist {
     val active = items.filter { it.status == ItemStatus.ACTIVE }
     fun entryOf(item: Item): WishlistEntry {
@@ -91,12 +139,24 @@ fun wishlistOf(
     }
     val priorities = prioritiesOf(active)
     val ids = priorities.map { it.id }.toSet()
-    val oldestFirst = compareBy<Item>({ it.addedAt }, { it.id.value })
-    val rest = active.filter { it.id !in ids }.sortedWith(oldestFirst)
+    val byAdded = compareBy<Item>({ it.addedAt }, { it.id.value })
+    val primary: Comparator<Item> = when (sort.field) {
+        SortField.ADDED -> byAdded
+        SortField.PRICE -> compareBy<Item> { it.price.minorUnits }
+    }.let { if (sort.descending) it.reversed() else it }
+    val order = if (sort.field == SortField.ADDED) primary else primary.then(byAdded)
+    val wanted = category?.categoryKey()?.takeIf { it.isNotEmpty() }
+    fun Item.shown() = wanted == null || this.category?.categoryKey() == wanted
+    val rest = active.filter { it.id !in ids && it.shown() }.sortedWith(order)
+    val categories = distinctCategories(active.map { it.category }).takeIf { it.size >= 2 }.orEmpty()
     return Wishlist(
-        priorities = priorities.mapIndexed { index, item -> Priority(index + 1, entryOf(item)) },
+        // Ranks are the real ones, also when a filter hides some priorities.
+        priorities = priorities.withIndex()
+            .filter { (_, item) -> item.shown() }
+            .map { (index, item) -> Priority(index + 1, entryOf(item)) },
         needs = rest.filter { it.kind == ItemKind.NEED }.map(::entryOf),
-        parked = rest.filter { it.isParked }.map(::entryOf)
+        parked = rest.filter { it.isParked }.map(::entryOf),
+        categories = categories
     )
 }
 

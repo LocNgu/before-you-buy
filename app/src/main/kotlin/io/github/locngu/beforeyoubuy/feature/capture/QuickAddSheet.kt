@@ -190,7 +190,7 @@ fun QuickAddForm(
             val label = if (state.detailsExpanded) R.string.quick_add_fewer_details else R.string.quick_add_more_details
             Text(stringResource(label))
         }
-        if (state.detailsExpanded) DetailFields(state.form, state.today, actions)
+        if (state.detailsExpanded) DetailFields(state.form, state.today, actions, state.categories)
     }
 }
 

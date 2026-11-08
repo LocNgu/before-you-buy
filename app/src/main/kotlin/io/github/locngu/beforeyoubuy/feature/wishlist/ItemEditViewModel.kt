@@ -27,6 +27,7 @@ import io.github.locngu.beforeyoubuy.core.domain.wishlist.editFormOf
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.editedItem
 import io.github.locngu.beforeyoubuy.core.domain.wishlist.waitChange
 import io.github.locngu.beforeyoubuy.feature.capture.ItemFormActions
+import io.github.locngu.beforeyoubuy.feature.capture.observeCategories
 import io.github.locngu.beforeyoubuy.feature.money.observeSavings
 import java.io.File
 import java.time.Clock
@@ -73,7 +74,8 @@ data class ItemEditUiState(
     val importingPhoto: Boolean = false,
     val photoFailed: Boolean = false,
     val confirmRelease: Money? = null,
-    val confirmLeavesPriorities: Boolean = false
+    val confirmLeavesPriorities: Boolean = false,
+    val categories: List<String> = emptyList()
 )
 
 /** How saving would change the wait, with the end date in the device's zone (from the injected clock). */
@@ -139,7 +141,8 @@ class ItemEditViewModel @AssistedInject constructor(
             policy,
             locale,
             ::uiStateOf
-        ).stateIn(viewModelScope, SharingStarted.Eagerly, ItemEditUiState())
+        ).combine(observeCategories(items)) { state, categories -> state.copy(categories = categories) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, ItemEditUiState())
 
     /** One event per stored edit; the screen closes. */
     val saved: Flow<Unit> = savedEvents.receiveAsFlow()
