@@ -121,4 +121,16 @@
         <item quantity="one">Das %1$d andere Ding auf deiner Wunschliste kostet %2$s</item>
         <item quantity="other">Alle %1$d anderen Dinge auf deiner Wunschliste kosten zusammen %2$s</item>
     </plurals>
+
+    <!-- Bestätigung nach einem normalen Kauf (ADR-0055): Kalendertage vom Hinzufügen bis zum Kauf, wie im Verlauf. -->
+    <plurals name="decision_bought_waited">
+        <item quantity="one">Du hast %d Tag darauf gewartet. Viel Freude damit.</item>
+        <item quantity="other">Du hast %d Tage darauf gewartet. Viel Freude damit.</item>
+    </plurals>
+
+    <!-- Zusammenfassung im Verlauf: normale Käufe, die ihre ganze Wartezeit abgewartet haben (ADR-0055). -->
+    <plurals name="history_summary_waited">
+        <item quantity="one">Du hast %d Ding gekauft, auf das du gewartet hast</item>
+        <item quantity="other">Du hast %d Dinge gekauft, auf die du gewartet hast</item>
+    </plurals>
 </resources>

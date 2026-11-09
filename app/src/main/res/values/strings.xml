@@ -258,6 +258,10 @@
     <!-- Snackbar once decided. Neutral: no "you saved", no celebration (ADR-0012). -->
     <string name="decision_rejected">Got it. It’s in “Decided against”.</string>
     <string name="decision_bought">Got it. It’s in “Bought”.</string>
+    <!-- After a plain Buy only (ADR-0055): "Enjoy it." alone when it was bought the day it was added. Also plural decision_bought_waited. -->
+    <string name="decision_bought_enjoy">Enjoy it.</string>
+    <!-- After Reject, when "Don’t buy" names a priority (ADR-0048, ADR-0055). -->
+    <string name="decision_rejected_for">Let go. %1$s stays for your %2$s (#%3$d).</string>
 
     <!-- History (brief §6.6, issue #19). Neutral, factual: no "saved", no streaks or praise (ADR-0012). -->
     <string name="history_open">History</string>
@@ -279,6 +283,12 @@
     <string name="history_decided_against_total">You decided against %1$s of purchases</string>
     <string name="history_decided_against_total_month">This month you decided against %1$s of purchases</string>
     <string name="history_decided_against_total_year">This year you decided against %1$s of purchases</string>
+
+    <!-- Summary line above the tabs (ADR-0055). Counts only; each part is left out at 0. Also plural history_summary_waited. -->
+    <string name="history_summary_let_go">You let %1$d go</string>
+    <string name="history_summary_join">%1$s · %2$s</string>
+    <string name="history_summary_month">This month: %1$s</string>
+    <string name="history_summary_year">This year: %1$s</string>
     <!-- %1$s: a date. -->
     <string name="history_bought_on">Bought on %1$s</string>
     <string name="history_decided_on">Decided on %1$s</string>

@@ -234,11 +234,14 @@ Then asks: **"Do you still want to spend this money on this?"** — Buy / Wait /
 
 The not-buying option is labelled concretely, e.g. *"Keep 1,200 € for your Camera (#2)"* (research: describing the alternative reduces impulse purchases).
 
+After a decision a plain-text confirmation says where the item went: a plain Buy *"You waited 61 days for this. Enjoy it."*, an early buy or a need *"Got it. It's in 'Bought'."*, Reject *"Let go. 1,200 € stays for your Camera (#2)."* (or *"It's in 'Decided against'."*). No animation, confetti or badge (ADR-0055).
+
 ### 6.6 History
 
 Two tabs: **Bought** and **Decided against**.
 
 - Bought: price, date, original price, time considered, original reason, early/need flag.
+- Summary line above the tabs, following the period: *"You bought 5 things you'd waited for · You let 12 go"* (counts only; plain buys only, early buys and needs aren't mentioned; a part at 0 is left out, hidden when both are 0; ADR-0055).
 - Decided against: total shown as *"You decided against 3,420 € of purchases"* — neutral, no trophies, streaks, confetti or "you saved!" language.
 
 ### 6.7 Settings

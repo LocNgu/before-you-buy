@@ -20,6 +20,7 @@ import io.github.locngu.beforeyoubuy.feature.capture.QuickAddHost
 import io.github.locngu.beforeyoubuy.feature.capture.QuickAddViewModel
 import io.github.locngu.beforeyoubuy.feature.decision.DecisionOutcome
 import io.github.locngu.beforeyoubuy.feature.decision.DecisionScreen
+import io.github.locngu.beforeyoubuy.feature.decision.decisionMessage
 import io.github.locngu.beforeyoubuy.feature.history.HistoryItemScreen
 import io.github.locngu.beforeyoubuy.feature.history.HistoryScreen
 import io.github.locngu.beforeyoubuy.feature.home.HomeScreen
@@ -34,6 +35,7 @@ import io.github.locngu.beforeyoubuy.notifications.NotificationPermissionPrompt
 import io.github.locngu.beforeyoubuy.notifications.NotificationPermissionViewModel
 import io.github.locngu.beforeyoubuy.notifications.NotificationTap
 import io.github.locngu.beforeyoubuy.notifications.NotificationTarget
+import io.github.locngu.beforeyoubuy.ui.format.currentLocale
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
@@ -101,6 +103,7 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val resources = LocalResources.current
+    val locale = currentLocale()
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
@@ -174,12 +177,8 @@ fun AppNavigation(notificationTap: NotificationTap? = null, onNotificationTapSho
                             // Bought or decided against: the item has ended, so its detail closes too, and the
                             // screen below says where it went.
                             if (backStack.lastOrNull() == ItemDetail(key.itemId)) backStack.removeLastOrNull()
-                            val message = if (outcome is DecisionOutcome.Rejected) {
-                                R.string.decision_rejected
-                            } else {
-                                R.string.decision_bought
-                            }
-                            scope.launch { snackbarHostState.showSnackbar(resources.getString(message)) }
+                            val message = decisionMessage(outcome, resources, locale)
+                            scope.launch { snackbarHostState.showSnackbar(message) }
                         },
                         onReflect = { backStack.open(ItemReflection(key.itemId)) },
                         onCompare = { backStack.open(HeadToHead(key.itemId)) }

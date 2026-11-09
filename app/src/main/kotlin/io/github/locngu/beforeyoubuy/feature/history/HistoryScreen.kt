@@ -38,6 +38,7 @@ import io.github.locngu.beforeyoubuy.core.domain.history.BoughtEntry
 import io.github.locngu.beforeyoubuy.core.domain.history.DecidedAgainst
 import io.github.locngu.beforeyoubuy.core.domain.history.DecidedAgainstEntry
 import io.github.locngu.beforeyoubuy.core.domain.history.HistoryPeriod
+import io.github.locngu.beforeyoubuy.core.domain.history.HistorySummary
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
 import io.github.locngu.beforeyoubuy.core.domain.money.format
 import io.github.locngu.beforeyoubuy.ui.components.EmptyState
@@ -80,6 +81,7 @@ fun HistoryContent(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.history_title)) }) }
     ) { innerPadding ->
         Column(Modifier.fillMaxSize().padding(innerPadding)) {
+            state.summary?.takeUnless { it.isEmpty }?.let { SummaryLine(it, state.period) }
             PrimaryTabRow(selectedTabIndex = state.tab.ordinal) {
                 HistoryTab.entries.forEach { tab ->
                     Tab(
@@ -99,6 +101,30 @@ fun HistoryContent(
             }
         }
     }
+}
+
+/**
+ * "You bought 5 things you'd waited for · You let 12 go", above the tabs and following the period (ADR-0055). Counts
+ * only, no money; a part at 0 is left out. Plain text: no icon, colour or celebration (ADR-0012).
+ */
+@Composable
+private fun SummaryLine(summary: HistorySummary, period: HistoryPeriod) {
+    val parts = listOfNotNull(
+        summary.waitedFor.takeIf { it > 0 }
+            ?.let { pluralStringResource(R.plurals.history_summary_waited, it, it) },
+        summary.letGo.takeIf { it > 0 }
+            ?.let { stringResource(R.string.history_summary_let_go, it) }
+    )
+    val line = parts.reduce { first, second -> stringResource(R.string.history_summary_join, first, second) }
+    Text(
+        text = when (period) {
+            HistoryPeriod.THIS_MONTH -> stringResource(R.string.history_summary_month, line)
+            HistoryPeriod.THIS_YEAR -> stringResource(R.string.history_summary_year, line)
+            HistoryPeriod.ALL -> line
+        },
+        style = MaterialTheme.typography.bodyLarge,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
+    )
 }
 
 @StringRes

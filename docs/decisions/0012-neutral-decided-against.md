@@ -1,6 +1,6 @@
 # ADR-0012: "Decided against" shown neutrally; no streaks, trophies or celebration
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0055 (plain, warm text after a plain Buy is allowed)
 **Type**: product
 **Date**: 2026-10-04
 

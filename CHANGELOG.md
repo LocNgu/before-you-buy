@@ -4,6 +4,10 @@ All notable user-visible changes. Format: [Keep a Changelog](https://keepachange
 
 ## [Unreleased]
 
+### Changed
+
+- A little warmth after a decision. Buying something that waited its whole period says "You waited 61 days for this. Enjoy it."; buying early or buying a need keeps the plain "Got it." When you let something go, the message names what the money stays for: "Let go. 1,200 € stays for your Camera (#2)." (or "It's in 'Decided against'." when no priority is named). History shows a line above its tabs with counts only, for the period you picked: "You bought 5 things you'd waited for · You let 12 go". There is no score, badge or money total in it; the total under "Decided against" stays as it was.
+
 ### Added
 
 - Settings, from the gear next to "History" on Home. Fun money opens its screen; "Priority slots" shows how many are used and changes how many there are, like the wishlist's "Change". Switch the waiting period notifications and the reflection reminders on or off; when your phone blocks the app's notifications, or one kind of them, Settings says so and opens the right page of the system settings. On Android 13 and later, "App language" opens the system's language page for the app; on older versions the app follows the system language. About shows the version, the licence (source available, free for personal and non-commercial use), a link to the source code and what happens with your data: everything stays on your phone.

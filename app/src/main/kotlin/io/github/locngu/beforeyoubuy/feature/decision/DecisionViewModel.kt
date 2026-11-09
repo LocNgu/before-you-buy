@@ -6,14 +6,18 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.locngu.beforeyoubuy.core.domain.decision.BoughtConfirmation
 import io.github.locngu.beforeyoubuy.core.domain.decision.BuyPath
 import io.github.locngu.beforeyoubuy.core.domain.decision.DecisionForm
 import io.github.locngu.beforeyoubuy.core.domain.decision.DecisionOverview
+import io.github.locngu.beforeyoubuy.core.domain.decision.OpportunityCostLine
 import io.github.locngu.beforeyoubuy.core.domain.decision.PurchaseCheck
+import io.github.locngu.beforeyoubuy.core.domain.decision.boughtConfirmationOf
 import io.github.locngu.beforeyoubuy.core.domain.decision.checkPurchase
 import io.github.locngu.beforeyoubuy.core.domain.decision.decisionFormOf
 import io.github.locngu.beforeyoubuy.core.domain.decision.decisionOverviewOf
 import io.github.locngu.beforeyoubuy.core.domain.decision.earliestWaitDate
+import io.github.locngu.beforeyoubuy.core.domain.decision.keepFor
 import io.github.locngu.beforeyoubuy.core.domain.decision.purchaseDates
 import io.github.locngu.beforeyoubuy.core.domain.decision.purchaseDecision
 import io.github.locngu.beforeyoubuy.core.domain.decision.rejectDecision
@@ -75,9 +79,11 @@ enum class DecisionStep {
 
 /** How a decision ended the screen. */
 sealed interface DecisionOutcome {
-    data object Bought : DecisionOutcome
+    /** Bought; [confirmation] says whether the confirmation is warm (a plain Buy) or neutral (ADR-0055). */
+    data class Bought(val confirmation: BoughtConfirmation) : DecisionOutcome
 
-    data object Rejected : DecisionOutcome
+    /** Let go; [keepFor] is the priority the money stays for, as "Don't buy" named it (ADR-0048, ADR-0055). */
+    data class Rejected(val price: Money, val keepFor: OpportunityCostLine.AboutPriority?) : DecisionOutcome
 
     data class Waiting(val until: LocalDate) : DecisionOutcome
 }
@@ -352,13 +358,13 @@ class DecisionViewModel @AssistedInject constructor(
             editor.update { it.copy(saving = false, decided = true) }
             outcomes.send(
                 when (decision.type) {
-                    DecisionType.REJECT -> DecisionOutcome.Rejected
+                    DecisionType.REJECT -> DecisionOutcome.Rejected(item.price, overview.opportunityCost.keepFor())
 
                     DecisionType.WAIT -> DecisionOutcome.Waiting(
                         checkNotNull(decision.waitUntil).atZone(clock.zone).toLocalDate()
                     )
 
-                    else -> DecisionOutcome.Bought
+                    else -> DecisionOutcome.Bought(boughtConfirmationOf(item, decision, clock.zone))
                 }
             )
         }

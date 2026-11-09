@@ -320,4 +320,59 @@ class HistoryTest {
             wantedAgain(ended(1, ItemStatus.REJECTED, price = Money(12_000, "USD")), policy, now, zone)
         }
     }
+
+    @Test
+    fun `the summary counts plain buys and decided-against items, and leaves early buys and needs out`() {
+        val at = Instant.parse("2026-11-10T08:00:00Z")
+        val entries = listOf(
+            bought(1, at),
+            bought(2, at),
+            bought(3, at, type = DecisionType.BUY_EARLY),
+            bought(4, at, type = DecisionType.BUY_NEED)
+        )
+        val rejects = listOf(rejected(5, at), rejected(6, at), rejected(7, at))
+
+        val summary = historySummaryOf(
+            boughtOf(entries, "EUR", HistoryPeriod.ALL, now, zone),
+            decidedAgainstOf(rejects, "EUR", HistoryPeriod.ALL, now, zone)
+        )
+
+        assertEquals(HistorySummary(waitedFor = 2, letGo = 3), summary)
+        assertFalse(summary.isEmpty)
+    }
+
+    @Test
+    fun `the summary follows the period, is empty when nothing counts, and counts no needs or early buys`() {
+        val thisMonth = Instant.parse("2026-11-10T08:00:00Z")
+        val lastYear = Instant.parse("2025-11-10T08:00:00Z")
+        val entries = listOf(bought(1, thisMonth), bought(2, lastYear))
+        val rejects = listOf(rejected(3, lastYear))
+
+        fun summaryOf(period: HistoryPeriod, bought: List<HistoryEntry>, rejected: List<HistoryEntry>) =
+            historySummaryOf(
+                boughtOf(bought, "EUR", period, now, zone),
+                decidedAgainstOf(rejected, "EUR", period, now, zone)
+            )
+
+        assertEquals(HistorySummary(1, 0), summaryOf(HistoryPeriod.THIS_MONTH, entries, rejects))
+        assertEquals(HistorySummary(2, 1), summaryOf(HistoryPeriod.ALL, entries, rejects))
+        // Early buys and needs alone leave nothing to say.
+        val onlyOthers = listOf(
+            bought(4, thisMonth, type = DecisionType.BUY_EARLY),
+            bought(5, thisMonth, type = DecisionType.BUY_NEED)
+        )
+        assertTrue(summaryOf(HistoryPeriod.ALL, onlyOthers, emptyList()).isEmpty)
+        assertTrue(summaryOf(HistoryPeriod.THIS_YEAR, emptyList(), rejects).isEmpty)
+    }
+
+    @Test
+    fun `considered days are the calendar days from adding to the decision, never negative`() {
+        val item = ended(1, ItemStatus.PURCHASED)
+        val buy = { at: String -> Decision(DecisionType.BUY, Instant.parse(at), actualPrice = PRICE) }
+
+        // ADDED is 2026-10-01.
+        assertEquals(47, consideredForDaysOf(item, buy("2026-11-17T08:00:00Z"), zone))
+        assertEquals(0, consideredForDaysOf(item, buy("2026-10-01T23:59:00Z"), zone))
+        assertEquals(0, consideredForDaysOf(item, buy("2026-09-01T08:00:00Z"), zone))
+    }
 }

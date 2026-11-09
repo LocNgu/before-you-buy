@@ -2,6 +2,7 @@ package io.github.locngu.beforeyoubuy.core.domain.decision
 
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.waitProgressOf
+import io.github.locngu.beforeyoubuy.core.domain.history.consideredForDaysOf
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
@@ -228,3 +229,29 @@ fun waitDecision(form: DecisionForm, now: Instant, zone: ZoneId): Decision {
 /** "Don't buy" at [now], with the optional "Why not?" trimmed; a blank note is none. */
 fun rejectDecision(form: DecisionForm, now: Instant): Decision =
     Decision(DecisionType.REJECT, now, note = form.note.trim().ifEmpty { null })
+
+/**
+ * What the confirmation after a purchase says (ADR-0055). Plain text, no animation, badge or sound.
+ * Only a plain [DecisionType.BUY] is warm; early buys and needs get the neutral line, so nothing marks the difference
+ * (ADR-0012).
+ */
+sealed interface BoughtConfirmation {
+    /** "Got it. It's in 'Bought'." */
+    data object Neutral : BoughtConfirmation
+
+    /** "Enjoy it." alone: a plain Buy on the day it was added (a tier allowing a 0-day wait). */
+    data object Enjoy : BoughtConfirmation
+
+    /** "You waited [days] days for this. Enjoy it." [days] ≥ 1. */
+    data class Waited(val days: Int) : BoughtConfirmation
+}
+
+/**
+ * The confirmation for the purchase [decision] of [item] in [zone]. The days are
+ * [io.github.locngu.beforeyoubuy.core.domain.history.consideredForDaysOf], the number History shows.
+ */
+fun boughtConfirmationOf(item: Item, decision: Decision, zone: ZoneId): BoughtConfirmation {
+    if (decision.type != DecisionType.BUY) return BoughtConfirmation.Neutral
+    val days = consideredForDaysOf(item, decision, zone)
+    return if (days >= 1) BoughtConfirmation.Waited(days) else BoughtConfirmation.Enjoy
+}
