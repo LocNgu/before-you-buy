@@ -9,6 +9,7 @@ import io.github.locngu.beforeyoubuy.core.domain.history.HistoryDetail
 import io.github.locngu.beforeyoubuy.core.domain.history.HistoryPeriod
 import io.github.locngu.beforeyoubuy.core.domain.history.boughtOf
 import io.github.locngu.beforeyoubuy.core.domain.history.decidedAgainstOf
+import io.github.locngu.beforeyoubuy.core.domain.history.historySummaryOf
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.HistoryEntry
@@ -96,12 +97,11 @@ abstract class HistoryScreenshotTest(private val german: Boolean) {
         rejected(6, t("Smartwatch", "Smartwatch"), 1_081, 300, note = t("My watch still works", "Meine Uhr geht noch"))
     )
 
-    private fun state(tab: HistoryTab, period: HistoryPeriod = HistoryPeriod.ALL) = HistoryUiState(
-        tab = tab,
-        period = period,
-        bought = boughtOf(boughtEntries, "EUR", period, now, zone),
-        decidedAgainst = decidedAgainstOf(rejectedEntries, "EUR", period, now, zone)
-    )
+    private fun state(tab: HistoryTab, period: HistoryPeriod = HistoryPeriod.ALL): HistoryUiState {
+        val bought = boughtOf(boughtEntries, "EUR", period, now, zone)
+        val decidedAgainst = decidedAgainstOf(rejectedEntries, "EUR", period, now, zone)
+        return HistoryUiState(tab, period, bought, decidedAgainst, historySummaryOf(bought, decidedAgainst))
+    }
 
     private val empty = HistoryUiState(
         bought = emptyList(),
@@ -116,6 +116,9 @@ abstract class HistoryScreenshotTest(private val german: Boolean) {
 
     @Test
     fun decidedAgainstThisMonth() = capture(state(HistoryTab.DECIDED_AGAINST, HistoryPeriod.THIS_MONTH))
+
+    @Test
+    fun summaryThisMonth() = capture(state(HistoryTab.BOUGHT, HistoryPeriod.THIS_MONTH))
 
     @Test
     fun boughtEmpty() = capture(empty)

@@ -115,6 +115,32 @@ fun decidedAgainstOf(
     return DecidedAgainst(listed, listed.map { it.price }.total(currency))
 }
 
+/**
+ * The counts above History's lists (ADR-0055): [waitedFor] plain buys, the ones that waited their whole period (no early
+ * buys, no needs), and [letGo] decided-against items. Counts only, no money. Each is at least 0; the line shows a part
+ * only when it is above 0.
+ */
+data class HistorySummary(val waitedFor: Int, val letGo: Int) {
+    /** Nothing to say: both parts are 0, so the line is hidden. */
+    val isEmpty: Boolean get() = waitedFor == 0 && letGo == 0
+}
+
+/**
+ * The summary line of one period: [bought] and [decidedAgainst] are the lists [boughtOf] and [decidedAgainstOf] made
+ * for it. Early buys and needs are left out of the first count and mentioned nowhere (ADR-0012, ADR-0055).
+ */
+fun historySummaryOf(bought: List<BoughtEntry>, decidedAgainst: DecidedAgainst): HistorySummary = HistorySummary(
+    waitedFor = bought.count { !it.early && !it.need },
+    letGo = decidedAgainst.entries.size
+)
+
+/**
+ * Calendar days from adding [item] to the day of [decision] in [zone] (ADR-0018), never negative: the number History
+ * shows as "Considered for N days", and the one the "bought as planned" confirmation names (ADR-0055).
+ */
+fun consideredForDaysOf(item: Item, decision: Decision, zone: ZoneId): Int =
+    daysBetween(item.addedAt.atZone(zone).toLocalDate(), decision.decidedAt.atZone(zone).toLocalDate())
+
 /** One history entry with its reflection answers, for the read-only detail (issue #19). */
 sealed interface HistoryDetail {
     val item: Item
@@ -155,7 +181,7 @@ private fun boughtEntryOf(item: Item, decision: Decision, zone: ZoneId): BoughtE
         paid = paid,
         wishlistPrice = item.price.takeIf { it != paid },
         boughtOn = boughtOn,
-        consideredForDays = daysBetween(item.addedAt.atZone(zone).toLocalDate(), boughtOn),
+        consideredForDays = consideredForDaysOf(item, decision, zone),
         early = decision.type == DecisionType.BUY_EARLY,
         need = decision.type == DecisionType.BUY_NEED
     )

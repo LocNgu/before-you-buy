@@ -245,6 +245,10 @@
 
     <string name="decision_rejected">Alles klar. Es ist jetzt unter „Dagegen entschieden“.</string>
     <string name="decision_bought">Alles klar. Es ist jetzt unter „Gekauft“.</string>
+    <!-- Nur nach einem normalen Kauf (ADR-0055): „Viel Freude damit.“ allein, wenn am selben Tag gekauft wurde. Dazu der Plural decision_bought_waited. -->
+    <string name="decision_bought_enjoy">Viel Freude damit.</string>
+    <!-- Nach „Nicht kaufen“, wenn der Knopf eine Priorität nennt (ADR-0048, ADR-0055). -->
+    <string name="decision_rejected_for">Losgelassen. %1$s bleiben für %2$s (#%3$d).</string>
 
     <!-- Verlauf (brief §6.6, issue #19). Neutral, sachlich: kein „gespart“, keine Serien oder Lob (ADR-0012). -->
     <string name="history_open">Verlauf</string>
@@ -265,6 +269,12 @@
     <string name="history_decided_against_total">Du hast dich gegen Käufe über %1$s entschieden</string>
     <string name="history_decided_against_total_month">Diesen Monat hast du dich gegen Käufe über %1$s entschieden</string>
     <string name="history_decided_against_total_year">Dieses Jahr hast du dich gegen Käufe über %1$s entschieden</string>
+
+    <!-- Zusammenfassung über den Tabs (ADR-0055). Nur Zahlen; ein Teil entfällt bei 0. Dazu der Plural history_summary_waited. -->
+    <string name="history_summary_let_go">Du hast %1$d losgelassen</string>
+    <string name="history_summary_join">%1$s · %2$s</string>
+    <string name="history_summary_month">Diesen Monat: %1$s</string>
+    <string name="history_summary_year">Dieses Jahr: %1$s</string>
     <string name="history_bought_on">Gekauft am %1$s</string>
     <string name="history_decided_on">Entschieden am %1$s</string>
     <string name="history_wishlist_price">Preis auf der Wunschliste: %1$s</string>

@@ -1,6 +1,6 @@
 # ADR-0041: History: one period filter, "Want it again?" creates a fresh want without answers, deleting only on purpose
 
-**Status**: accepted
+**Status**: accepted; amended by ADR-0055 (a summary line of counts above the tabs)
 **Type**: product
 **Date**: 2026-10-21
 

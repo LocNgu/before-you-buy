@@ -6,9 +6,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.locngu.beforeyoubuy.core.domain.history.BoughtEntry
 import io.github.locngu.beforeyoubuy.core.domain.history.DecidedAgainst
 import io.github.locngu.beforeyoubuy.core.domain.history.HistoryPeriod
+import io.github.locngu.beforeyoubuy.core.domain.history.HistorySummary
 import io.github.locngu.beforeyoubuy.core.domain.history.allInCurrency
 import io.github.locngu.beforeyoubuy.core.domain.history.boughtOf
 import io.github.locngu.beforeyoubuy.core.domain.history.decidedAgainstOf
+import io.github.locngu.beforeyoubuy.core.domain.history.historySummaryOf
 import io.github.locngu.beforeyoubuy.core.domain.history.untilHistoryChanges
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemRepository
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemStatus
@@ -30,13 +32,15 @@ enum class HistoryTab { BOUGHT, DECIDED_AGAINST }
 
 /**
  * What history shows: the selected [tab] and [period], and both lists for that period. [bought] and [decidedAgainst]
- * are null until the first load; empty means nothing in the period.
+ * are null until the first load; empty means nothing in the period. [summary] counts both for the period (ADR-0055),
+ * null until the first load.
  */
 data class HistoryUiState(
     val tab: HistoryTab = HistoryTab.BOUGHT,
     val period: HistoryPeriod = HistoryPeriod.ALL,
     val bought: List<BoughtEntry>? = null,
-    val decidedAgainst: DecidedAgainst? = null
+    val decidedAgainst: DecidedAgainst? = null,
+    val summary: HistorySummary? = null
 )
 
 /**
@@ -68,11 +72,14 @@ class HistoryViewModel @Inject constructor(
                 flow {
                     while (true) {
                         val now = clock.instant()
+                        val boughtIn = boughtOf(bought, currency, selected, now, clock.zone)
+                        val decidedAgainstIn = decidedAgainstOf(rejected, currency, selected, now, clock.zone)
                         emit(
                             HistoryUiState(
                                 period = selected,
-                                bought = boughtOf(bought, currency, selected, now, clock.zone),
-                                decidedAgainst = decidedAgainstOf(rejected, currency, selected, now, clock.zone)
+                                bought = boughtIn,
+                                decidedAgainst = decidedAgainstIn,
+                                summary = historySummaryOf(boughtIn, decidedAgainstIn)
                             )
                         )
                         delay(untilHistoryChanges(now, clock.zone).toMillis().coerceAtLeast(1))

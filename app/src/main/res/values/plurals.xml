@@ -132,4 +132,16 @@
         <item quantity="one">The %1$d other item on your wishlist comes to %2$s</item>
         <item quantity="other">All %1$d other items on your wishlist come to %2$s together</item>
     </plurals>
+
+    <!-- Confirmation after a plain Buy (ADR-0055): calendar days from adding to buying, as History shows them. -->
+    <plurals name="decision_bought_waited">
+        <item quantity="one">You waited %d day for this. Enjoy it.</item>
+        <item quantity="other">You waited %d days for this. Enjoy it.</item>
+    </plurals>
+
+    <!-- History summary: plain buys, the ones that waited their whole period (ADR-0055). -->
+    <plurals name="history_summary_waited">
+        <item quantity="one">You bought %d thing you’d waited for</item>
+        <item quantity="other">You bought %d things you’d waited for</item>
+    </plurals>
 </resources>

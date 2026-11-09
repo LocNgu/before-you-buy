@@ -2,6 +2,7 @@ package io.github.locngu.beforeyoubuy.feature.history
 
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.CoolingOffRules
 import io.github.locngu.beforeyoubuy.core.domain.history.HistoryPeriod
+import io.github.locngu.beforeyoubuy.core.domain.history.HistorySummary
 import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
@@ -93,11 +94,27 @@ class HistoryViewModelTest {
     }
 
     @Test
+    fun `the summary counts plain buys and decided-against items for the period`() =
+        runTest(UnconfinedTestDispatcher()) {
+            buy("Camera", euros = 1_200, paid = 1_200, at = Instant.parse("2026-09-20T10:00:00Z"))
+            buy("Lens", euros = 300, paid = 300, at = Instant.parse("2026-10-20T10:00:00Z"))
+            reject("Bike", euros = 450, at = Instant.parse("2026-09-10T10:00:00Z"))
+            val viewModel = viewModel()
+            viewModel.uiState.launchIn(backgroundScope)
+
+            assertEquals(HistorySummary(waitedFor = 2, letGo = 1), viewModel.uiState.value.summary)
+
+            viewModel.selectPeriod(HistoryPeriod.THIS_MONTH)
+            assertEquals(HistorySummary(waitedFor = 1, letGo = 0), viewModel.uiState.value.summary)
+        }
+
+    @Test
     fun `shows nothing until loaded`() = runTest(UnconfinedTestDispatcher()) {
         val viewModel = viewModel()
 
         assertNull(viewModel.uiState.value.bought)
         assertNull(viewModel.uiState.value.decidedAgainst)
+        assertNull(viewModel.uiState.value.summary)
     }
 
     @Test

@@ -1,6 +1,7 @@
 package io.github.locngu.beforeyoubuy.core.domain.decision
 
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
+import io.github.locngu.beforeyoubuy.core.domain.item.Decision
 import io.github.locngu.beforeyoubuy.core.domain.item.DecisionType
 import io.github.locngu.beforeyoubuy.core.domain.item.Item
 import io.github.locngu.beforeyoubuy.core.domain.item.ItemId
@@ -281,5 +282,36 @@ class DecidingTest {
         val plain = rejectDecision(form().copy(note = "  "), AFTER_COOLING)
         assertEquals(DecisionType.REJECT, plain.type)
         assertNull(plain.note)
+    }
+
+    @Test
+    fun `only a plain buy is confirmed warmly, with the days History shows`() {
+        val decided = Instant.parse("2026-11-02T10:00:00Z")
+        val plain = Decision(DecisionType.BUY, decided, actualPrice = ready.price)
+
+        // ADDED is 2026-10-01: 32 calendar days.
+        assertEquals(BoughtConfirmation.Waited(32), boughtConfirmationOf(ready, plain, zone))
+        assertEquals(
+            BoughtConfirmation.Neutral,
+            boughtConfirmationOf(
+                ready,
+                Decision(DecisionType.BUY_EARLY, decided, actualPrice = ready.price, earlyReason = "Broke"),
+                zone
+            )
+        )
+        assertEquals(
+            BoughtConfirmation.Neutral,
+            boughtConfirmationOf(need, Decision(DecisionType.BUY_NEED, decided, actualPrice = need.price), zone)
+        )
+    }
+
+    @Test
+    fun `a plain buy on the day it was added says only enjoy it`() {
+        val sameDay = ADDED.plusSeconds(60)
+
+        assertEquals(
+            BoughtConfirmation.Enjoy,
+            boughtConfirmationOf(ready, Decision(DecisionType.BUY, sameDay, actualPrice = ready.price), zone)
+        )
     }
 }

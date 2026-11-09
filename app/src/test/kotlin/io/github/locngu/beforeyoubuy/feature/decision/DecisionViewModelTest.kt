@@ -2,6 +2,7 @@ package io.github.locngu.beforeyoubuy.feature.decision
 
 import app.cash.turbine.test
 import io.github.locngu.beforeyoubuy.core.domain.coolingoff.WaitProgress
+import io.github.locngu.beforeyoubuy.core.domain.decision.BoughtConfirmation
 import io.github.locngu.beforeyoubuy.core.domain.decision.BuyPath
 import io.github.locngu.beforeyoubuy.core.domain.decision.OpportunityCostLine
 import io.github.locngu.beforeyoubuy.core.domain.decision.decisionFormOf
@@ -121,7 +122,8 @@ class DecisionViewModelTest {
             viewModel.onPriceChange("1100")
             viewModel.confirm()
 
-            assertEquals(DecisionOutcome.Bought, awaitItem())
+            // Added 30 days ago: the warm line names them (ADR-0055).
+            assertEquals(DecisionOutcome.Bought(BoughtConfirmation.Waited(30)), awaitItem())
         }
         val decision = items.decisions.single()
         assertEquals(DecisionType.BUY, decision.type)
@@ -161,7 +163,8 @@ class DecisionViewModelTest {
             viewModel.onEarlyReasonChange("Old one broke")
             assertTrue(viewModel.uiState.value.purchase!!.isValid)
             viewModel.confirm()
-            assertEquals(DecisionOutcome.Bought, awaitItem())
+            // No warmth for an early buy, and nothing that marks the difference (ADR-0055).
+            assertEquals(DecisionOutcome.Bought(BoughtConfirmation.Neutral), awaitItem())
         }
         val decision = items.decisions.single()
         assertEquals(DecisionType.BUY_EARLY, decision.type)
@@ -207,7 +210,7 @@ class DecisionViewModelTest {
             viewModel.onReject()
             viewModel.onNoteChange(" Phone is enough ")
             viewModel.confirm()
-            assertEquals(DecisionOutcome.Rejected, awaitItem())
+            assertEquals(DecisionOutcome.Rejected(Money(120_000, "EUR"), null), awaitItem())
         }
         val decision = items.decisions.single()
         assertEquals(DecisionType.REJECT, decision.type)
@@ -341,6 +344,32 @@ class DecisionViewModelTest {
         }
 
     @Test
+    fun `letting go names the priority the money stays for, as Don't buy did`() = runTest(UnconfinedTestDispatcher()) {
+        setUpFunMoney(starting = 0)
+        val camera = add()
+        val bikeId = items.add(
+            Item(
+                id = ItemId.NEW,
+                name = "Bike",
+                price = Money(160_000, "EUR"),
+                addedAt = start.minus(Duration.ofDays(10)),
+                coolingOffDays = 30
+            ).asPriority(start.plus(Duration.ofDays(20)))
+        )
+        val bike = items.stored.single { it.id == bikeId }
+        val viewModel = viewModelFor(camera)
+
+        viewModel.outcome.test {
+            viewModel.onReject()
+            viewModel.confirm()
+            val outcome = awaitItem() as DecisionOutcome.Rejected
+            assertEquals(Money(120_000, "EUR"), outcome.price)
+            assertEquals(bike, outcome.keepFor?.priority)
+            assertEquals(1, outcome.keepFor?.rank)
+        }
+    }
+
+    @Test
     fun `once fun money is set up, a want is Ready only when its price is set aside`() =
         runTest(UnconfinedTestDispatcher()) {
             setUpFunMoney(starting = 200_000)
@@ -382,7 +411,7 @@ class DecisionViewModelTest {
         viewModel.outcome.test {
             viewModel.confirm()
             viewModel.confirmBelowZero()
-            assertEquals(DecisionOutcome.Bought, awaitItem())
+            assertEquals(DecisionOutcome.Bought(BoughtConfirmation.Waited(30)), awaitItem())
         }
         assertEquals(Money(160_000, "EUR"), items.decisions.single().actualPrice)
     }
@@ -398,7 +427,7 @@ class DecisionViewModelTest {
             viewModel.onBuy()
             viewModel.onPriceChange("1500")
             viewModel.confirm()
-            assertEquals(DecisionOutcome.Bought, awaitItem())
+            assertEquals(DecisionOutcome.Bought(BoughtConfirmation.Waited(30)), awaitItem())
         }
         assertNull(viewModel.uiState.value.confirmBelowZero)
     }
@@ -412,7 +441,7 @@ class DecisionViewModelTest {
         viewModel.outcome.test {
             viewModel.onBuy()
             viewModel.confirm()
-            assertEquals(DecisionOutcome.Bought, awaitItem())
+            assertEquals(DecisionOutcome.Bought(BoughtConfirmation.Neutral), awaitItem())
         }
         assertEquals(DecisionType.BUY_NEED, items.decisions.single().type)
     }
