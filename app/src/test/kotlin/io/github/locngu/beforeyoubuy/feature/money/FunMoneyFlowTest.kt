@@ -52,7 +52,7 @@ class FunMoneyFlowTest {
 
         waitFor("Fun money for wants")
         waitFor("Set aside for wants")
-        waitFor("Not yet set aside")
+        waitFor("Not yet assigned")
         tap("Change or adjust")
 
         waitFor("Adjust the amount")

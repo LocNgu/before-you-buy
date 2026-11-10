@@ -18,7 +18,7 @@
     <string name="home_money_manage">Ändern oder anpassen</string>
     <string name="home_money_pool">Spaßgeld für Wünsche</string>
     <string name="home_money_committed">Für Wünsche zurückgelegt</string>
-    <string name="home_money_unallocated">Noch nicht zurückgelegt</string>
+    <string name="home_money_unallocated">Noch nicht verteilt</string>
 
     <!-- Der Spaßgeld-Bildschirm (Issue #22). Die App bewegt nie echtes Geld (ADR-0010). -->
     <string name="fun_money_title">Spaßgeld</string>
@@ -42,8 +42,8 @@
     <string name="fun_money_add">Hinzufügen</string>
     <string name="fun_money_take_out">Herausnehmen</string>
     <string name="fun_money_below_zero_title">Unter null gehen?</string>
-    <!-- %1$s: der Betrag zum Herausnehmen; %2$s: was danach nicht zurückgelegt bleibt, unter null, z. B. „-50 €“. -->
-    <string name="fun_money_below_zero_body">Wenn du %1$s herausnimmst, bleiben %2$s noch nicht zurückgelegt.</string>
+    <!-- %1$s: der Betrag zum Herausnehmen; %2$s: was danach nicht verteilt bleibt, unter null, z. B. „-50 €“. -->
+    <string name="fun_money_below_zero_body">Wenn du %1$s herausnimmst, bleiben %2$s noch nicht verteilt.</string>
 
     <!-- Countdown bei Artikeln in der Wartezeit. -->
     <string name="countdown_over">Wartezeit vorbei</string>
@@ -313,7 +313,7 @@
     <string name="savings_sheet_set_aside_title">Für %1$s zurücklegen</string>
     <string name="savings_sheet_take_back_title">Von %1$s zurücknehmen</string>
     <string name="savings_amount">Betrag</string>
-    <string name="savings_not_set_aside">Noch nicht zurückgelegt: %1$s</string>
+    <string name="savings_not_set_aside">Noch nicht verteilt: %1$s</string>
     <string name="savings_held">Dafür zurückgelegt: %1$s</string>
     <string name="savings_chip_rest">Den Rest (%1$s)</string>
     <string name="savings_chip_all">Alles (%1$s)</string>
@@ -323,7 +323,7 @@
     <string name="savings_changed_meanwhile">Inzwischen hat sich etwas geändert. Es wurde nichts zurückgelegt oder zurückgenommen.</string>
     <string name="item_mark_as_need_release">Die dafür zurückgelegten %1$s gehen zurück in dein Spaßgeld.</string>
     <string name="decision_early_saving">Die Wartezeit ist vorbei, aber vom Preis sind %1$s noch nicht zurückgelegt.</string>
-    <string name="decision_below_zero_body">Wenn du %1$s bezahlst, bleiben %2$s noch nicht zurückgelegt.</string>
+    <string name="decision_below_zero_body">Wenn du %1$s bezahlst, bleiben %2$s noch nicht verteilt.</string>
     <string name="priorities_title">Prioritäten</string>
     <string name="priority_item_rank">Priorität #%1$d</string>
     <string name="priority_make">Zur Priorität machen</string>
