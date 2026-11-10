@@ -122,7 +122,7 @@ Manual, no bank connection.
 - `committed = sum of allocations to active items`
 - `unallocated = pool − committed` (shown prominently; may never go below zero through allocation)
 
-Example: *Fun money for wants 300 € · Set aside for wants 200 € · Not yet set aside 100 €*. Never "available" or "spend" (ADR-0045). First credit, catch-up and changes: ADR-0045.
+Example: *Fun money for wants 300 € · Set aside for wants 200 € · Not yet assigned 100 €*. Never "available" or "spend" (ADR-0045). First credit, catch-up and changes: ADR-0045.
 
 ### 4.6 Savings per item (earmarks)
 

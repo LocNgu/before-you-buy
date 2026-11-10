@@ -1,6 +1,6 @@
 # ADR-0045: Fun money: accrual from the next accrual day, an append-only ledger, calm labels, setup from Home
 
-**Status**: accepted
+**Status**: accepted, amended by ADR-0055 (the "Not yet set aside" label)
 **Type**: product
 **Date**: 2026-10-23
 
